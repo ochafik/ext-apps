@@ -19,7 +19,6 @@ import {
   LATEST_PROTOCOL_VERSION,
   McpUiAppCapabilities,
   McpUiHostCapabilities,
-  McpUiHostInfo,
   McpUiInitializedNotification,
   McpUiInitializeRequest,
   McpUiInitializeResultSchema,
@@ -40,7 +39,7 @@ type AppOptions = ProtocolOptions & {
 
 export class App extends Protocol<Request, Notification, Result> {
   private _hostCapabilities?: McpUiHostCapabilities;
-  private _hostInfo?: McpUiHostInfo;
+  private _hostInfo?: Implementation;
 
   constructor(
     private _appInfo: Implementation,

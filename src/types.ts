@@ -211,15 +211,9 @@ export type McpUiInitializeRequest = z.infer<
   typeof McpUiInitializeRequestSchema
 >;
 
-export const McpUiHostInfoSchema = z.object({
-  name: z.string(),
-  version: z.string(),
-});
-export type McpUiHostInfo = z.infer<typeof McpUiHostInfoSchema>;
-
 export const McpUiInitializeResultSchema = z.object({
   protocolVersion: z.string(),
-  hostInfo: McpUiHostInfoSchema,
+  hostInfo: ImplementationSchema,
   hostCapabilities: McpUiHostCapabilitiesSchema,
   hostContext: McpUiHostContextSchema,
 });
