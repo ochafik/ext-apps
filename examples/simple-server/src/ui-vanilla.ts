@@ -22,7 +22,6 @@ window.addEventListener("load", async () => {
       { style: "color: red;" },
     );
 
-  const transport = new PostMessageTransport(window.parent);
   const app = new App({
     name: "MCP UI Client (Vanilla)",
     version: "1.0.0",
@@ -139,5 +138,5 @@ window.addEventListener("load", async () => {
     }),
   );
 
-  await app.connect(transport);
+  await app.connect(new PostMessageTransport(window.parent));
 });
