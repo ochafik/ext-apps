@@ -19,6 +19,9 @@
       "types": "./dist/src/app-host.d.ts"
     }
   },
+  "files": [
+      "dist"
+  ],
   "scripts": {
     "start:example-server0": "tsx examples/example-server.ts",
     "start:example-server": "cd ../openai-apps-sdk-examples && concurrently \"npm run serve\" \"cd pizzaz_server_node && PORT=3001 npm start\"",
