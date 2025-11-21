@@ -43,7 +43,7 @@ MCP Apps extends the Model Context Protocol to enable servers to deliver interac
 - **Bidirectional Communication:** UI iframes communicate with hosts using standard MCP JSON-RPC protocol
 - **Security Model:** Mandatory iframe sandboxing with auditable communication
 
-This specification focuses on HTML content (`text/html`) as the initial content type, with extensibility for future formats.
+This specification focuses on HTML content (`text/vnd.mcp.ui+html`) as the initial content type, with extensibility for future formats.
 
 As an extension, MCP Apps is optional and must be explicitly negotiated between clients and servers through the extension capabilities mechanism (see Capability Negotiation section).
 
@@ -56,7 +56,7 @@ interface UIResource {
   uri: string;           // MUST start with 'ui://'
   name: string;          // Human-readable identifier
   description?: string;  // Description of the UI resource
-  mimeType: string;      // SHOULD be 'text/html' in MVP
+  mimeType: string;      // SHOULD be 'text/vnd.mcp.ui+html' in MVP
 }
 ```
 
@@ -67,7 +67,7 @@ The resource content is returned via `resources/read`:
 {
   contents: [{
     uri: string;                  // Matching UI resource URI
-    mimeType: "text/html";        // MUST be "text/html"
+    mimeType: "text/vnd.mcp.ui+html";  // MUST be "text/vnd.mcp.ui+html"
     text?: string;                // HTML content as string
     blob?: string;                // OR base64-encoded HTML
     _meta?: {
@@ -85,7 +85,7 @@ The resource content is returned via `resources/read`:
 #### Content Requirements:
 
 - URI MUST start with `ui://` scheme
-- `mimeType` MUST be `text/html` (other types reserved for future extensions)
+- `mimeType` MUST be `text/vnd.mcp.ui+html` (other types reserved for future extensions)
 - Content MUST be provided via either `text` (string) or `blob` (base64-encoded)
 - Content MUST be valid HTML5 document
 
@@ -144,14 +144,14 @@ Example:
   "uri": "ui://weather-server/dashboard-template",
   "name": "weather_dashboard",
   "description": "Interactive weather dashboard widget",
-  "mimeType": "text/html"
+  "mimeType": "text/vnd.mcp.ui+html"
 }
 
 // Resource content with metadata
 {
   "contents": [{
     "uri": "ui://weather-server/dashboard-template",
-    "mimeType": "text/html",
+    "mimeType": "text/vnd.mcp.ui+html",
     "text": "<!DOCTYPE html><html>...</html>",
     "_meta": {
       "ui/csp": {
@@ -841,7 +841,7 @@ Servers SHOULD check client (host would-be) capabilities before registering UI-e
 
 ```typescript
 const hasUISupport =
-  clientCapabilities?.extensions?.["io.modelcontextprotocol/ui"]?.mimeTypes?.includes("text/html");
+  clientCapabilities?.extensions?.["io.modelcontextprotocol/ui"]?.mimeTypes?.includes("text/vnd.mcp.ui+html");
 
 if (hasUISupport) {
   // Register tools with UI templates
@@ -925,7 +925,7 @@ This proposal synthesizes feedback from the UI CWG and MCP-UI community, host im
 
 #### 3. Support Raw HTML Content Type
 
-**Decision:** MVP supports only `text/html` (rawHtml), with other types explicitly deferred.
+**Decision:** MVP supports only `text/vnd.mcp.ui+html` (rawHtml), with other types explicitly deferred.
 
 **Rationale:**
 

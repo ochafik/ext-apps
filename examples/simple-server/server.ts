@@ -47,7 +47,7 @@ const getServer = async () => {
     uri: "ui://vanilla",
     title: "Vanilla UI Template",
     description: "A simple vanilla JS UI",
-    mimeType: "text/html",
+    mimeType: "text/vnd.mcp.ui+html",
   };
 
   server.registerResource(
@@ -89,7 +89,7 @@ const getServer = async () => {
     uri: "ui://react",
     title: "React UI Template",
     description: "A React-based UI",
-    mimeType: "text/html",
+    mimeType: "text/vnd.mcp.ui+html",
   };
 
   server.registerResource(
