@@ -60,7 +60,7 @@ interface UIResource {
   _meta?: UIResourceMeta // Resource Metadata
 }
 
-interface UiResourceMeta {
+interface UIResourceMeta {
   csp?: {
     connectDomains?: string[],
     resourceDomains?: string[],
@@ -398,7 +398,7 @@ Example:
 
 ### MCP Apps Specific Messages
 
-MCP-UI introduces additional JSON-RPC methods for UI-specific functionality:
+MCP Apps introduces additional JSON-RPC methods for UI-specific functionality:
 
 #### Requests (UI → Host)
 
@@ -585,7 +585,7 @@ Host SHOULD wait for a response before tearing down the resource (to prevent dat
 }
 ```
 
-Guest UI SHOULD send this notification when rendered content body size changes (e.g. using ResizeObserver API to report up to date size)
+Guest UI SHOULD send this notification when rendered content body size changes (e.g. using ResizeObserver API to report up to date size).
 
 `ui/host-context-change` - Host context has changed
 
@@ -640,8 +640,8 @@ sequenceDiagram
  participant S as MCP Server
 
  autonumber
-   S -->> H: resources/list (includes ui:// resources)
-   S -->> H: tools/list (includes tools with ui/resourceUri metadata)
+  S -->> H: resources/list (includes ui:// resources)
+  S -->> H: tools/list (includes tools with ui/resourceUri metadata)
 ```
 
 #### 2. UI Initialization (Desktop/Native Hosts)
@@ -706,7 +706,7 @@ sequenceDiagram
    H -->> H: Process message and follow up
  else Notify
      UI ->> H: notifications/message
-     H ->> H: Process notifation and store in context
+     H ->> H: Process notification and store in context
  else Resource read
      UI ->> H: resources/read
      H ->> S: resources/read
