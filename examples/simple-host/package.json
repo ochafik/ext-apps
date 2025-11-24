@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "start:server": "python3 serve.py",
+    "start:server": "tsx server.ts",
     "start:mcp-server": "cd ../simple-server && npm install && npm run start",
     "build": "concurrently 'INPUT=example-host.html vite build' 'INPUT=example-host-react.html vite build' 'INPUT=sandbox.html vite build'",
     "server": "bun server.ts",

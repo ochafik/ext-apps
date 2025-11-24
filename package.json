@@ -1,7 +1,7 @@
 {
   "homepage": "https://gist.github.com/a9603ba2d6757d6038ce066eded4c354",
   "name": "@modelcontextprotocol/ext-apps",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "Hey",
   "type": "module",
   "main": "./dist/src/app.js",
