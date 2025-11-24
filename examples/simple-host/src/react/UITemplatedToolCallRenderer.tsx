@@ -9,10 +9,6 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 
 import {
-  type McpUiMessageRequest,
-  type McpUiMessageResult,
-  type McpUiOpenLinkRequest,
-  type McpUiOpenLinkResult,
   AppBridge,
   PostMessageTransport,
 } from "@modelcontextprotocol/ext-apps/app-bridge";

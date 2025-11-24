@@ -13,7 +13,6 @@ export async function setupSandboxProxyIframe(sandboxProxyUrl: URL): Promise<{
   iframe.style.height = "600px";
   iframe.style.border = "none";
   iframe.style.backgroundColor = "transparent";
-  // iframe.allow = 'microphone'
   iframe.setAttribute("sandbox", "allow-scripts allow-same-origin allow-forms");
 
   const onReady = new Promise<void>((resolve, _reject) => {
