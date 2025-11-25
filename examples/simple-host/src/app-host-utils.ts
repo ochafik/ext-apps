@@ -3,6 +3,7 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { Tool } from "@modelcontextprotocol/sdk/types.js";
 
 const MCP_UI_RESOURCE_META_KEY = "ui/resourceUri";
+const OPENAI_OUTPUT_TEMPLATE_KEY = "openai/outputTemplate";
 
 export async function setupSandboxProxyIframe(sandboxProxyUrl: URL): Promise<{
   iframe: HTMLIFrameElement;
@@ -38,6 +39,7 @@ export async function setupSandboxProxyIframe(sandboxProxyUrl: URL): Promise<{
 
 export type ToolUiResourceInfo = {
   uri: string;
+  needsOpenAiAppsSdk: boolean;
 };
 
 export async function getToolUiResourceUri(
@@ -59,8 +61,12 @@ export async function getToolUiResourceUri(
   }
 
   let uri: string;
+  let needsOpenAiAppsSdk = false;
   if (MCP_UI_RESOURCE_META_KEY in tool._meta) {
     uri = String(tool._meta[MCP_UI_RESOURCE_META_KEY]);
+  } else if (OPENAI_OUTPUT_TEMPLATE_KEY in tool._meta) {
+    uri = String(tool._meta[OPENAI_OUTPUT_TEMPLATE_KEY]);
+    needsOpenAiAppsSdk = true;
   } else {
     return null;
   }
@@ -69,7 +75,7 @@ export async function getToolUiResourceUri(
       `tool ${toolName} has unsupported output template URI: ${uri}`,
     );
   }
-  return { uri };
+  return { uri, needsOpenAiAppsSdk };
 }
 
 export async function readToolUiResourceHtml(
@@ -90,7 +96,8 @@ export async function readToolUiResourceHtml(
   }
   const content = resource.contents[0];
   let html: string;
-  const isHtml = (t?: string) => t === "text/html+mcp";
+  const isHtml = (t?: string) =>
+    t === "text/html+mcp" || t === "text/html+skybridge";
 
   if (
     "text" in content &&

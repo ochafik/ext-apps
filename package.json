@@ -25,7 +25,9 @@
   "scripts": {
     "start:example-host": "cd examples/simple-host && npm --registry=https://registry.npmjs.org/ i && npm start",
     "start:example-mcp-server": "cd examples//simple-server && npm --registry=https://registry.npmjs.org/ install && npm start",
+    "start:example-oai-server": "cd ../openai-apps-sdk-examples && concurrently \"npm run serve\" \"cd pizzaz_server_node && PORT=3001 npm start\"",
     "start": "NODE_ENV=development npm run build && concurrently 'npm run start:example-host' 'npm run start:example-mcp-server'",
+    "start:oai": "NODE_ENV=development npm run build && concurrently 'npm run start:example-host' 'npm run start:example-oai-server'",
     "build": "bun build.bun.ts",
     "prepare": "npm run build",
     "prettier:base-cmd": "prettier -u --ignore-path ./.gitignore --ignore-path ./.prettierignore",

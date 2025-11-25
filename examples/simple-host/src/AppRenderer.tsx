@@ -17,7 +17,9 @@ import {
   getToolUiResourceUri,
   readToolUiResourceHtml,
   setupSandboxProxyIframe,
+  ToolUiResourceInfo,
 } from "./app-host-utils";
+import { injectOpenAiShimIntoHtml } from "./openai/openai-shim-injector";
 
 /**
  * Props for the AppRenderer component.
@@ -34,6 +36,8 @@ export interface AppRendererProps {
 
   /** Optional pre-fetched resource URI. If not provided, will be fetched via getToolUiResourceUri() */
   toolResourceUri?: string;
+
+  needsOpenAiAppsSdk?: boolean;
 
   /** Optional input arguments to pass to the tool UI once it's ready */
   toolInput?: Record<string, unknown>;
@@ -101,6 +105,7 @@ export const AppRenderer = (props: AppRendererProps) => {
     sandboxProxyUrl,
     toolName,
     toolResourceUri,
+    needsOpenAiAppsSdk,
     toolInput,
     toolResult,
     onmessage,
@@ -249,12 +254,13 @@ export const AppRenderer = (props: AppRendererProps) => {
     const fetchAndSendResource = async () => {
       try {
         // Get the resource URI (use prop if provided, otherwise fetch)
-        let resourceInfo: { uri: string };
+        let resourceInfo: ToolUiResourceInfo;
 
         if (toolResourceUri) {
           // When URI is provided directly, assume it's NOT OpenAI Apps SDK format
           resourceInfo = {
             uri: toolResourceUri,
+            needsOpenAiAppsSdk: needsOpenAiAppsSdk ?? false,
           };
           console.log(
             `[Host] Using provided resource URI: ${resourceInfo.uri}`,
@@ -279,9 +285,12 @@ export const AppRenderer = (props: AppRendererProps) => {
 
         // Read the HTML content
         console.log(`[Host] Reading resource HTML from: ${resourceInfo.uri}`);
-        const html = await readToolUiResourceHtml(client, {
+        let html = await readToolUiResourceHtml(client, {
           uri: resourceInfo.uri,
         });
+        if (resourceInfo.needsOpenAiAppsSdk) {
+          html = await injectOpenAiShimIntoHtml(html);
+        }
 
         if (!mounted) return;
 
