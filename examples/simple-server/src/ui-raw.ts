@@ -131,7 +131,9 @@ window.addEventListener("load", async () => {
   });
 
   new ResizeObserver(() => {
-    const rect = (document.body.parentElement ?? document.body).getBoundingClientRect();
+    const rect = (
+      document.body.parentElement ?? document.body
+    ).getBoundingClientRect();
     const width = Math.ceil(rect.width);
     const height = Math.ceil(rect.height);
     app.sendNotification<McpUiSizeChangeNotification>({

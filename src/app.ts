@@ -174,7 +174,9 @@ export class App extends Protocol<Request, Notification, Result> {
       scheduled = true;
       requestAnimationFrame(() => {
         scheduled = false;
-        const rect = (document.body.parentElement ?? document.body).getBoundingClientRect();
+        const rect = (
+          document.body.parentElement ?? document.body
+        ).getBoundingClientRect();
         const width = Math.ceil(rect.width);
         const height = Math.ceil(rect.height);
         this.sendSizeChange({ width, height });
