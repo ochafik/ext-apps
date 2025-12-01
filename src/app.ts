@@ -745,6 +745,8 @@ export class App extends Protocol<Request, Notification, Result> {
    */
   setupSizeChangeNotifications() {
     let scheduled = false;
+    let lastWidth = 0;
+    let lastHeight = 0;
 
     const sendBodySizeChange = () => {
       if (scheduled) {
@@ -753,18 +755,32 @@ export class App extends Protocol<Request, Notification, Result> {
       scheduled = true;
       requestAnimationFrame(() => {
         scheduled = false;
-        const el = document.body.parentElement ?? document.body;
-        const rect = el.getBoundingClientRect();
-        // Compensate for viewport scrollbar on Linux/Windows where scrollbars
-        // consume space. window.innerWidth includes scrollbar, clientWidth excludes it.
-        const scrollbarWidth =
-          window.innerWidth - document.documentElement.clientWidth;
-        // Use max of rect (includes CSS transforms) and scroll dimensions (content overflow).
-        const width = Math.ceil(
-          Math.max(rect.width, el.scrollWidth) + scrollbarWidth,
-        );
-        const height = Math.ceil(Math.max(rect.height, el.scrollHeight));
-        this.sendSizeChange({ width, height });
+        const html = document.documentElement;
+
+        // Measure actual content size by temporarily setting html to fit-content.
+        // This shrinks html to fit body (including body margins), giving us the
+        // true minimum size needed by the content.
+        const originalWidth = html.style.width;
+        const originalHeight = html.style.height;
+        html.style.width = "fit-content";
+        html.style.height = "fit-content";
+        const rect = html.getBoundingClientRect();
+        html.style.width = originalWidth;
+        html.style.height = originalHeight;
+
+        // Compensate for scrollbar width on Linux/Windows where scrollbars consume space.
+        // On systems with overlay scrollbars (macOS), this will be 0.
+        const scrollbarWidth = window.innerWidth - html.clientWidth;
+
+        const width = Math.ceil(rect.width + scrollbarWidth);
+        const height = Math.ceil(rect.height);
+
+        // Only send if size actually changed (prevents feedback loops from style changes)
+        if (width !== lastWidth || height !== lastHeight) {
+          lastWidth = width;
+          lastHeight = height;
+          this.sendSizeChange({ width, height });
+        }
       });
     };
 
