@@ -562,6 +562,37 @@ export class AppBridge extends Protocol<Request, Notification, Result> {
     };
   }
 
+  /**
+   * Update the host context and notify the Guest UI of changes.
+   *
+   * Compares the new context with the current context and sends a
+   * `ui/notifications/host-context-changed` notification containing only the
+   * fields that have changed. If no fields have changed, no notification is sent.
+   *
+   * Common use cases include notifying the Guest UI when:
+   * - Theme changes (light/dark mode toggle)
+   * - Viewport size changes (window resize)
+   * - Display mode changes (inline/fullscreen)
+   * - Locale or timezone changes
+   *
+   * @param hostContext - The complete new host context state
+   *
+   * @example Update theme when user toggles dark mode
+   * ```typescript
+   * bridge.setHostContext({ theme: "dark" });
+   * ```
+   *
+   * @example Update multiple context fields
+   * ```typescript
+   * bridge.setHostContext({
+   *   theme: "dark",
+   *   viewport: { width: 800, height: 600 }
+   * });
+   * ```
+   *
+   * @see {@link McpUiHostContext} for the context structure
+   * @see {@link McpUiHostContextChangedNotification} for the notification type
+   */
   setHostContext(hostContext: McpUiHostContext) {
     const changes: McpUiHostContext = {};
     let hasChanges = false;
@@ -614,6 +645,33 @@ export class AppBridge extends Protocol<Request, Notification, Result> {
     });
   }
 
+  /**
+   * Send streaming partial tool arguments to the Guest UI.
+   *
+   * The host MAY send this notification zero or more times while tool arguments
+   * are being streamed, before {@link sendToolInput} is called with complete
+   * arguments. This enables progressive rendering of tool arguments in the
+   * Guest UI.
+   *
+   * The arguments represent best-effort recovery of incomplete JSON. Guest UIs
+   * SHOULD handle missing or changing fields gracefully between notifications.
+   *
+   * @param params - Partial tool call arguments (may be incomplete)
+   *
+   * @example Stream partial arguments as they arrive
+   * ```typescript
+   * // As streaming progresses...
+   * bridge.sendToolInputPartial({ arguments: { loc: "N" } });
+   * bridge.sendToolInputPartial({ arguments: { location: "New" } });
+   * bridge.sendToolInputPartial({ arguments: { location: "New York" } });
+   *
+   * // When complete, send final input
+   * bridge.sendToolInput({ arguments: { location: "New York", units: "metric" } });
+   * ```
+   *
+   * @see {@link McpUiToolInputPartialNotification} for the notification type
+   * @see {@link sendToolInput} for sending complete arguments
+   */
   sendToolInputPartial(params: McpUiToolInputPartialNotification["params"]) {
     return this.notification(<McpUiToolInputPartialNotification>{
       method: "ui/notifications/tool-input-partial",
