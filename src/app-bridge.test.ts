@@ -19,7 +19,7 @@ function createMockClient(
 ): Pick<Client, "getServerCapabilities" | "request" | "notification"> {
   return {
     getServerCapabilities: () => serverCapabilities,
-    request: async () => ({}),
+    request: async () => ({}) as never,
     notification: async () => {},
   };
 }
