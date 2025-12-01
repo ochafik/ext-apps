@@ -285,7 +285,7 @@ app.delete("/mcp", async (req: Request, res: Response) => {
   }
 });
 
-app.listen(MCP_PORT, error => {
+app.listen(MCP_PORT, (error) => {
   if (error) {
     console.error("Failed to start MCP Server:", error);
     process.exit(1);
