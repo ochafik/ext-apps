@@ -30,6 +30,7 @@
     "start:example-mcp-server": "cd examples/simple-server && npm start",
     "start": "NODE_ENV=development npm run build && concurrently 'npm run start:example-host' 'npm run start:example-mcp-server'",
     "build": "bun build.bun.ts",
+    "test": "bun test",
     "prepare": "npm run build && husky",
     "docs": "typedoc",
     "docs:watch": "typedoc --watch",

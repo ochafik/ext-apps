@@ -12,18 +12,18 @@ import {
   ListResourcesResultSchema,
   ListResourceTemplatesRequestSchema,
   ListResourceTemplatesResultSchema,
-  ReadResourceRequestSchema,
-  ReadResourceResultSchema,
   LoggingMessageNotification,
   LoggingMessageNotificationSchema,
   Notification,
   PingRequest,
   PingRequestSchema,
   PromptListChangedNotificationSchema,
+  ReadResourceRequestSchema,
+  ReadResourceResultSchema,
+  Request,
   ResourceListChangedNotificationSchema,
   Result,
   ToolListChangedNotificationSchema,
-  Request,
 } from "@modelcontextprotocol/sdk/types.js";
 import {
   Protocol,
@@ -32,13 +32,16 @@ import {
 } from "@modelcontextprotocol/sdk/shared/protocol.js";
 
 import {
-  type McpUiToolInputNotification,
-  type McpUiToolResultNotification,
   type McpUiSandboxResourceReadyNotification,
   type McpUiSizeChangeNotification,
+  type McpUiToolInputNotification,
+  type McpUiToolInputPartialNotification,
+  type McpUiToolResultNotification,
   LATEST_PROTOCOL_VERSION,
   McpUiAppCapabilities,
   McpUiHostCapabilities,
+  McpUiHostContext,
+  McpUiHostContextChangedNotification,
   McpUiInitializedNotification,
   McpUiInitializedNotificationSchema,
   McpUiInitializeRequest,
@@ -64,7 +67,9 @@ export { PostMessageTransport } from "./message-transport";
  *
  * @see ProtocolOptions from @modelcontextprotocol/sdk for available options
  */
-export type HostOptions = ProtocolOptions;
+export type HostOptions = ProtocolOptions & {
+  hostContext?: McpUiHostContext;
+};
 
 /**
  * Protocol versions supported by this AppBridge implementation.
@@ -149,6 +154,7 @@ type RequestHandlerExtra = Parameters<
 export class AppBridge extends Protocol<Request, Notification, Result> {
   private _appCapabilities?: McpUiAppCapabilities;
   private _appInfo?: Implementation;
+  private _hostContext: McpUiHostContext;
 
   /**
    * Create a new AppBridge instance.
@@ -174,6 +180,8 @@ export class AppBridge extends Protocol<Request, Notification, Result> {
     options?: HostOptions,
   ) {
     super(options);
+
+    this._hostContext = options?.hostContext || {};
 
     this.setRequestHandler(McpUiInitializeRequestSchema, (request) =>
       this._oninitialize(request),
@@ -550,10 +558,31 @@ export class AppBridge extends Protocol<Request, Notification, Result> {
       protocolVersion,
       hostCapabilities: this.getCapabilities(),
       hostInfo: this._hostInfo,
-      hostContext: {
-        // TODO
-      },
+      hostContext: this._hostContext,
     };
+  }
+
+  setHostContext(hostContext: McpUiHostContext) {
+    const changes: McpUiHostContext = {};
+    let hasChanges = false;
+    for (const key of Object.keys(hostContext) as Array<
+      keyof McpUiHostContext
+    >) {
+      const oldValue = this._hostContext[key];
+      const newValue = hostContext[key];
+      if (deepEqual(oldValue, newValue)) {
+        continue;
+      }
+      changes[key] = newValue as any;
+      hasChanges = true;
+    }
+    if (hasChanges) {
+      this._hostContext = hostContext;
+      this.notification((<McpUiHostContextChangedNotification>{
+        method: "ui/notifications/host-context-changed",
+        params: changes,
+      }) as Notification); // Cast needed because McpUiHostContext is a params type that doesn't allow arbitrary keys.
+    }
   }
 
   /**
@@ -581,6 +610,13 @@ export class AppBridge extends Protocol<Request, Notification, Result> {
   sendToolInput(params: McpUiToolInputNotification["params"]) {
     return this.notification(<McpUiToolInputNotification>{
       method: "ui/notifications/tool-input",
+      params,
+    });
+  }
+
+  sendToolInputPartial(params: McpUiToolInputPartialNotification["params"]) {
+    return this.notification(<McpUiToolInputPartialNotification>{
+      method: "ui/notifications/tool-input-partial",
       params,
     });
   }
@@ -779,4 +815,8 @@ export class AppBridge extends Protocol<Request, Notification, Result> {
 
     return super.connect(transport);
   }
+}
+
+function deepEqual(a: any, b: any): boolean {
+  return JSON.stringify(a) === JSON.stringify(b);
 }
