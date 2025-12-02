@@ -137,21 +137,21 @@ interface UIResourceMeta {
     resourceDomains?: string[],
   },
   /**
-   * Dedicated origin for widget
+   * Dedicated origin for Guest UI
    *
-   * Optional domain for the widget's sandbox origin. Useful when widgets need
+   * Optional domain for the Guest UI's sandbox origin. Useful when Guest UIs need
    * dedicated origins for API key allowlists or cross-origin isolation.
    *
    * If omitted, Host uses default sandbox origin.
    *
    * @example
-   * "https://weather-widget.example.com"
+   * "https://weather-app.example.com"
    */
   domain?: string,
   /**
    * Visual boundary preference
    *
-   * Boolean indicating the UI prefers a visible border. Useful for widgets
+   * Boolean indicating the UI prefers a visible border. Useful for Guest UIs
    * that might blend with host background.
    *
    * - `true`: Request visible border (host decides styling)
@@ -215,7 +215,7 @@ Example:
 {
   "uri": "ui://weather-server/dashboard-template",
   "name": "weather_dashboard",
-  "description": "Interactive weather dashboard widget",
+  "description": "Interactive weather dashboard App",
   "mimeType": "text/html+mcp"
 }
 
@@ -299,7 +299,7 @@ Conceptually, UI iframes act as MCP clients, connecting to the host via a `postM
 ```typescript
 // UI iframe initializes MCP client
 const transport = new MessageTransport(window.parent);
-const client = new Client({ name: "ui-widget", version: "1.0.0" });
+const client = new Client({ name: "ui-app", version: "1.0.0" });
 await client.connect(transport);
 ```
 
@@ -899,7 +899,7 @@ await client.callTool("get_weather", { location: "New York" });
 // Result returned via standard tools/call response
 ```
 
-This pattern enables interactive, self-updating widgets.
+This pattern enables interactive, self-updating Apps.
 
 Note: The called tool may not appear in `tools/list` responses. MCP servers MAY expose private tools specifically designed for UI interaction that are not visible to the agent. UI implementations SHOULD attempt to call tools by name regardless of discoverability. The specification for Private Tools will be covered in a future SEP.
 
@@ -981,12 +981,12 @@ This specification defines the Minimum Viable Product (MVP) for MCP Apps. Future
 
 - `externalUrl`: Embed external web applications (e.g., `text/uri-list`)
 
-**Advanced Features (see Future Considerations):**
+**Future Directions:**
 
 - Support multiple UI resources in a tool response
 - State persistence and restoration
 - Custom sandbox policies per resource
-- Widget-to-widget communication
+- UI-to-UI communication
 - Screenshot/preview generation APIs
 
 ## Rationale
