@@ -365,9 +365,18 @@ export class App extends Protocol<AppRequest, AppNotification, AppResult> {
           const result: Tool = {
             name,
             description: tool.description,
-            inputSchema: tool.inputSchema
+            inputSchema: (tool.inputSchema
               ? z.toJSONSchema(tool.inputSchema as ZodSchema)
-              : { type: "object" as const, properties: {} },
+              : {
+                  type: "object" as const,
+                  properties: {},
+                }) as Tool["inputSchema"],
+            outputSchema: (tool.outputSchema
+              ? z.toJSONSchema(tool.outputSchema as ZodSchema)
+              : {
+                  type: "object" as const,
+                  properties: {},
+                }) as Tool["outputSchema"],
           };
           if (tool.annotations) {
             result.annotations = tool.annotations;
