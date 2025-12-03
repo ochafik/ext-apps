@@ -69,6 +69,7 @@ Then open http://localhost:8080/
 
 ## Resources
 
+- [Quickstart Guide](https://modelcontextprotocol.github.io/ext-apps/api/documents/Quickstart.html)
 - [API Documentation](https://modelcontextprotocol.github.io/ext-apps/api/)
 - [Draft Specification](https://github.com/modelcontextprotocol/ext-apps/blob/main/specification/draft/apps.mdx)
 - [SEP-1865 Discussion](https://github.com/modelcontextprotocol/modelcontextprotocol/pull/1865)
