@@ -62,7 +62,6 @@ import {
   ToolCallback,
 } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z, ZodSchema } from "zod/v4";
-import { zodToJsonSchema } from "zod-to-json-schema";
 
 export { PostMessageTransport } from "./message-transport";
 export * from "./types";
