@@ -310,7 +310,9 @@ server.registerResource(
       "utf-8",
     );
     return {
-      contents: [{ uri: resourceUri, mimeType: "text/html+mcp", text: html }],
+      contents: [
+        { uri: resourceUri, mimeType: "text/html;profile=mcp-app", text: html },
+      ],
     };
   },
 );

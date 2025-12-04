@@ -205,7 +205,13 @@ const server = new McpServer({
       );
 
       return {
-        contents: [{ uri: resourceUri, mimeType: "text/html+mcp", text: html }],
+        contents: [
+          {
+            uri: resourceUri,
+            mimeType: "text/html;profile=mcp-app",
+            text: html,
+          },
+        ],
       };
     },
   );
