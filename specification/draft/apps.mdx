@@ -647,12 +647,12 @@ Host SHOULD wait for a response before tearing down the resource (to prevent dat
 
 Guest UI SHOULD send this notification when rendered content body size changes (e.g. using ResizeObserver API to report up to date size).
 
-`ui/host-context-change` - Host context has changed
+`ui/notifications/host-context-changed` - Host context has changed
 
 ```typescript
 {
   jsonrpc: "2.0",
-  method: "ui/host-context-change",
+  method: "ui/notifications/host-context-changed",
   params: Partial<HostContext>  // See HostContext type above
 }
 ```
@@ -777,7 +777,7 @@ sequenceDiagram
       UI ->> H: notifications (e.g., ui/notifications/size-change)
     end
     opt Host notifications
-      H ->> UI: notifications (e.g., ui/notifications/host-context-change)
+      H ->> UI: notifications (e.g., ui/notifications/host-context-changed)
     end
   end
 ```
