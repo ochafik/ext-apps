@@ -425,7 +425,7 @@ export interface McpUiHostContext {
    * Current color theme preference.
    * @example "dark"
    */
-  theme?: "light" | "dark" | "system";
+  theme?: "light" | "dark";
   /**
    * How the UI is currently displayed.
    * @example "inline"
