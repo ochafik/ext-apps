@@ -265,7 +265,7 @@ export class AppBridge extends Protocol<Request, Notification, Result> {
   /**
    * Register a handler for size change notifications from the Guest UI.
    *
-   * The Guest UI sends `ui/notifications/size-change` when its rendered content
+   * The Guest UI sends `ui/notifications/size-changed` when its rendered content
    * size changes, typically via ResizeObserver. Set this callback to dynamically
    * adjust the iframe container dimensions based on the Guest UI's content.
    *

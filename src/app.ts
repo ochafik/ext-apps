@@ -88,7 +88,7 @@ type AppOptions = ProtocolOptions & {
    * Automatically report size changes to the host using ResizeObserver.
    *
    * When enabled, the App monitors `document.body` and `document.documentElement`
-   * for size changes and automatically sends `ui/notifications/size-change`
+   * for size changes and automatically sends `ui/notifications/size-changed`
    * notifications to the host.
    *
    * @default true
@@ -719,7 +719,7 @@ export class App extends Protocol<Request, Notification, Result> {
    */
   sendSizeChange(params: McpUiSizeChangeNotification["params"]) {
     return this.notification(<McpUiSizeChangeNotification>{
-      method: "ui/notifications/size-change",
+      method: "ui/notifications/size-changed",
       params,
     });
   }
@@ -728,7 +728,7 @@ export class App extends Protocol<Request, Notification, Result> {
    * Set up automatic size change notifications using ResizeObserver.
    *
    * Observes both `document.documentElement` and `document.body` for size changes
-   * and automatically sends `ui/notifications/size-change` notifications to the host.
+   * and automatically sends `ui/notifications/size-changed` notifications to the host.
    * The notifications are debounced using requestAnimationFrame to avoid duplicates.
    *
    * Note: This method is automatically called by `connect()` if the `autoResize`

@@ -5,7 +5,7 @@ import { App } from "../app";
  * React hook that automatically reports UI size changes to the host.
  *
  * Uses ResizeObserver to watch `document.body` and `document.documentElement` for
- * size changes and sends `ui/notifications/size-change` notifications.
+ * size changes and sends `ui/notifications/size-changed` notifications.
  *
  * **Note**: This hook is rarely needed since the {@link useApp} hook automatically enables
  * auto-resize by default. This hook is provided for advanced cases where you

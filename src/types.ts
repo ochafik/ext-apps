@@ -262,7 +262,7 @@ type _VerifySandboxResourceReadyNotification = VerifySchemaMatches<
  * @see {@link app.App.setupSizeChangeNotifications} for automatic size reporting
  */
 export interface McpUiSizeChangeNotification {
-  method: "ui/notifications/size-change";
+  method: "ui/notifications/size-changed";
   params: {
     /** New width in pixels */
     width?: number;
@@ -276,7 +276,7 @@ export interface McpUiSizeChangeNotification {
  * @internal
  */
 export const McpUiSizeChangeNotificationSchema = z.object({
-  method: z.literal("ui/notifications/size-change"),
+  method: z.literal("ui/notifications/size-changed"),
   params: z.object({
     width: z.number().optional(),
     height: z.number().optional(),
