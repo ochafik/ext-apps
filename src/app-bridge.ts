@@ -526,6 +526,22 @@ export class AppBridge extends Protocol<Request, Notification, Result> {
   }
 
   /**
+   * Verify that task creation is supported for the given request method.
+   * @internal
+   */
+  protected assertTaskCapability(_method: string): void {
+    throw new Error("Tasks are not supported in MCP Apps");
+  }
+
+  /**
+   * Verify that task handler is supported for the given method.
+   * @internal
+   */
+  protected assertTaskHandlerCapability(_method: string): void {
+    throw new Error("Task handlers are not supported in MCP Apps");
+  }
+
+  /**
    * Get the host capabilities passed to the constructor.
    *
    * @returns Host capabilities object

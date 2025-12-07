@@ -543,6 +543,22 @@ export class App extends Protocol<Request, Notification, Result> {
   }
 
   /**
+   * Verify that task creation is supported for the given request method.
+   * @internal
+   */
+  protected assertTaskCapability(_method: string): void {
+    throw new Error("Tasks are not supported in MCP Apps");
+  }
+
+  /**
+   * Verify that task handler is supported for the given method.
+   * @internal
+   */
+  protected assertTaskHandlerCapability(_method: string): void {
+    throw new Error("Task handlers are not supported in MCP Apps");
+  }
+
+  /**
    * Call a tool on the originating MCP server (proxied through the host).
    *
    * Apps can call tools to fetch fresh data or trigger server-side actions.
