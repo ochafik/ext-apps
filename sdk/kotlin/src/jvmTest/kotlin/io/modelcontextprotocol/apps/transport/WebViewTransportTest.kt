@@ -1,6 +1,12 @@
 package io.modelcontextprotocol.apps.transport
 
+import android.net.Uri
+import android.os.Build
 import android.webkit.WebView
+import androidx.webkit.WebMessageCompat
+import androidx.webkit.WebMessagePortCompat
+import androidx.webkit.WebViewCompat
+import androidx.webkit.WebViewFeature
 import io.modelcontextprotocol.apps.protocol.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
@@ -10,18 +16,24 @@ import kotlinx.coroutines.withTimeout
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.BeforeEach
 import org.mockito.kotlin.*
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
+import kotlin.test.assertFailsWith
 
 /**
  * Unit tests for WebViewTransport.
  *
- * Note: These tests use Mockito to mock the WebView since we're testing
+ * Note: These tests use Mockito to mock the WebView and WebViewCompat since we're testing
  * the transport logic without needing an actual Android environment.
  */
 class WebViewTransportTest {
+
+    private lateinit var nativePort: WebMessagePortCompat
+    private lateinit var jsPort: WebMessagePortCompat
+    private lateinit var portCallback: WebMessagePortCompat.WebMessageCallbackCompat
 
     /**
      * Create a mock WebView that simulates the Android WebView behavior.
@@ -41,168 +53,237 @@ class WebViewTransportTest {
         return webView
     }
 
+    @BeforeEach
+    fun setup() {
+        // Create mock ports
+        nativePort = mock<WebMessagePortCompat>()
+        jsPort = mock<WebMessagePortCompat>()
+
+        // Capture the callback when setWebMessageCallback is called
+        whenever(nativePort.setWebMessageCallback(any())).thenAnswer { invocation ->
+            portCallback = invocation.arguments[0] as WebMessagePortCompat.WebMessageCallbackCompat
+        }
+    }
+
     @Test
     fun testStartInitializesWebView() = runTest {
         val webView = createMockWebView()
-        val transport = WebViewTransport(webView)
 
-        transport.start()
+        // Mock static methods using mockStatic
+        mockStatic(WebViewFeature::class.java).use { webViewFeatureMock ->
+            webViewFeatureMock.`when`<Boolean> { WebViewFeature.isFeatureSupported(WebViewFeature.POST_WEB_MESSAGE) }.thenReturn(true)
+            webViewFeatureMock.`when`<Boolean> { WebViewFeature.isFeatureSupported(WebViewFeature.CREATE_WEB_MESSAGE_CHANNEL) }.thenReturn(true)
 
-        // Verify JavaScript is enabled
-        verify(webView.settings).javaScriptEnabled = true
+            mockStatic(WebViewCompat::class.java).use { webViewCompatMock ->
+                webViewCompatMock.`when`<Array<WebMessagePortCompat>> { WebViewCompat.createWebMessageChannel(webView) }
+                    .thenReturn(arrayOf(nativePort, jsPort))
 
-        // Verify JavaScript interface is added with the correct bridge name
-        verify(webView).addJavascriptInterface(any(), argThat { equals("AndroidMcpBridge") })
+                val transport = WebViewTransport(webView)
+                transport.start()
 
-        // Verify bridge script is injected
-        verify(webView).evaluateJavascript(argThat { contains("window.mcpBridge") }, isNull())
+                // Verify JavaScript is enabled
+                verify(webView.settings).javaScriptEnabled = true
+
+                // Verify channel was created
+                webViewCompatMock.verify { WebViewCompat.createWebMessageChannel(webView) }
+
+                // Verify callback was set on native port
+                verify(nativePort).setWebMessageCallback(any())
+
+                // Verify bridge script was injected
+                verify(webView).evaluateJavascript(argThat { contains("window.mcpBridge") }, isNull())
+
+                // Verify port was sent to WebView
+                webViewCompatMock.verify {
+                    WebViewCompat.postWebMessage(
+                        eq(webView),
+                        argThat { it.data == "mcp-channel-init" && it.ports?.contains(jsPort) == true },
+                        eq(Uri.EMPTY)
+                    )
+                }
+            }
+        }
     }
 
     @Test
     fun testSendMessageToWebView() = runTest {
         val webView = createMockWebView()
-        val transport = WebViewTransport(webView)
 
-        transport.start()
+        mockStatic(WebViewFeature::class.java).use { webViewFeatureMock ->
+            webViewFeatureMock.`when`<Boolean> { WebViewFeature.isFeatureSupported(WebViewFeature.POST_WEB_MESSAGE) }.thenReturn(true)
+            webViewFeatureMock.`when`<Boolean> { WebViewFeature.isFeatureSupported(WebViewFeature.CREATE_WEB_MESSAGE_CHANNEL) }.thenReturn(true)
 
-        // Create a test message
-        val message = JSONRPCRequest(
-            id = JsonPrimitive(1),
-            method = "test/method",
-            params = buildJsonObject {
-                put("key", JsonPrimitive("value"))
+            mockStatic(WebViewCompat::class.java).use { webViewCompatMock ->
+                webViewCompatMock.`when`<Array<WebMessagePortCompat>> { WebViewCompat.createWebMessageChannel(webView) }
+                    .thenReturn(arrayOf(nativePort, jsPort))
+
+                val transport = WebViewTransport(webView)
+                transport.start()
+
+                // Create a test message
+                val message = JSONRPCRequest(
+                    id = JsonPrimitive(1),
+                    method = "test/method",
+                    params = buildJsonObject {
+                        put("key", JsonPrimitive("value"))
+                    }
+                )
+
+                transport.send(message)
+
+                // Verify postWebMessage was called with the serialized message
+                webViewCompatMock.verify {
+                    WebViewCompat.postWebMessage(
+                        eq(webView),
+                        argThat { it.data?.contains("test/method") == true },
+                        eq(Uri.EMPTY)
+                    )
+                }
             }
-        )
-
-        transport.send(message)
-
-        // Verify evaluateJavascript was called with the message
-        verify(webView, atLeast(2)).evaluateJavascript(
-            argThat { contains("MessageEvent") && contains("test/method") },
-            isNull()
-        )
+        }
     }
 
     @Test
     fun testReceiveMessageFromJavaScript() = runTest {
         val webView = createMockWebView()
-        val transport = WebViewTransport(webView)
 
-        transport.start()
+        mockStatic(WebViewFeature::class.java).use { webViewFeatureMock ->
+            webViewFeatureMock.`when`<Boolean> { WebViewFeature.isFeatureSupported(WebViewFeature.POST_WEB_MESSAGE) }.thenReturn(true)
+            webViewFeatureMock.`when`<Boolean> { WebViewFeature.isFeatureSupported(WebViewFeature.CREATE_WEB_MESSAGE_CHANNEL) }.thenReturn(true)
 
-        // Capture the JsBridge instance
-        val bridgeCaptor = argumentCaptor<Any>()
-        verify(webView).addJavascriptInterface(bridgeCaptor.capture(), argThat { equals("AndroidMcpBridge") })
+            mockStatic(WebViewCompat::class.java).use { webViewCompatMock ->
+                webViewCompatMock.`when`<Array<WebMessagePortCompat>> { WebViewCompat.createWebMessageChannel(webView) }
+                    .thenReturn(arrayOf(nativePort, jsPort))
 
-        val jsBridge = bridgeCaptor.firstValue
+                val transport = WebViewTransport(webView)
+                transport.start()
 
-        // Create a test message JSON
-        val messageJson = """{"jsonrpc":"2.0","id":1,"method":"ui/initialize","params":{}}"""
+                // Create a test message JSON
+                val messageJson = """{"jsonrpc":"2.0","id":1,"method":"ui/initialize","params":{}}"""
 
-        // Collect incoming messages in a separate coroutine
-        val receivedMessages = mutableListOf<JSONRPCMessage>()
-        val job = launch {
-            transport.incoming.collect { receivedMessages.add(it) }
+                // Collect incoming messages in a separate coroutine
+                val receivedMessages = mutableListOf<JSONRPCMessage>()
+                val job = launch {
+                    transport.incoming.collect { receivedMessages.add(it) }
+                }
+
+                // Simulate JavaScript sending a message via the port
+                val webMessage = WebMessageCompat(messageJson)
+                portCallback.onMessage(nativePort, webMessage)
+
+                // Give some time for the message to be processed
+                delay(50)
+
+                // Verify message was received
+                assertTrue(receivedMessages.isNotEmpty(), "Should have received at least one message")
+                val received = receivedMessages.first() as JSONRPCRequest
+                assertEquals("ui/initialize", received.method)
+                assertEquals(JsonPrimitive(1), received.id)
+
+                job.cancel()
+            }
         }
-
-        // Simulate JavaScript calling the send method
-        val sendMethod = jsBridge.javaClass.getMethod("send", String::class.java)
-        sendMethod.invoke(jsBridge, messageJson)
-
-        // Give some time for the message to be processed
-        delay(50)
-
-        // Verify message was received
-        assertTrue(receivedMessages.isNotEmpty(), "Should have received at least one message")
-        val received = receivedMessages.first() as JSONRPCRequest
-        assertEquals("ui/initialize", received.method)
-        assertEquals(JsonPrimitive(1), received.id)
-
-        job.cancel()
     }
 
     @Test
-    fun testCloseRemovesJavaScriptInterface() = runTest {
+    fun testCloseClosesPort() = runTest {
         val webView = createMockWebView()
-        val transport = WebViewTransport(webView)
 
-        transport.start()
-        transport.close()
+        mockStatic(WebViewFeature::class.java).use { webViewFeatureMock ->
+            webViewFeatureMock.`when`<Boolean> { WebViewFeature.isFeatureSupported(WebViewFeature.POST_WEB_MESSAGE) }.thenReturn(true)
+            webViewFeatureMock.`when`<Boolean> { WebViewFeature.isFeatureSupported(WebViewFeature.CREATE_WEB_MESSAGE_CHANNEL) }.thenReturn(true)
 
-        // Verify JavaScript interface is removed
-        verify(webView).removeJavascriptInterface("AndroidMcpBridge")
+            mockStatic(WebViewCompat::class.java).use { webViewCompatMock ->
+                webViewCompatMock.`when`<Array<WebMessagePortCompat>> { WebViewCompat.createWebMessageChannel(webView) }
+                    .thenReturn(arrayOf(nativePort, jsPort))
+
+                val transport = WebViewTransport(webView)
+                transport.start()
+                transport.close()
+
+                // Verify port is closed
+                verify(nativePort).close()
+            }
+        }
     }
 
     @Test
     fun testErrorHandlingForInvalidJSON() = runTest {
         val webView = createMockWebView()
-        val transport = WebViewTransport(webView)
 
-        transport.start()
+        mockStatic(WebViewFeature::class.java).use { webViewFeatureMock ->
+            webViewFeatureMock.`when`<Boolean> { WebViewFeature.isFeatureSupported(WebViewFeature.POST_WEB_MESSAGE) }.thenReturn(true)
+            webViewFeatureMock.`when`<Boolean> { WebViewFeature.isFeatureSupported(WebViewFeature.CREATE_WEB_MESSAGE_CHANNEL) }.thenReturn(true)
 
-        // Capture the JsBridge instance
-        val bridgeCaptor = argumentCaptor<Any>()
-        verify(webView).addJavascriptInterface(bridgeCaptor.capture(), argThat { equals("AndroidMcpBridge") })
+            mockStatic(WebViewCompat::class.java).use { webViewCompatMock ->
+                webViewCompatMock.`when`<Array<WebMessagePortCompat>> { WebViewCompat.createWebMessageChannel(webView) }
+                    .thenReturn(arrayOf(nativePort, jsPort))
 
-        val jsBridge = bridgeCaptor.firstValue
+                val transport = WebViewTransport(webView)
+                transport.start()
 
-        // Collect errors
-        val receivedErrors = mutableListOf<Throwable>()
-        val job = launch {
-            transport.errors.collect { receivedErrors.add(it) }
+                // Collect errors
+                val receivedErrors = mutableListOf<Throwable>()
+                val job = launch {
+                    transport.errors.collect { receivedErrors.add(it) }
+                }
+
+                // Simulate JavaScript sending invalid JSON
+                val webMessage = WebMessageCompat("invalid json{")
+                portCallback.onMessage(nativePort, webMessage)
+
+                delay(50)
+
+                // Verify error was emitted
+                assertTrue(receivedErrors.isNotEmpty(), "Should have received at least one error")
+                assertTrue(receivedErrors.first().message?.contains("Failed to parse") == true)
+
+                job.cancel()
+            }
         }
-
-        // Simulate JavaScript sending invalid JSON
-        val sendMethod = jsBridge.javaClass.getMethod("send", String::class.java)
-        sendMethod.invoke(jsBridge, "invalid json{")
-
-        delay(50)
-
-        // Verify error was emitted
-        assertTrue(receivedErrors.isNotEmpty(), "Should have received at least one error")
-        assertTrue(receivedErrors.first().message?.contains("Failed to parse") == true)
-
-        job.cancel()
     }
 
     @Test
     fun testMultipleMessages() = runTest {
         val webView = createMockWebView()
-        val transport = WebViewTransport(webView)
 
-        transport.start()
+        mockStatic(WebViewFeature::class.java).use { webViewFeatureMock ->
+            webViewFeatureMock.`when`<Boolean> { WebViewFeature.isFeatureSupported(WebViewFeature.POST_WEB_MESSAGE) }.thenReturn(true)
+            webViewFeatureMock.`when`<Boolean> { WebViewFeature.isFeatureSupported(WebViewFeature.CREATE_WEB_MESSAGE_CHANNEL) }.thenReturn(true)
 
-        // Capture the JsBridge instance
-        val bridgeCaptor = argumentCaptor<Any>()
-        verify(webView).addJavascriptInterface(bridgeCaptor.capture(), argThat { equals("AndroidMcpBridge") })
+            mockStatic(WebViewCompat::class.java).use { webViewCompatMock ->
+                webViewCompatMock.`when`<Array<WebMessagePortCompat>> { WebViewCompat.createWebMessageChannel(webView) }
+                    .thenReturn(arrayOf(nativePort, jsPort))
 
-        val jsBridge = bridgeCaptor.firstValue
-        val sendMethod = jsBridge.javaClass.getMethod("send", String::class.java)
+                val transport = WebViewTransport(webView)
+                transport.start()
 
-        // Collect incoming messages
-        val receivedMessages = mutableListOf<JSONRPCMessage>()
-        val job = launch {
-            transport.incoming.collect { receivedMessages.add(it) }
+                // Collect incoming messages
+                val receivedMessages = mutableListOf<JSONRPCMessage>()
+                val job = launch {
+                    transport.incoming.collect { receivedMessages.add(it) }
+                }
+
+                // Send multiple messages
+                val message1 = """{"jsonrpc":"2.0","method":"notification/one"}"""
+                val message2 = """{"jsonrpc":"2.0","method":"notification/two"}"""
+                val message3 = """{"jsonrpc":"2.0","id":42,"method":"request/three"}"""
+
+                portCallback.onMessage(nativePort, WebMessageCompat(message1))
+                portCallback.onMessage(nativePort, WebMessageCompat(message2))
+                portCallback.onMessage(nativePort, WebMessageCompat(message3))
+
+                delay(100)
+
+                // Verify all messages were received
+                assertEquals(3, receivedMessages.size)
+                assertEquals("notification/one", (receivedMessages[0] as JSONRPCNotification).method)
+                assertEquals("notification/two", (receivedMessages[1] as JSONRPCNotification).method)
+                assertEquals("request/three", (receivedMessages[2] as JSONRPCRequest).method)
+
+                job.cancel()
+            }
         }
-
-        // Send multiple messages
-        val message1 = """{"jsonrpc":"2.0","method":"notification/one"}"""
-        val message2 = """{"jsonrpc":"2.0","method":"notification/two"}"""
-        val message3 = """{"jsonrpc":"2.0","id":42,"method":"request/three"}"""
-
-        sendMethod.invoke(jsBridge, message1)
-        sendMethod.invoke(jsBridge, message2)
-        sendMethod.invoke(jsBridge, message3)
-
-        delay(100)
-
-        // Verify all messages were received
-        assertEquals(3, receivedMessages.size)
-        assertEquals("notification/one", (receivedMessages[0] as JSONRPCNotification).method)
-        assertEquals("notification/two", (receivedMessages[1] as JSONRPCNotification).method)
-        assertEquals("request/three", (receivedMessages[2] as JSONRPCRequest).method)
-
-        job.cancel()
     }
 
     @Test
@@ -224,10 +305,16 @@ class WebViewTransportTest {
             "Should override window.parent.postMessage"
         )
 
-        // Should check for AndroidMcpBridge
+        // Should listen for MessagePort
         assertTrue(
-            bridgeScript.contains("AndroidMcpBridge"),
-            "Should reference AndroidMcpBridge"
+            bridgeScript.contains("mcp-channel-init"),
+            "Should listen for channel init message"
+        )
+
+        // Should check for port initialization
+        assertTrue(
+            bridgeScript.contains("_port"),
+            "Should have port field"
         )
 
         // Should handle initialization check
@@ -235,5 +322,20 @@ class WebViewTransportTest {
             bridgeScript.contains("_initialized"),
             "Should have initialization guard"
         )
+    }
+
+    @Test
+    fun testUnsupportedWebViewFeatureThrows() = runTest {
+        val webView = createMockWebView()
+
+        mockStatic(WebViewFeature::class.java).use { webViewFeatureMock ->
+            webViewFeatureMock.`when`<Boolean> { WebViewFeature.isFeatureSupported(WebViewFeature.POST_WEB_MESSAGE) }.thenReturn(false)
+
+            val transport = WebViewTransport(webView)
+
+            assertFailsWith<UnsupportedOperationException> {
+                transport.start()
+            }
+        }
     }
 }
