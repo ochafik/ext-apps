@@ -7,6 +7,8 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
   workers: 1, // Single worker since we share the server
   reporter: "html",
+  // In CI, create missing snapshots instead of failing (for cross-platform support)
+  updateSnapshots: process.env.CI ? "missing" : "none",
   use: {
     baseURL: "http://localhost:8080",
     trace: "on-first-retry",
