@@ -27,7 +27,7 @@ dependencies {
 
 ### Swift SDK
 
-**Platforms**: iOS 15+, macOS 12+, tvOS 15+, watchOS 8+
+**Platforms**: iOS 16+, macOS 13+, tvOS 16+, watchOS 9+
 
 ```swift
 .package(url: "https://github.com/modelcontextprotocol/ext-apps.git", from: "0.1.0")
@@ -100,20 +100,64 @@ These native SDKs are compatible with the TypeScript SDK (`@modelcontextprotocol
 
 ## Building
 
+### Prerequisites
+
+**Kotlin SDK:**
+- JDK 17+
+- Gradle 8+ (or use the wrapper)
+
+**Swift SDK:**
+- Xcode 15+ (for Swift 6.0)
+- macOS 13+ for development
+
 ### Kotlin
 
 ```bash
-cd kotlin
+cd sdk/kotlin
+
+# Generate gradle wrapper (first time)
+gradle wrapper
+
+# Build
 ./gradlew build
+
+# Run tests
 ./gradlew test
+
+# Build for specific platform
+./gradlew jvmJar        # JVM/Android
+./gradlew iosArm64Main  # iOS
 ```
 
 ### Swift
 
 ```bash
-cd swift
+cd sdk/swift
+
+# Build
 swift build
+
+# Run tests (requires Xcode/macOS)
 swift test
+
+# Build for release
+swift build -c release
+```
+
+### Example Apps
+
+**Android (basic-host-kotlin):**
+```bash
+cd examples/basic-host-kotlin
+# Open in Android Studio, or:
+./gradlew assembleDebug
+```
+
+**iOS (basic-host-swift):**
+```bash
+cd examples/basic-host-swift
+# Open Package.swift in Xcode, or:
+swift build
 ```
 
 ## Contributing

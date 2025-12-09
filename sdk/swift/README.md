@@ -116,10 +116,23 @@ let _ = try await bridge.sendResourceTeardown()
 
 ## Platform Support
 
-- iOS 15+
-- macOS 12+
-- tvOS 15+
-- watchOS 8+
+- iOS 16+
+- macOS 13+
+- tvOS 16+
+- watchOS 9+
+
+## Building
+
+```bash
+# Build the SDK
+swift build
+
+# Run tests (requires Xcode on macOS)
+swift test
+
+# Build for release
+swift build -c release
+```
 
 ## Types
 

@@ -118,6 +118,24 @@ val result = bridge.sendResourceTeardown()
 - macOS (via Kotlin/Native)
 - WebAssembly (experimental)
 
+## Building
+
+```bash
+# First time: generate gradle wrapper
+gradle wrapper
+
+# Build all targets
+./gradlew build
+
+# Run tests
+./gradlew test
+
+# Build specific targets
+./gradlew jvmJar           # JVM/Android
+./gradlew iosArm64Main     # iOS ARM64
+./gradlew macosArm64Main   # macOS ARM64
+```
+
 ## Types
 
 ### Host Context
