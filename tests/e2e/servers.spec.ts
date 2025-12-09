@@ -20,10 +20,9 @@ const SERVERS = [
   { key: "threejs", index: 7, name: "Three.js Server" },
 ];
 
-// Increase timeout for iframe-heavy tests
-test.setTimeout(90000);
-
 test.describe("Host UI", () => {
+  // Increase timeout for iframe-heavy tests
+  test.setTimeout(90000);
   test("initial state shows controls", async ({ page }) => {
     await page.goto("/");
     await expect(page.locator("label:has-text('Server')")).toBeVisible();
@@ -41,6 +40,8 @@ test.describe("Host UI", () => {
 // Generate tests for each server
 for (const server of SERVERS) {
   test.describe(`${server.name}`, () => {
+    test.setTimeout(90000);
+
     test(`loads app UI`, async ({ page }) => {
       await page.goto("/");
 
