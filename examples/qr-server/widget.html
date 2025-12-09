@@ -25,67 +25,28 @@
 </head>
 <body>
   <div id="qr"></div>
-  <script>
-    const WIDTH = 340;
-    const HEIGHT = 340;
-    let requestId = 1;
+  <script type="module">
+    import { App, PostMessageTransport } from "https://unpkg.com/@modelcontextprotocol/ext-apps@0.0.4";
 
-    // Listen for messages from host
-    window.addEventListener('message', e => {
-      console.log('[Widget] Received message:', e);
-      const msg = e.data;
-      if (!msg || typeof msg !== 'object') return;
+    const app = new App({ name: "QR Widget", version: "1.0.0" });
 
-      // Handle ui/notifications/tool-result
-      if (msg.method === 'ui/notifications/tool-result') {
-        const content = msg.params?.content;
-        const img = content?.find(c => c.type === 'image');
-        if (img) {
-          const qrDiv = document.getElementById('qr');
-          qrDiv.innerHTML = ''; // clear previous content
+    app.ontoolresult = ({ content }) => {
+      const img = content?.find(c => c.type === 'image');
+      if (img) {
+        const qrDiv = document.getElementById('qr');
+        qrDiv.innerHTML = '';
 
-          // Optionally allowlist mimetypes
-          const allowedTypes = ['image/png', 'image/jpeg', 'image/gif'];
-          const mimeType = allowedTypes.includes(img.mimeType) ? img.mimeType : 'image/png';
+        const allowedTypes = ['image/png', 'image/jpeg', 'image/gif'];
+        const mimeType = allowedTypes.includes(img.mimeType) ? img.mimeType : 'image/png';
 
-          const image = document.createElement('img');
-          image.src = `data:${mimeType};base64,${img.data}`;
-          image.alt = "QR Code";
-          qrDiv.appendChild(image);
-
-          // Report size to host
-          window.parent.postMessage({
-            jsonrpc: '2.0',
-            method: 'ui/notifications/size-changed',
-            params: { width: WIDTH, height: HEIGHT }
-          }, '*');
-        }
+        const image = document.createElement('img');
+        image.src = `data:${mimeType};base64,${img.data}`;
+        image.alt = "QR Code";
+        qrDiv.appendChild(image);
       }
+    };
 
-      // Handle ui/initialize response - MUST send ui/notifications/initialized
-      if (msg.id && msg.result) {
-        console.log('[Widget] Initialize response received:', msg.result);
-        // Send initialized notification - HOST WAITS FOR THIS!
-        window.parent.postMessage({
-          jsonrpc: '2.0',
-          method: 'ui/notifications/initialized',
-          params: {}
-        }, '*');
-        console.log('[Widget] Sent ui/notifications/initialized');
-      }
-    });
-
-    // Send ui/initialize request when ready
-    window.parent.postMessage({
-      jsonrpc: '2.0',
-      id: requestId++,
-      method: 'ui/initialize',
-      params: {
-        appInfo: { name: 'QR Widget', version: '1.0.0' },
-        appCapabilities: {},
-        protocolVersion: '2024-11-05'
-      }
-    }, '*');
+    await app.connect(new PostMessageTransport(window.parent));
   </script>
 </body>
 </html>

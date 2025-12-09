@@ -62,9 +62,21 @@ def generate_qr(
     return [ImageContent(type="image", data=b64, mimeType="image/png")]
 
 
+# IMPORTANT: resourceDomains needed for CSP to allow loading SDK from unpkg.com
+# Without this, hosts enforcing CSP will block the external script import
 @mcp.resource(WIDGET_URI, mime_type="text/html")
-def widget() -> str:
-    return Path(__file__).parent.joinpath("widget.html").read_text()
+def widget() -> dict:
+    html = Path(__file__).parent.joinpath("widget.html").read_text()
+    return {
+        "text": html,
+        "_meta": {
+            "ui": {
+                "csp": {
+                    "resourceDomains": ["https://unpkg.com"]
+                }
+            }
+        }
+    }
 
 # HACK: Bypass SDK's restrictive mime_type validation
 # The SDK pattern doesn't allow ";profile=mcp-app" but MCP spec requires it for widgets
