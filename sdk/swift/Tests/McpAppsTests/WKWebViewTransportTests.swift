@@ -304,4 +304,130 @@ final class WKWebViewTransportTests: XCTestCase {
 
         await transport.close()
     }
+
+    func testMessageEventFormat() async throws {
+        let webView = WKWebView()
+        let transport = WKWebViewTransport(webView: webView)
+
+        try await transport.start()
+
+        // Load an HTML page that captures MessageEvents
+        let html = """
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Test</title>
+            <script>
+                window.capturedEvents = [];
+                window.addEventListener('message', (event) => {
+                    // Verify event.data is an object, not a string
+                    window.capturedEvents.push({
+                        dataType: typeof event.data,
+                        isObject: typeof event.data === 'object',
+                        hasJsonRpc: event.data && event.data.jsonrpc !== undefined,
+                        data: event.data
+                    });
+                });
+            </script>
+        </head>
+        <body>Test Page</body>
+        </html>
+        """
+
+        await MainActor.run {
+            webView.loadHTMLString(html, baseURL: nil)
+        }
+
+        // Wait for page to load
+        try await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
+
+        // Send a message
+        let request = JSONRPCRequest(
+            id: .number(1),
+            method: "test/method",
+            params: ["key": AnyCodable("value")]
+        )
+
+        try await transport.send(.request(request))
+
+        // Wait for event to be captured
+        try await Task.sleep(nanoseconds: 100_000_000) // 0.1 seconds
+
+        // Verify the event was captured correctly
+        let result = try await MainActor.run {
+            try await webView.evaluateJavaScript("window.capturedEvents.length")
+        }
+
+        // Should have captured at least one event
+        if let count = result as? Int {
+            XCTAssertGreaterThan(count, 0, "Should have captured at least one message event")
+
+            // Check the format of the first event
+            let firstEvent = try await MainActor.run {
+                try await webView.evaluateJavaScript("JSON.stringify(window.capturedEvents[0])")
+            }
+
+            if let eventJson = firstEvent as? String {
+                // Parse and verify the event structure
+                let data = eventJson.data(using: .utf8)!
+                let event = try JSONSerialization.jsonObject(with: data) as! [String: Any]
+
+                // CRITICAL: event.data must be an object, not a string
+                XCTAssertEqual(event["dataType"] as? String, "object", "event.data must be an object")
+                XCTAssertEqual(event["isObject"] as? Bool, true, "event.data must be an object")
+                XCTAssertEqual(event["hasJsonRpc"] as? Bool, true, "event.data must have jsonrpc property")
+            }
+        }
+
+        await transport.close()
+    }
+
+    func testBridgeScriptPostMessage() async throws {
+        let webView = WKWebView()
+        let transport = WKWebViewTransport(webView: webView)
+
+        try await transport.start()
+
+        // Load HTML that uses window.parent.postMessage (like TypeScript SDK)
+        let html = """
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Test</title>
+            <script>
+                // Wait for bridge to be ready
+                window.addEventListener('mcp-bridge-ready', () => {
+                    // This simulates what the TypeScript SDK does
+                    window.parent.postMessage({
+                        jsonrpc: '2.0',
+                        method: 'test/fromJs',
+                        params: { test: 'value' }
+                    }, '*');
+                });
+            </script>
+        </head>
+        <body>Test Page</body>
+        </html>
+        """
+
+        // Set up expectation to receive message
+        let expectation = expectation(description: "Receive message from JS")
+
+        Task {
+            for try await message in await transport.incoming {
+                if case .notification(let notif) = message, notif.method == "test/fromJs" {
+                    expectation.fulfill()
+                    break
+                }
+            }
+        }
+
+        await MainActor.run {
+            webView.loadHTMLString(html, baseURL: nil)
+        }
+
+        await fulfillment(of: [expectation], timeout: 2.0)
+
+        await transport.close()
+    }
 }

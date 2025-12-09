@@ -22,16 +22,33 @@ import WebKit
 /// TypeScript SDK and WKWebView's message handlers:
 ///
 /// ```javascript
-/// // Creates window.mcpBridge.send() for explicit sending
-/// window.mcpBridge = {
-///   send: (message) => webkit.messageHandlers.mcpBridge.postMessage(message)
+/// // Override window.parent for TypeScript SDK compatibility
+/// window.parent = {
+///   postMessage: (message, origin) => {
+///     webkit.messageHandlers.mcpBridge.postMessage(message);
+///   }
 /// };
 ///
-/// // Overrides window.parent.postMessage for TypeScript SDK compatibility
-/// window.parent.postMessage = (message) => {
-///   webkit.messageHandlers.mcpBridge.postMessage(message);
-/// };
+/// // Signal ready
+/// window.dispatchEvent(new Event('mcp-bridge-ready'));
 /// ```
+///
+/// ## Message Format
+///
+/// **Outgoing (Swift → JS)**: The transport dispatches MessageEvent with `data`
+/// as a parsed JavaScript object, NOT a JSON string. This matches the TypeScript
+/// SDK's expectation in `PostMessageTransport.messageListener`:
+///
+/// ```javascript
+/// window.dispatchEvent(new MessageEvent('message', {
+///   data: messageObj,  // Parsed object, not string!
+///   origin: window.location.origin,
+///   source: window
+/// }));
+/// ```
+///
+/// **Incoming (JS → Swift)**: The bridge intercepts `window.parent.postMessage()`
+/// and forwards the message object directly to the native handler.
 ///
 /// ## Usage
 ///
@@ -116,7 +133,9 @@ public actor WKWebViewTransport: McpAppsTransport {
     /// Send a JSON-RPC message to the Guest UI.
     ///
     /// Messages are encoded to JSON and dispatched as MessageEvents on the
-    /// window object in JavaScript.
+    /// window object in JavaScript. The message is dispatched as a parsed
+    /// JavaScript object (not a JSON string) to match the TypeScript SDK's
+    /// expectations in PostMessageTransport.
     public func send(_ message: JSONRPCMessage) async throws {
         guard let webView = webView else {
             throw TransportError.notConnected
@@ -130,21 +149,17 @@ public actor WKWebViewTransport: McpAppsTransport {
             throw TransportError.serializationFailed
         }
 
-        // Escape the JSON string for JavaScript
-        let escapedJson = jsonString
-            .replacingOccurrences(of: "\\", with: "\\\\")
-            .replacingOccurrences(of: "\"", with: "\\\"")
-            .replacingOccurrences(of: "\n", with: "\\n")
-            .replacingOccurrences(of: "\r", with: "\\r")
-
-        // Dispatch MessageEvent on window
+        // Dispatch MessageEvent with parsed object as data
+        // CRITICAL: The TypeScript SDK's JSONRPCMessageSchema.safeParse(event.data)
+        // expects event.data to be a parsed object, NOT a JSON string
         let script = """
         (function() {
             try {
-                const message = JSON.parse("\(escapedJson)");
+                const messageObj = \(jsonString);
                 window.dispatchEvent(new MessageEvent('message', {
-                    data: message,
-                    origin: window.location.origin
+                    data: messageObj,
+                    origin: window.location.origin,
+                    source: window
                 }));
             } catch (error) {
                 console.error('Failed to dispatch message:', error);
@@ -176,33 +191,21 @@ public actor WKWebViewTransport: McpAppsTransport {
     private func createBridgeScript() -> String {
         """
         (function() {
-            // Create mcpBridge for explicit message sending
-            window.mcpBridge = {
-                send: function(message) {
-                    if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.\(handlerName)) {
-                        window.webkit.messageHandlers.\(handlerName).postMessage(message);
-                    } else {
-                        console.error('WKWebView message handler not available');
-                    }
+            // Override window.parent.postMessage for TypeScript SDK compatibility
+            // The TypeScript SDK's PostMessageTransport uses window.parent.postMessage
+            // to send messages to the host
+            window.parent = window.parent || {};
+            window.parent.postMessage = function(message, targetOrigin) {
+                if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.\(handlerName)) {
+                    // Send the message object directly to native
+                    window.webkit.messageHandlers.\(handlerName).postMessage(message);
+                } else {
+                    console.error('WKWebView message handler not available');
                 }
             };
 
-            // Override window.parent.postMessage for TypeScript SDK compatibility
-            // The TypeScript SDK uses window.parent.postMessage to communicate with the host
-            const originalPostMessage = window.parent.postMessage.bind(window.parent);
-            window.parent.postMessage = function(message, targetOrigin, transfer) {
-                // Check if this is a JSON-RPC message (has jsonrpc property)
-                if (message && typeof message === 'object' && message.jsonrpc) {
-                    if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.\(handlerName)) {
-                        window.webkit.messageHandlers.\(handlerName).postMessage(message);
-                    } else {
-                        console.error('WKWebView message handler not available');
-                    }
-                } else {
-                    // Fall back to original postMessage for non-JSON-RPC messages
-                    originalPostMessage(message, targetOrigin, transfer);
-                }
-            };
+            // Signal that the bridge is ready
+            window.dispatchEvent(new Event('mcp-bridge-ready'));
 
             console.log('MCP Apps WKWebView bridge initialized');
         })();
