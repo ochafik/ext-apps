@@ -40,6 +40,45 @@ Or build and run examples:
 npm run examples:start
 ```
 
+## Testing
+
+### Unit Tests
+
+Run unit tests with Bun:
+
+```bash
+npm test
+```
+
+### E2E Tests
+
+E2E tests use Playwright to verify all example servers work correctly with screenshot comparisons.
+
+```bash
+# Run all E2E tests
+npm run test:e2e
+
+# Run a specific server's tests
+npm run test:e2e -- --grep "Budget Allocator"
+
+# Run tests in interactive UI mode
+npm run test:e2e:ui
+```
+
+### Updating Golden Screenshots
+
+When UI changes are intentional, update the golden screenshots:
+
+```bash
+# Update all screenshots
+npm run test:e2e:update
+
+# Update screenshots for a specific server
+npm run test:e2e:update -- --grep "Three.js"
+```
+
+**Note**: Golden screenshots are platform-specific (e.g., `*-chromium-darwin.png` for macOS). CI runs on Linux, so you may need to update screenshots in both environments or run in a container.
+
 ## Code of Conduct
 
 This project follows our [Code of Conduct](CODE_OF_CONDUCT.md). Please review it before contributing.
