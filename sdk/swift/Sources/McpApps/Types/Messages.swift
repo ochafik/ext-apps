@@ -277,7 +277,9 @@ public struct McpUiResourceMeta: Codable, Sendable {
 // MARK: - AnyCodable Helper
 
 /// Type-erased Codable wrapper for heterogeneous JSON values.
-public struct AnyCodable: Codable, Sendable, Equatable {
+/// Uses @unchecked Sendable because we only store JSON-compatible values
+/// (String, Int, Double, Bool, Array, Dictionary, NSNull) which are all safe.
+public struct AnyCodable: Codable, Equatable, @unchecked Sendable {
     public let value: Any
 
     public init(_ value: Any) {
