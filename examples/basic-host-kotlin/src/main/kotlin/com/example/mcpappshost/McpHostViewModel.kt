@@ -18,16 +18,16 @@ import kotlinx.serialization.json.*
 
 private const val TAG = "McpHostViewModel"
 
-// Known servers matching examples/servers.json
+// Known servers - using /sse endpoint for SSE transport (Kotlin SDK)
 val knownServers = listOf(
-    "basic-server-react" to "http://10.0.2.2:3101/mcp",
-    "basic-server-vanillajs" to "http://10.0.2.2:3102/mcp",
-    "budget-allocator-server" to "http://10.0.2.2:3103/mcp",
-    "cohort-heatmap-server" to "http://10.0.2.2:3104/mcp",
-    "customer-segmentation-server" to "http://10.0.2.2:3105/mcp",
-    "scenario-modeler-server" to "http://10.0.2.2:3106/mcp",
-    "system-monitor-server" to "http://10.0.2.2:3107/mcp",
-    "threejs-server" to "http://10.0.2.2:3108/mcp",
+    "basic-server-react" to "http://10.0.2.2:3101/sse",
+    "basic-server-vanillajs" to "http://10.0.2.2:3102/sse",
+    "budget-allocator-server" to "http://10.0.2.2:3103/sse",
+    "cohort-heatmap-server" to "http://10.0.2.2:3104/sse",
+    "customer-segmentation-server" to "http://10.0.2.2:3105/sse",
+    "scenario-modeler-server" to "http://10.0.2.2:3106/sse",
+    "system-monitor-server" to "http://10.0.2.2:3107/sse",
+    "threejs-server" to "http://10.0.2.2:3108/sse",
 )
 
 data class ToolInfo(

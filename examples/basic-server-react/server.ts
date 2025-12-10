@@ -1,5 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
+import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 import type { CallToolResult, ReadResourceResult } from "@modelcontextprotocol/sdk/types.js";
 import cors from "cors";
 import express, { type Request, type Response } from "express";
@@ -62,6 +63,34 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// SSE endpoint for Kotlin/native clients
+const sseTransports = new Map<string, SSEServerTransport>();
+
+app.get("/sse", async (req: Request, res: Response) => {
+  const transport = new SSEServerTransport("/messages", res);
+  const sessionId = transport.sessionId;
+  sseTransports.set(sessionId, transport);
+
+  res.on("close", () => {
+    sseTransports.delete(sessionId);
+    transport.close();
+  });
+
+  await server.connect(transport);
+  await transport.start();
+});
+
+app.post("/messages", async (req: Request, res: Response) => {
+  const sessionId = req.query.sessionId as string;
+  const transport = sseTransports.get(sessionId);
+  if (!transport) {
+    res.status(404).json({ error: "Session not found" });
+    return;
+  }
+  await transport.handlePostMessage(req, res, req.body);
+});
+
+// StreamableHTTP endpoint for web clients
 app.post("/mcp", async (req: Request, res: Response) => {
   try {
     const transport = new StreamableHTTPServerTransport({
