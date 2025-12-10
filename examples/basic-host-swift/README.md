@@ -316,7 +316,7 @@ Ideas for improvements:
 
 ## See Also
 
-- [MCP Apps Swift SDK](../../sdk/swift/README.md)
+- [MCP Apps Swift SDK](../../swift/README.md)
 - [MCP Apps Specification](../../docs/specification.md)
 - [Basic Host (Web)](../basic-host/README.md) - Web-based reference implementation
 - [Example Servers](../) - MCP servers with UIs to test with

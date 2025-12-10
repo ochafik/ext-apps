@@ -75,7 +75,7 @@ Android Studio will automatically detect the `build.gradle.kts` file and prompt 
 The project is configured to use the local MCP Apps Kotlin SDK via composite build:
 
 ```kotlin
-includeBuild("../../sdk/kotlin") {
+includeBuild("../../kotlin") {
     dependencySubstitution {
         substitute(module("io.modelcontextprotocol:mcp-apps-kotlin-sdk"))
             .using(project(":"))
@@ -279,7 +279,7 @@ Inspect the WebView remotely:
 
 This example uses:
 
-- **MCP Apps Kotlin SDK**: From `../../sdk/kotlin` (local)
+- **MCP Apps Kotlin SDK**: From `../../kotlin` (local)
   - `AppBridge`: Host-side bridge for communication
   - `WebViewTransport`: Android WebView transport layer
   - Type definitions: `McpUiHostContext`, `McpUiHostCapabilities`, etc.

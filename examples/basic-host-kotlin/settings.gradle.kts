@@ -17,7 +17,7 @@ dependencyResolutionManagement {
 rootProject.name = "basic-host-kotlin"
 
 // Include the MCP Apps Kotlin SDK from the parent project
-includeBuild("../../sdk/kotlin") {
+includeBuild("../../kotlin") {
     dependencySubstitution {
         substitute(module("io.modelcontextprotocol:mcp-apps-kotlin-sdk"))
             .using(project(":"))

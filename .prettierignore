@@ -11,3 +11,6 @@ examples/basic-host-swift/.build/
 examples/basic-host-swift/build/
 examples/basic-host-kotlin/.gradle/
 examples/basic-host-kotlin/build/
+
+# Swift build artifacts
+swift/.build/

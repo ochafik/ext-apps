@@ -115,7 +115,7 @@ These native SDKs are compatible with the TypeScript SDK (`@modelcontextprotocol
 ### Kotlin
 
 ```bash
-cd sdk/kotlin
+cd kotlin
 
 # Generate gradle wrapper (first time)
 gradle wrapper
@@ -134,7 +134,7 @@ gradle wrapper
 ### Swift
 
 ```bash
-cd sdk/swift
+cd swift
 
 # Build
 swift build

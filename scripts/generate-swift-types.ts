@@ -17,7 +17,7 @@ const PROJECT_DIR = join(__dirname, "..");
 const SCHEMA_FILE = join(PROJECT_DIR, "src/generated/schema.json");
 const OUTPUT_FILE = join(
   PROJECT_DIR,
-  "sdk/swift/Sources/McpApps/Generated/SchemaTypes.swift",
+  "swift/Sources/McpApps/Generated/SchemaTypes.swift",
 );
 
 interface JsonSchema {
