@@ -224,12 +224,13 @@ struct ToolCallCard: View {
                     .cornerRadius(4)
             } else if toolCallInfo.state == .ready, toolCallInfo.htmlContent != nil {
                 WebViewContainer(toolCallInfo: toolCallInfo)
-                    .frame(height: 350)
+                    .frame(height: toolCallInfo.preferredHeight)
                     .cornerRadius(8)
                     .overlay(
                         RoundedRectangle(cornerRadius: 8)
                             .stroke(Color.gray.opacity(0.3), lineWidth: 1)
                     )
+                    .animation(.easeInOut(duration: 0.2), value: toolCallInfo.preferredHeight)
             } else if toolCallInfo.state == .completed, let result = toolCallInfo.result {
                 VStack(alignment: .leading, spacing: 4) {
                     ForEach(Array(result.content.enumerated()), id: \.offset) { _, content in

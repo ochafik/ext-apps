@@ -110,6 +110,76 @@ function isEmptyObject(schema: JsonSchema): boolean {
   );
 }
 
+// Check if anyOf represents a discriminated union (objects with "type" const field)
+function isDiscriminatedUnion(variants: JsonSchema[]): boolean {
+  return variants.every((v) => {
+    if (v.type !== "object" || !v.properties?.type) return false;
+    const typeField = v.properties.type;
+    return typeField.const !== undefined || typeField.type === "string";
+  });
+}
+
+// Get the discriminator value from a variant
+function getDiscriminatorValue(variant: JsonSchema): string | null {
+  const typeField = variant.properties?.type;
+  if (typeField?.const) return typeField.const as string;
+  return null;
+}
+
+// Generate Swift enum for discriminated union
+function generateDiscriminatedUnion(
+  name: string,
+  variants: JsonSchema[],
+  defs: Record<string, JsonSchema>,
+): void {
+  const canonical = getCanonicalName(name);
+  if (generatedTypes.has(canonical)) return;
+  generatedTypes.add(canonical);
+
+  const cases: string[] = [];
+  const decodeCases: string[] = [];
+  const encodeCases: string[] = [];
+
+  for (const variant of variants) {
+    const discriminator = getDiscriminatorValue(variant);
+    if (!discriminator) continue;
+
+    const caseName = discriminator.replace(/-/g, "").replace(/_/g, "");
+    const structName = canonical + capitalize(caseName);
+
+    // Generate the associated struct
+    generateStruct(structName, variant, defs);
+
+    cases.push(`    case ${caseName}(${structName})`);
+    decodeCases.push(`        case "${discriminator}": self = .${caseName}(try ${structName}(from: decoder))`);
+    encodeCases.push(`        case .${caseName}(let v): try v.encode(to: encoder)`);
+  }
+
+  typeDefinitions.push(`public enum ${canonical}: Codable, Sendable, Equatable {
+${cases.join("\n")}
+
+    private enum CodingKeys: String, CodingKey {
+        case type
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let type = try container.decode(String.self, forKey: .type)
+        switch type {
+${decodeCases.join("\n")}
+        default:
+            throw DecodingError.dataCorruptedError(forKey: .type, in: container, debugDescription: "Unknown type: \\(type)")
+        }
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        switch self {
+${encodeCases.join("\n")}
+        }
+    }
+}`);
+}
+
 function toSwiftType(
   schema: JsonSchema,
   contextName: string,
@@ -121,6 +191,7 @@ function toSwiftType(
   }
 
   if (schema.anyOf) {
+    // Check if it's a simple string enum (all const strings)
     const allConsts = schema.anyOf.every((s) => s.const !== undefined);
     if (allConsts) {
       const canonical = getCanonicalName(contextName);
@@ -129,6 +200,17 @@ function toSwiftType(
       }
       return canonical;
     }
+
+    // Check if it's a discriminated union (objects with "type" const field)
+    const discriminatedUnion = isDiscriminatedUnion(schema.anyOf);
+    if (discriminatedUnion) {
+      const canonical = getCanonicalName(contextName);
+      if (!generatedTypes.has(canonical)) {
+        generateDiscriminatedUnion(contextName, schema.anyOf, defs);
+      }
+      return canonical;
+    }
+
     return "AnyCodable";
   }
 
@@ -400,6 +482,7 @@ public typealias McpUiOpenLinkParams = McpUiOpenLinkRequestParams
 public typealias ServerToolsCapability = McpUiHostCapabilitiesServerTools
 public typealias ServerResourcesCapability = McpUiHostCapabilitiesServerResources
 public typealias AppToolsCapability = McpUiAppCapabilitiesTools
+public typealias ContentBlock = McpUiMessageRequestParamsContentItem
 
 // MARK: - Generated Types
 `;

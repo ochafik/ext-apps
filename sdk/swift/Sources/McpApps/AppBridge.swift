@@ -23,7 +23,7 @@ public actor AppBridge {
     // Callbacks - using nonisolated(unsafe) for callback storage
     nonisolated(unsafe) public var onInitialized: (@Sendable () -> Void)?
     nonisolated(unsafe) public var onSizeChange: (@Sendable (Int?, Int?) -> Void)?
-    nonisolated(unsafe) public var onMessage: (@Sendable (String, [AnyCodable]) async -> McpUiMessageResult)?
+    nonisolated(unsafe) public var onMessage: (@Sendable (String, [ContentBlock]) async -> McpUiMessageResult)?
     nonisolated(unsafe) public var onOpenLink: (@Sendable (String) async -> McpUiOpenLinkResult)?
     nonisolated(unsafe) public var onLoggingMessage: (@Sendable (LogLevel, AnyCodable, String?) -> Void)?
     nonisolated(unsafe) public var onPing: (@Sendable () -> Void)?

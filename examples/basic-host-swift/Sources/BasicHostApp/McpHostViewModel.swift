@@ -172,6 +172,7 @@ class ToolCallInfo: ObservableObject, Identifiable {
     @Published var appBridge: AppBridge?
     @Published var htmlContent: String?
     @Published var cspConfig: CspConfig?
+    @Published var preferredHeight: CGFloat = 350
     @Published var result: ToolResult?
     @Published var state: ExecutionState = .calling
     @Published var error: String?
@@ -321,8 +322,13 @@ class ToolCallInfo: ObservableObject, Identifiable {
             print("[Host] Guest UI log [\(level)]: \(data.value)")
         }
 
-        bridge.onSizeChange = { width, height in
+        bridge.onSizeChange = { [weak self] width, height in
             print("[Host] Size change: \(width ?? 0) x \(height ?? 0)")
+            if let height = height {
+                Task { @MainActor in
+                    self?.preferredHeight = CGFloat(height)
+                }
+            }
         }
 
         bridge.onToolCall = { [weak self] toolName, arguments in

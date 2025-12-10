@@ -105,6 +105,7 @@ public typealias McpUiOpenLinkParams = McpUiOpenLinkRequestParams
 public typealias ServerToolsCapability = McpUiHostCapabilitiesServerTools
 public typealias ServerResourcesCapability = McpUiHostCapabilitiesServerResources
 public typealias AppToolsCapability = McpUiAppCapabilitiesTools
+public typealias ContentBlock = McpUiMessageRequestParamsContentItem
 
 // MARK: - Generated Types
 
@@ -503,15 +504,263 @@ public struct McpUiInitializedNotification: Codable, Sendable, Equatable {
     }
 }
 
+public struct McpUiMessageRequestParamsContentItemTextAnnotations: Codable, Sendable, Equatable {
+    public var audience: [String]?
+    public var priority: Double?
+    public var lastModified: String?
+
+    public init(
+        audience: [String]? = nil,
+        priority: Double? = nil,
+        lastModified: String? = nil
+    ) {
+        self.audience = audience
+        self.priority = priority
+        self.lastModified = lastModified
+    }
+}
+
+public struct McpUiMessageRequestParamsContentItemText: Codable, Sendable, Equatable {
+    public var type: String
+    public var text: String
+    public var annotations: McpUiMessageRequestParamsContentItemTextAnnotations?
+    public var _meta: [String: AnyCodable]?
+
+    public init(
+        type: String,
+        text: String,
+        annotations: McpUiMessageRequestParamsContentItemTextAnnotations? = nil,
+        _meta: [String: AnyCodable]? = nil
+    ) {
+        self.type = type
+        self.text = text
+        self.annotations = annotations
+        self._meta = _meta
+    }
+}
+
+public struct McpUiMessageRequestParamsContentItemImageAnnotations: Codable, Sendable, Equatable {
+    public var audience: [String]?
+    public var priority: Double?
+    public var lastModified: String?
+
+    public init(
+        audience: [String]? = nil,
+        priority: Double? = nil,
+        lastModified: String? = nil
+    ) {
+        self.audience = audience
+        self.priority = priority
+        self.lastModified = lastModified
+    }
+}
+
+public struct McpUiMessageRequestParamsContentItemImage: Codable, Sendable, Equatable {
+    public var type: String
+    public var data: String
+    public var mimeType: String
+    public var annotations: McpUiMessageRequestParamsContentItemImageAnnotations?
+    public var _meta: [String: AnyCodable]?
+
+    public init(
+        type: String,
+        data: String,
+        mimeType: String,
+        annotations: McpUiMessageRequestParamsContentItemImageAnnotations? = nil,
+        _meta: [String: AnyCodable]? = nil
+    ) {
+        self.type = type
+        self.data = data
+        self.mimeType = mimeType
+        self.annotations = annotations
+        self._meta = _meta
+    }
+}
+
+public struct McpUiMessageRequestParamsContentItemAudioAnnotations: Codable, Sendable, Equatable {
+    public var audience: [String]?
+    public var priority: Double?
+    public var lastModified: String?
+
+    public init(
+        audience: [String]? = nil,
+        priority: Double? = nil,
+        lastModified: String? = nil
+    ) {
+        self.audience = audience
+        self.priority = priority
+        self.lastModified = lastModified
+    }
+}
+
+public struct McpUiMessageRequestParamsContentItemAudio: Codable, Sendable, Equatable {
+    public var type: String
+    public var data: String
+    public var mimeType: String
+    public var annotations: McpUiMessageRequestParamsContentItemAudioAnnotations?
+    public var _meta: [String: AnyCodable]?
+
+    public init(
+        type: String,
+        data: String,
+        mimeType: String,
+        annotations: McpUiMessageRequestParamsContentItemAudioAnnotations? = nil,
+        _meta: [String: AnyCodable]? = nil
+    ) {
+        self.type = type
+        self.data = data
+        self.mimeType = mimeType
+        self.annotations = annotations
+        self._meta = _meta
+    }
+}
+
+public struct McpUiMessageRequestParamsContentItemResourcelinkIconsItem: Codable, Sendable, Equatable {
+    public var src: String
+    public var mimeType: String?
+    public var sizes: [String]?
+
+    public init(
+        src: String,
+        mimeType: String? = nil,
+        sizes: [String]? = nil
+    ) {
+        self.src = src
+        self.mimeType = mimeType
+        self.sizes = sizes
+    }
+}
+
+public struct McpUiMessageRequestParamsContentItemResourcelinkAnnotations: Codable, Sendable, Equatable {
+    public var audience: [String]?
+    public var priority: Double?
+    public var lastModified: String?
+
+    public init(
+        audience: [String]? = nil,
+        priority: Double? = nil,
+        lastModified: String? = nil
+    ) {
+        self.audience = audience
+        self.priority = priority
+        self.lastModified = lastModified
+    }
+}
+
+public struct McpUiMessageRequestParamsContentItemResourcelink: Codable, Sendable, Equatable {
+    public var name: String
+    public var title: String?
+    public var icons: [McpUiMessageRequestParamsContentItemResourcelinkIconsItem]?
+    public var uri: String
+    public var description: String?
+    public var mimeType: String?
+    public var annotations: McpUiMessageRequestParamsContentItemResourcelinkAnnotations?
+    public var _meta: [String: AnyCodable]?
+    public var type: String
+
+    public init(
+        name: String,
+        title: String? = nil,
+        icons: [McpUiMessageRequestParamsContentItemResourcelinkIconsItem]? = nil,
+        uri: String,
+        description: String? = nil,
+        mimeType: String? = nil,
+        annotations: McpUiMessageRequestParamsContentItemResourcelinkAnnotations? = nil,
+        _meta: [String: AnyCodable]? = nil,
+        type: String
+    ) {
+        self.name = name
+        self.title = title
+        self.icons = icons
+        self.uri = uri
+        self.description = description
+        self.mimeType = mimeType
+        self.annotations = annotations
+        self._meta = _meta
+        self.type = type
+    }
+}
+
+public struct McpUiMessageRequestParamsContentItemResourceAnnotations: Codable, Sendable, Equatable {
+    public var audience: [String]?
+    public var priority: Double?
+    public var lastModified: String?
+
+    public init(
+        audience: [String]? = nil,
+        priority: Double? = nil,
+        lastModified: String? = nil
+    ) {
+        self.audience = audience
+        self.priority = priority
+        self.lastModified = lastModified
+    }
+}
+
+public struct McpUiMessageRequestParamsContentItemResource: Codable, Sendable, Equatable {
+    public var type: String
+    public var resource: AnyCodable
+    public var annotations: McpUiMessageRequestParamsContentItemResourceAnnotations?
+    public var _meta: [String: AnyCodable]?
+
+    public init(
+        type: String,
+        resource: AnyCodable,
+        annotations: McpUiMessageRequestParamsContentItemResourceAnnotations? = nil,
+        _meta: [String: AnyCodable]? = nil
+    ) {
+        self.type = type
+        self.resource = resource
+        self.annotations = annotations
+        self._meta = _meta
+    }
+}
+
+public enum McpUiMessageRequestParamsContentItem: Codable, Sendable, Equatable {
+    case text(McpUiMessageRequestParamsContentItemText)
+    case image(McpUiMessageRequestParamsContentItemImage)
+    case audio(McpUiMessageRequestParamsContentItemAudio)
+    case resourcelink(McpUiMessageRequestParamsContentItemResourcelink)
+    case resource(McpUiMessageRequestParamsContentItemResource)
+
+    private enum CodingKeys: String, CodingKey {
+        case type
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let type = try container.decode(String.self, forKey: .type)
+        switch type {
+        case "text": self = .text(try McpUiMessageRequestParamsContentItemText(from: decoder))
+        case "image": self = .image(try McpUiMessageRequestParamsContentItemImage(from: decoder))
+        case "audio": self = .audio(try McpUiMessageRequestParamsContentItemAudio(from: decoder))
+        case "resource_link": self = .resourcelink(try McpUiMessageRequestParamsContentItemResourcelink(from: decoder))
+        case "resource": self = .resource(try McpUiMessageRequestParamsContentItemResource(from: decoder))
+        default:
+            throw DecodingError.dataCorruptedError(forKey: .type, in: container, debugDescription: "Unknown type: \(type)")
+        }
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        switch self {
+        case .text(let v): try v.encode(to: encoder)
+        case .image(let v): try v.encode(to: encoder)
+        case .audio(let v): try v.encode(to: encoder)
+        case .resourcelink(let v): try v.encode(to: encoder)
+        case .resource(let v): try v.encode(to: encoder)
+        }
+    }
+}
+
 public struct McpUiMessageRequestParams: Codable, Sendable, Equatable {
     /// Message role, currently only "user" is supported.
     public var role: String
     /// Message content blocks (text, image, etc.).
-    public var content: [AnyCodable]
+    public var content: [McpUiMessageRequestParamsContentItem]
 
     public init(
         role: String,
-        content: [AnyCodable]
+        content: [McpUiMessageRequestParamsContentItem]
     ) {
         self.role = role
         self.content = content
