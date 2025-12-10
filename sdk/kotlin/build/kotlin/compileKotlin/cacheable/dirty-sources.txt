@@ -1,0 +1,10 @@
+/Users/ochafik/code/ext-apps2/sdk/kotlin/src/main/kotlin/io/modelcontextprotocol/apps/Config.kt
+/Users/ochafik/code/ext-apps2/sdk/kotlin/src/main/kotlin/io/modelcontextprotocol/apps/transport/Transport.kt
+/Users/ochafik/code/ext-apps2/sdk/kotlin/src/main/kotlin/io/modelcontextprotocol/apps/types/HostTypes.kt
+/Users/ochafik/code/ext-apps2/sdk/kotlin/src/main/kotlin/io/modelcontextprotocol/apps/protocol/Protocol.kt
+/Users/ochafik/code/ext-apps2/sdk/kotlin/src/main/kotlin/io/modelcontextprotocol/apps/generated/SchemaTypes.kt
+/Users/ochafik/code/ext-apps2/sdk/kotlin/src/main/kotlin/io/modelcontextprotocol/apps/protocol/JSONRPCMessage.kt
+/Users/ochafik/code/ext-apps2/sdk/kotlin/src/main/kotlin/io/modelcontextprotocol/apps/types/Messages.kt
+/Users/ochafik/code/ext-apps2/sdk/kotlin/src/main/kotlin/io/modelcontextprotocol/apps/AppBridge.kt
+/Users/ochafik/code/ext-apps2/sdk/kotlin/src/main/kotlin/io/modelcontextprotocol/apps/types/AppTypes.kt
+/Users/ochafik/code/ext-apps2/sdk/kotlin/src/main/kotlin/io/modelcontextprotocol/apps/transport/WebViewTransport.kt
