@@ -232,14 +232,23 @@ class ToolCallInfo: ObservableObject, Identifiable {
         // - system-monitor-server: ui://system-monitor/mcp-app.html (tool: get_system_stats)
         // - threejs-server: ui://threejs/mcp-app.html (tool: render_3d)
 
+        // Tool names from example servers (verified from server.ts files)
         let knownMappings: [String: String] = [
-            "get_time": "ui://get-time/mcp-app.html",
-            "create_budget": "ui://budget-allocator/mcp-app.html",
-            "get_cohort_data": "ui://get-cohort-data/mcp-app.html",
-            "analyze_segments": "ui://customer-segmentation/mcp-app.html",
-            "run_scenario": "ui://scenario-modeler/mcp-app.html",
-            "get_system_stats": "ui://system-monitor/mcp-app.html",
-            "render_3d": "ui://threejs/mcp-app.html",
+            // basic-server-react & basic-server-vanillajs
+            "get-time": "ui://get-time/mcp-app.html",
+            // budget-allocator-server
+            "get-budget-data": "ui://budget-allocator/mcp-app.html",
+            // cohort-heatmap-server
+            "get-cohort-data": "ui://get-cohort-data/mcp-app.html",
+            // customer-segmentation-server
+            "get-customer-data": "ui://customer-segmentation/mcp-app.html",
+            // scenario-modeler-server
+            "get-scenario-data": "ui://scenario-modeler/mcp-app.html",
+            // system-monitor-server
+            "get-system-stats": "ui://system-monitor/mcp-app.html",
+            // threejs-server
+            "show_threejs_scene": "ui://threejs/mcp-app.html",
+            "learn_threejs": "ui://threejs/mcp-app.html",
         ]
 
         return knownMappings[tool.name]
