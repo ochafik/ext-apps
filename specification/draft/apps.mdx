@@ -803,10 +803,12 @@ sequenceDiagram
       H-->>UI: ui/notifications/tool-result
     else Message
       UI ->> H: ui/message
+      H -->> UI: ui/message response
       H -->> H: Process message and follow up
     else Context update
       UI ->> H: ui/update-context
-      H ->> H: Process context update and store in conversation context
+      H ->> H: Store in conversation context
+      H -->> UI: ui/update-context response
     else Log
       UI ->> H: notifications/message
       H ->> H: Record log for debugging/telemetry
