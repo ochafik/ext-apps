@@ -229,7 +229,10 @@ fun ToolCallCard(toolCall: ToolCallState, onRemove: () -> Unit) {
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(toolCall.toolName, style = MaterialTheme.typography.titleSmall)
+                Column {
+                    Text(toolCall.serverName, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                    Text(toolCall.toolName, style = MaterialTheme.typography.titleSmall)
+                }
 
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                     val (color, text) = when (toolCall.state) {

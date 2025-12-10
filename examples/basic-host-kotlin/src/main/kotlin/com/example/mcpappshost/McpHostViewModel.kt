@@ -52,6 +52,7 @@ sealed class ConnectionState {
 
 data class ToolCallState(
     val id: String = java.util.UUID.randomUUID().toString(),
+    val serverName: String,
     val toolName: String,
     val input: String,
     val inputArgs: Map<String, Any>? = null,
@@ -198,7 +199,12 @@ class McpHostViewModel : ViewModel() {
         val tool = _selectedTool.value ?: return
         val client = mcpClient ?: return
 
+        val serverName = if (_selectedServerIndex.value in knownServers.indices) {
+            knownServers[_selectedServerIndex.value].first
+        } else "Custom"
+
         val toolCall = ToolCallState(
+            serverName = serverName,
             toolName = tool.name,
             input = _toolInputJson.value
         )
