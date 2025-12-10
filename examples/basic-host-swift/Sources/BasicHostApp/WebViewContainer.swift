@@ -23,6 +23,8 @@ struct WebViewContainer: UIViewRepresentable {
         // Create web view
         let webView = WKWebView(frame: .zero, configuration: configuration)
         webView.scrollView.isScrollEnabled = true
+        webView.scrollView.showsHorizontalScrollIndicator = false
+        webView.scrollView.bounces = false
         webView.isOpaque = false
         webView.backgroundColor = .clear
 
@@ -53,8 +55,19 @@ struct WebViewContainer: UIViewRepresentable {
                 // Set up AppBridge with callbacks
                 try await toolCallInfo.setupAppBridge(transport: transport)
 
-                // Inject bridge script into HTML and load
-                let bridgeScript = """
+                // Inject viewport, CSS, and bridge script
+                let injectedContent = """
+                <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+                <style>
+                    html, body {
+                        max-width: 100% !important;
+                        overflow-x: hidden !important;
+                        box-sizing: border-box !important;
+                    }
+                    *, *::before, *::after {
+                        box-sizing: inherit !important;
+                    }
+                </style>
                 <script>
                 (function() {
                     window.parent = window.parent || {};
@@ -71,18 +84,18 @@ struct WebViewContainer: UIViewRepresentable {
                 </script>
                 """
 
-                // Inject script at the beginning of <head> or <html>
+                // Inject at the beginning of <head> or <html>
                 var modifiedHtml = html
                 if let headRange = html.range(of: "<head>", options: .caseInsensitive) {
-                    modifiedHtml.insert(contentsOf: bridgeScript, at: headRange.upperBound)
+                    modifiedHtml.insert(contentsOf: injectedContent, at: headRange.upperBound)
                 } else if let htmlRange = html.range(of: "<html>", options: .caseInsensitive) {
                     // Find end of <html> tag
                     if let tagEnd = html.range(of: ">", range: htmlRange.upperBound..<html.endIndex) {
-                        modifiedHtml.insert(contentsOf: "<head>\(bridgeScript)</head>", at: tagEnd.upperBound)
+                        modifiedHtml.insert(contentsOf: "<head>\(injectedContent)</head>", at: tagEnd.upperBound)
                     }
                 } else {
                     // Prepend to beginning
-                    modifiedHtml = bridgeScript + html
+                    modifiedHtml = injectedContent + html
                 }
 
                 await MainActor.run {
