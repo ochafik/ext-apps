@@ -2,6 +2,22 @@
 
 A minimal iOS app demonstrating how to host MCP Apps in a WKWebView using the Swift SDK.
 
+## Quick Start - Running in iOS Simulator
+
+1. **Open in Xcode:**
+   ```bash
+   open Package.swift
+   ```
+
+2. **Wait for SPM** to resolve dependencies (McpApps, MCP SDK)
+
+3. **Select iOS Simulator** from the device dropdown (e.g., "iPhone 15")
+
+4. **Run** (⌘R)
+
+> **Note:** If no simulators appear, install them via:
+> Xcode → Settings → Components → iOS Simulators → Download
+
 This example shows the complete flow of:
 
 1. Connecting to an MCP server
