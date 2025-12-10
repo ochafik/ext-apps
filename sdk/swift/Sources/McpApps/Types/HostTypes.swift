@@ -147,21 +147,26 @@ public struct ServerResourcesCapability: Codable, Sendable, Equatable {
 ///
 /// Hosts declare these capabilities during the initialization handshake.
 /// Guest UIs can check capabilities before attempting to use specific features.
+/// Empty capability marker (matches TypeScript `{}`)
+public struct EmptyCapability: Codable, Sendable, Equatable {
+    public init() {}
+}
+
 public struct McpUiHostCapabilities: Codable, Sendable, Equatable {
     /// Host supports opening external URLs
-    public var openLinks: Bool?
+    public var openLinks: EmptyCapability?
     /// Host can proxy tool calls to the MCP server
     public var serverTools: ServerToolsCapability?
     /// Host can proxy resource reads to the MCP server
     public var serverResources: ServerResourcesCapability?
     /// Host accepts log messages
-    public var logging: Bool?
+    public var logging: EmptyCapability?
 
     public init(
-        openLinks: Bool? = nil,
+        openLinks: EmptyCapability? = nil,
         serverTools: ServerToolsCapability? = nil,
         serverResources: ServerResourcesCapability? = nil,
-        logging: Bool? = nil
+        logging: EmptyCapability? = nil
     ) {
         self.openLinks = openLinks
         self.serverTools = serverTools

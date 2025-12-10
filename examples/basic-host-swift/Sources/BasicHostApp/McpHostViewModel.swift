@@ -48,10 +48,10 @@ class McpHostViewModel: ObservableObject {
     private let hostInfo = Implementation(name: "BasicHostSwift", version: "1.0.0")
 
     private let hostCapabilities = McpUiHostCapabilities(
-        openLinks: true,
+        openLinks: EmptyCapability(),
         serverTools: ServerToolsCapability(),
         serverResources: ServerResourcesCapability(),
-        logging: true
+        logging: EmptyCapability()
     )
 
     init() {}
