@@ -506,10 +506,12 @@ Host SHOULD open the URL in the user's default browser or a new tab.
   method: "ui/message",
   params: {
     role: "user",
-    content: {
-      type: "text",
-      text: string
-    }
+    content: [
+      {
+        type: "text",
+        text: string
+      }
+    ]
   }
 }
 
