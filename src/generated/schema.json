@@ -90,7 +90,7 @@
           "properties": {},
           "additionalProperties": false
         },
-        "context": {
+        "updateContext": {
           "description": "Host accepts context updates to be stored in the agent's conversation context.",
           "type": "object",
           "properties": {},
@@ -858,7 +858,7 @@
               "properties": {},
               "additionalProperties": false
             },
-            "context": {
+            "updateContext": {
               "description": "Host accepts context updates to be stored in the agent's conversation context.",
               "type": "object",
               "properties": {},

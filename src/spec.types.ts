@@ -308,7 +308,7 @@ export interface McpUiHostCapabilities {
   /** @description Host accepts log messages. */
   logging?: {};
   /** @description Host accepts context updates to be stored in the agent's conversation context. */
-  context?: {};
+  updateContext?: {};
 }
 
 /**
