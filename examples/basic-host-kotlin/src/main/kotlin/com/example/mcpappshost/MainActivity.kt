@@ -19,6 +19,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontFamily
@@ -100,7 +101,11 @@ fun McpHostApp(viewModel: McpHostViewModel = viewModel()) {
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 items(toolCalls, key = { it.id }) { toolCall ->
-                    ToolCallCard(toolCall = toolCall, onRemove = { viewModel.removeToolCall(toolCall) })
+                    ToolCallCard(
+                        toolCall = toolCall,
+                        onRemove = { viewModel.removeToolCall(toolCall) },
+                        onToolCall = { name, args -> viewModel.forwardToolCall(name, args) }
+                    )
                 }
             }
         }
@@ -224,7 +229,11 @@ fun ToolPicker(
 }
 
 @Composable
-fun ToolCallCard(toolCall: ToolCallState, onRemove: () -> Unit) {
+fun ToolCallCard(
+    toolCall: ToolCallState,
+    onRemove: () -> Unit,
+    onToolCall: (suspend (name: String, arguments: Map<String, Any>?) -> String)? = null
+) {
     var isInputExpanded by remember { mutableStateOf(false) }
 
     Card(modifier = Modifier.fillMaxWidth()) {
@@ -279,6 +288,7 @@ fun ToolCallCard(toolCall: ToolCallState, onRemove: () -> Unit) {
                     // WebView for UI resource with full AppBridge protocol
                     McpAppWebView(
                         toolCall = toolCall,
+                        onToolCall = onToolCall,
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(toolCall.preferredHeight.dp)
@@ -307,9 +317,11 @@ fun ToolCallCard(toolCall: ToolCallState, onRemove: () -> Unit) {
 @Composable
 fun McpAppWebView(
     toolCall: ToolCallState,
+    onToolCall: (suspend (name: String, arguments: Map<String, Any>?) -> String)? = null,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
     val json = remember { kotlinx.serialization.json.Json { ignoreUnknownKeys = true } }
     var webViewRef by remember { mutableStateOf<WebView?>(null) }
     var initialized by remember { mutableStateOf(false) }
@@ -453,12 +465,27 @@ fun McpAppWebView(
                                 "tools/call" -> {
                                     // App wants to call a server tool (e.g., Get Server Time)
                                     val params = msg["params"]?.jsonObject
-                                    val toolName = params?.get("name")?.jsonPrimitive?.contentOrNull
-                                    android.util.Log.i("McpAppWebView", "Tool call: $toolName")
-                                    post {
-                                        Toast.makeText(context, "Tool call: $toolName (not implemented)", Toast.LENGTH_SHORT).show()
-                                        // TODO: Forward to MCP client
-                                        sendToWebView("""{"jsonrpc":"2.0","id":$id,"error":{"code":-32601,"message":"Tool call forwarding not implemented"}}""")
+                                    val toolName = params?.get("name")?.jsonPrimitive?.contentOrNull ?: ""
+                                    val args = params?.get("arguments")?.jsonObject?.let { argsObj ->
+                                        argsObj.mapValues { (_, v) -> v.jsonPrimitive.contentOrNull ?: "" }
+                                    }
+                                    android.util.Log.i("McpAppWebView", "Tool call: $toolName with args: $args")
+
+                                    if (onToolCall != null) {
+                                        coroutineScope.launch {
+                                            try {
+                                                val result = onToolCall(toolName, args)
+                                                post { sendToWebView("""{"jsonrpc":"2.0","id":$id,"result":$result}""") }
+                                            } catch (e: Exception) {
+                                                android.util.Log.e("McpAppWebView", "Tool call failed", e)
+                                                post { sendToWebView("""{"jsonrpc":"2.0","id":$id,"error":{"code":-32603,"message":"${e.message}"}}""") }
+                                            }
+                                        }
+                                    } else {
+                                        post {
+                                            Toast.makeText(context, "Tool call: $toolName (no handler)", Toast.LENGTH_SHORT).show()
+                                            sendToWebView("""{"jsonrpc":"2.0","id":$id,"error":{"code":-32601,"message":"Tool call handler not configured"}}""")
+                                        }
                                     }
                                 }
                                 else -> {

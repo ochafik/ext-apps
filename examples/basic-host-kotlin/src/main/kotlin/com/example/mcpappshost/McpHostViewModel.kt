@@ -311,6 +311,41 @@ class McpHostViewModel : ViewModel() {
         _toolCalls.value = _toolCalls.value.filter { it.id != toolCall.id }
     }
 
+    /**
+     * Forward a tool call from the WebView App to the MCP server.
+     * Returns the result as a JSON string.
+     */
+    suspend fun forwardToolCall(name: String, arguments: Map<String, Any>?): String {
+        val client = mcpClient ?: throw IllegalStateException("Not connected")
+
+        Log.i(TAG, "Forwarding tool call: $name with args: $arguments")
+
+        val callResult = client.callTool(name, emptyMap(), emptyMap())
+
+        // Format result as JSON for the App
+        val resultJson = json.encodeToString(
+            kotlinx.serialization.json.JsonObject.serializer(),
+            buildJsonObject {
+                put("content", buildJsonArray {
+                    callResult.content.forEach { block ->
+                        val text = when (block) {
+                            is TextContent -> block.text
+                            else -> block.toString()
+                        }
+                        add(buildJsonObject {
+                            put("type", JsonPrimitive("text"))
+                            put("text", JsonPrimitive(text))
+                        })
+                    }
+                })
+                put("isError", JsonPrimitive(callResult.isError ?: false))
+            }
+        )
+
+        Log.i(TAG, "Tool call result: $resultJson")
+        return resultJson
+    }
+
     private fun updateToolCall(id: String, update: (ToolCallState) -> ToolCallState) {
         _toolCalls.value = _toolCalls.value.map { if (it.id == id) update(it) else it }
     }
