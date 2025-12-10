@@ -2,7 +2,7 @@ package io.modelcontextprotocol.apps
 
 import io.modelcontextprotocol.apps.protocol.*
 import io.modelcontextprotocol.apps.transport.McpAppsTransport
-import io.modelcontextprotocol.apps.types.*
+
 import io.modelcontextprotocol.apps.generated.*
 import kotlinx.serialization.json.*
 
@@ -77,7 +77,7 @@ class AppBridge(
                 json.decodeFromJsonElement<McpUiSizeChangedParams>(params ?: JsonObject(emptyMap()))
             }
         ) { params ->
-            onSizeChange?.invoke(params.width, params.height)
+            onSizeChange?.invoke(params.width?.toInt(), params.height?.toInt())
         }
 
         // Handle ui/message request

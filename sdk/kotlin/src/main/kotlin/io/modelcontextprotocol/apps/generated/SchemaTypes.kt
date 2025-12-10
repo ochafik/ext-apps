@@ -340,8 +340,7 @@ data class McpUiResourceTeardownRequest(
 )
 
 @Serializable
-data class McpUiResourceTeardownResult(
-    val _placeholder: Unit = Unit
+data class McpUiResourceTeardownResult(val _placeholder: Unit = Unit
 
 )
 
@@ -440,3 +439,21 @@ data class McpUiToolResultNotification(
     /** Standard MCP tool execution result. */
     val params: McpUiToolResultNotificationParams
 )
+
+// Additional type aliases for compatibility
+typealias McpUiSizeChangedParams = McpUiSizeChangedNotificationParams
+typealias McpUiToolInputParams = McpUiToolInputNotificationParams  
+typealias McpUiToolInputPartialParams = McpUiToolInputPartialNotificationParams
+typealias McpUiSandboxResourceReadyParams = McpUiSandboxResourceReadyNotificationParams
+@Serializable
+data class McpUiResourceTeardownParams(val _placeholder: Unit = Unit)
+typealias CspConfig = McpUiSandboxResourceReadyNotificationParamsCsp
+
+// Logging message params (standard MCP type)
+@Serializable
+data class LoggingMessageParams(
+    val level: LogLevel,
+    val data: JsonElement,
+    val logger: String? = null
+)
+
