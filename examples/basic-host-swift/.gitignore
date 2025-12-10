@@ -27,3 +27,8 @@ Pods/
 
 # Intermediate outputs
 intermediate-outputs/
+build/
+.build/
+*.xcodeproj/
+DerivedData/
+Package.resolved

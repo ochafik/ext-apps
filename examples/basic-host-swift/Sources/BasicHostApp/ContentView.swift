@@ -1,5 +1,6 @@
 import SwiftUI
 import MCP
+import McpApps
 
 /// Main view for the Basic Host Swift example.
 ///
@@ -130,7 +131,7 @@ struct ContentView: View {
                 Picker("Tool", selection: $viewModel.selectedTool) {
                     ForEach(viewModel.tools, id: \.name) { tool in
                         Text(tool.name)
-                            .tag(tool as MCPTool?)
+                            .tag(tool as Tool?)
                     }
                 }
                 .pickerStyle(.menu)
@@ -261,13 +262,16 @@ struct ToolCallCard: View {
                         .foregroundColor(.secondary)
 
                     ForEach(Array(result.content.enumerated()), id: \.offset) { _, content in
-                        if let text = content.text {
+                        switch content {
+                        case .text(let text):
                             Text(text)
                                 .font(.system(.caption, design: .monospaced))
                                 .padding(8)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .background(Color(UIColor.systemGray6))
                                 .cornerRadius(4)
+                        default:
+                            EmptyView()
                         }
                     }
                 }
