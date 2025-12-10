@@ -1,25 +1,22 @@
 import { test, expect, type Page, type ConsoleMessage } from "@playwright/test";
 
-/**
- * Helper to get the app frame locator (nested: sandbox > app)
- */
-function getAppFrame(page: Page) {
-  return page.frameLocator("iframe").first().frameLocator("iframe").first();
-}
-
-/**
- * Collect console messages with [HOST] prefix
- */
-function captureHostLogs(page: Page): string[] {
-  const logs: string[] = [];
-  page.on("console", (msg: ConsoleMessage) => {
-    const text = msg.text();
-    if (text.includes("[HOST]")) {
-      logs.push(text);
-    }
-  });
-  return logs;
-}
+// Dynamic element selectors to mask for screenshot comparison
+// Note: CSS modules generate unique class names, so we use attribute selectors
+// with partial matches (e.g., [class*="heatmapWrapper"]) for those components
+const DYNAMIC_MASKS: Record<string, string[]> = {
+  "basic-react": ["code"], // Server time display
+  "basic-vanillajs": ["#server-time"], // Server time display
+  "cohort-heatmap": ['[class*="heatmapWrapper"]'], // Heatmap grid (random data)
+  "customer-segmentation": [".chart-container"], // Scatter plot (random data)
+  "system-monitor": [
+    ".chart-container", // CPU chart (highly dynamic)
+    "#status-text", // Current timestamp
+    "#memory-percent", // Memory percentage
+    "#memory-detail", // Memory usage details
+    "#memory-bar-fill", // Memory bar fill level
+    "#info-uptime", // System uptime
+  ],
+};
 
 // Server configurations
 const SERVERS = [
@@ -42,6 +39,27 @@ const SERVERS = [
 ];
 
 /**
+ * Helper to get the app frame locator (nested: sandbox > app)
+ */
+function getAppFrame(page: Page) {
+  return page.frameLocator("iframe").first().frameLocator("iframe").first();
+}
+
+/**
+ * Collect console messages with [HOST] prefix
+ */
+function captureHostLogs(page: Page): string[] {
+  const logs: string[] = [];
+  page.on("console", (msg: ConsoleMessage) => {
+    const text = msg.text();
+    if (text.includes("[HOST]")) {
+      logs.push(text);
+    }
+  });
+  return logs;
+}
+
+/**
  * Wait for the MCP App to load inside nested iframes.
  * Structure: page > iframe (sandbox) > iframe (app)
  */
@@ -50,11 +68,25 @@ async function waitForAppLoad(page: Page) {
   await expect(outerFrame.locator("iframe")).toBeVisible();
 }
 
+/**
+ * Load a server by selecting it and clicking Call Tool
+ */
 async function loadServer(page: Page, serverIndex: number) {
   await page.goto("/");
   await page.locator("select").first().selectOption({ index: serverIndex });
   await page.click('button:has-text("Call Tool")');
   await waitForAppLoad(page);
+}
+
+/**
+ * Get mask locators for dynamic elements inside the nested app iframe.
+ */
+function getMaskLocators(page: Page, serverKey: string) {
+  const selectors = DYNAMIC_MASKS[serverKey];
+  if (!selectors) return [];
+
+  const appFrame = getAppFrame(page);
+  return selectors.map((selector) => appFrame.locator(selector));
 }
 
 test.describe("Host UI", () => {
@@ -82,8 +114,13 @@ SERVERS.forEach((server) => {
     test("screenshot matches golden", async ({ page }) => {
       await loadServer(page, server.index);
       await page.waitForTimeout(500); // Brief stabilization
+
+      // Get mask locators for dynamic content (timestamps, charts, etc.)
+      const mask = getMaskLocators(page, server.key);
+
       await expect(page).toHaveScreenshot(`${server.key}.png`, {
-        maxDiffPixelRatio: 0.1,
+        mask,
+        maxDiffPixelRatio: 0.01, // 1% tolerance (tighter now that dynamic content is masked)
       });
     });
   });
