@@ -2,43 +2,36 @@ import SwiftUI
 import MCP
 import McpApps
 
-/// Main view for the Basic Host Swift example.
-///
-/// This view displays:
-/// - Connection controls and status
-/// - Tool selection picker
-/// - JSON input field for tool arguments
-/// - Call tool button
-/// - List of active tool UIs in WebViews
 struct ContentView: View {
     @StateObject private var viewModel = McpHostViewModel()
 
     var body: some View {
         NavigationView {
             VStack(spacing: 0) {
-                // Connection Section
+                // Compact connection section
                 connectionSection
+                    .padding(.horizontal)
+                    .padding(.vertical, 8)
 
                 Divider()
 
-                // Tool Call Section
+                // Tool call section (only when connected)
                 if viewModel.connectionState == .connected {
                     toolCallSection
-                        .padding()
+                        .padding(.horizontal)
+                        .padding(.vertical, 8)
+
+                    Divider()
                 }
 
-                Divider()
-
-                // Active Tool Calls Section
+                // Active tool calls
                 if !viewModel.activeToolCalls.isEmpty {
                     ScrollView {
-                        VStack(spacing: 16) {
+                        VStack(spacing: 12) {
                             ForEach(viewModel.activeToolCalls) { toolCall in
                                 ToolCallCard(
                                     toolCallInfo: toolCall,
-                                    onRemove: {
-                                        viewModel.removeToolCall(toolCall)
-                                    }
+                                    onRemove: { viewModel.removeToolCall(toolCall) }
                                 )
                             }
                         }
@@ -48,285 +41,203 @@ struct ContentView: View {
                     Spacer()
                     Text("No active tool calls")
                         .foregroundColor(.secondary)
+                        .font(.subheadline)
                     Spacer()
                 }
             }
-            .navigationTitle("MCP Apps Host")
+            .navigationTitle("MCP Host")
             .navigationBarTitleDisplayMode(.inline)
         }
     }
 
-    // MARK: - Connection Section
+    // MARK: - Compact Connection Section
 
     private var connectionSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            // Server picker
-            VStack(alignment: .leading, spacing: 4) {
-                Text("MCP Server")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-
+        VStack(spacing: 8) {
+            // Server dropdown + Connect/Disconnect button on same line
+            HStack {
                 Picker("Server", selection: $viewModel.selectedServerIndex) {
                     ForEach(Array(McpHostViewModel.knownServers.enumerated()), id: \.offset) { index, server in
                         Text(server.0).tag(index)
                     }
-                    Text("Custom URL...").tag(-1)
+                    Text("Custom...").tag(-1)
                 }
                 .pickerStyle(.menu)
                 .disabled(viewModel.connectionState == .connected || viewModel.connectionState == .connecting)
 
-                // Show custom URL field when "Custom URL..." is selected
-                if viewModel.selectedServerIndex == -1 {
-                    TextField("http://localhost:3001/mcp", text: $viewModel.customServerUrl)
-                        .textFieldStyle(.roundedBorder)
-                        .font(.system(.caption, design: .monospaced))
-                        .autocapitalization(.none)
-                        .disableAutocorrection(true)
-                        .disabled(viewModel.connectionState == .connected || viewModel.connectionState == .connecting)
-                } else {
-                    // Show the URL for the selected server
-                    Text(viewModel.serverUrlString)
-                        .font(.system(.caption, design: .monospaced))
-                        .foregroundColor(.secondary)
-                }
-            }
-
-            HStack {
-                Text("Status:")
-                    .font(.subheadline)
                 Spacer()
-                Text(viewModel.connectionState.description)
-                    .foregroundColor(connectionColor)
-                    .font(.subheadline)
+
+                connectionButton
             }
 
-            HStack {
-                if case .error = viewModel.connectionState {
-                    // Error state - show Retry button
-                    Button(action: {
-                        Task {
-                            await viewModel.connect()
-                        }
-                    }) {
-                        Label("Retry", systemImage: "arrow.clockwise")
-                            .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .tint(.orange)
-                } else if viewModel.connectionState == .disconnected {
-                    Button(action: {
-                        Task {
-                            await viewModel.connect()
-                        }
-                    }) {
-                        Label("Connect", systemImage: "network")
-                            .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(.borderedProminent)
-                } else if viewModel.connectionState == .connecting {
-                    Button(action: {}) {
-                        HStack {
-                            ProgressView()
-                                .scaleEffect(0.8)
-                            Text("Connecting...")
-                        }
-                        .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(.bordered)
-                    .disabled(true)
-                } else if viewModel.connectionState == .connected {
-                    Button(action: {
-                        Task {
-                            await viewModel.disconnect()
-                        }
-                    }) {
-                        Label("Disconnect", systemImage: "network.slash")
-                            .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(.bordered)
-                    .tint(.red)
-                }
+            // Custom URL field (only when Custom is selected)
+            if viewModel.selectedServerIndex == -1 {
+                TextField("http://localhost:3001/mcp", text: $viewModel.customServerUrl)
+                    .textFieldStyle(.roundedBorder)
+                    .font(.system(.caption, design: .monospaced))
+                    .autocapitalization(.none)
+                    .disableAutocorrection(true)
+                    .disabled(viewModel.connectionState == .connected || viewModel.connectionState == .connecting)
             }
 
+            // Error message
             if let error = viewModel.errorMessage {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(error)
-                        .font(.caption)
-                        .foregroundColor(.red)
-                    Text("Tap Retry to try again")
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
-                }
-                .padding(8)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color.red.opacity(0.1))
-                .cornerRadius(4)
+                Text(error)
+                    .font(.caption2)
+                    .foregroundColor(.red)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
-        .padding()
     }
 
-    private var connectionColor: Color {
-        switch viewModel.connectionState {
-        case .disconnected:
-            return .secondary
-        case .connecting:
-            return .orange
-        case .connected:
-            return .green
-        case .error:
-            return .red
+    private var connectionButton: some View {
+        Group {
+            if case .error = viewModel.connectionState {
+                Button("Retry") {
+                    Task { await viewModel.connect() }
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(.orange)
+                .controlSize(.small)
+            } else if viewModel.connectionState == .disconnected {
+                Button("Connect") {
+                    Task { await viewModel.connect() }
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.small)
+            } else if viewModel.connectionState == .connecting {
+                HStack(spacing: 4) {
+                    ProgressView().scaleEffect(0.7)
+                    Text("...")
+                }
+                .font(.caption)
+            } else if viewModel.connectionState == .connected {
+                Button("Disconnect") {
+                    Task { await viewModel.disconnect() }
+                }
+                .buttonStyle(.bordered)
+                .tint(.red)
+                .controlSize(.small)
+            }
         }
     }
 
-    // MARK: - Tool Call Section
+    // MARK: - Compact Tool Call Section
 
     private var toolCallSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Call Tool")
-                .font(.headline)
-
-            // Tool Picker
-            if !viewModel.tools.isEmpty {
-                Picker("Tool", selection: $viewModel.selectedTool) {
-                    ForEach(viewModel.tools, id: \.name) { tool in
-                        Text(tool.name)
-                            .tag(tool as Tool?)
-                    }
-                }
-                .pickerStyle(.menu)
-
-                if let selectedTool = viewModel.selectedTool {
-                    Text(selectedTool.description ?? "No description")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-            } else {
-                Text("No tools available")
-                    .foregroundColor(.secondary)
-            }
-
-            // Input JSON
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Input (JSON)")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-
-                TextEditor(text: $viewModel.toolInputJson)
-                    .font(.system(.body, design: .monospaced))
-                    .frame(height: 100)
-                    .padding(4)
-                    .background(Color(UIColor.systemGray6))
-                    .cornerRadius(8)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 8)
-                            .stroke(isValidJson ? Color.clear : Color.red, lineWidth: 1)
-                    )
-
-                if !isValidJson {
-                    Text("Invalid JSON")
-                        .font(.caption)
-                        .foregroundColor(.red)
+        HStack {
+            // Tool dropdown
+            Picker("Tool", selection: $viewModel.selectedTool) {
+                ForEach(viewModel.tools, id: \.name) { tool in
+                    Text(tool.name).tag(tool as Tool?)
                 }
             }
+            .pickerStyle(.menu)
 
-            // Call Button
-            Button(action: {
-                Task {
-                    await viewModel.callTool()
-                }
-            }) {
-                Label("Call Tool", systemImage: "play.fill")
-                    .frame(maxWidth: .infinity)
+            Spacer()
+
+            // Call button
+            Button("Call") {
+                Task { await viewModel.callTool() }
             }
             .buttonStyle(.borderedProminent)
-            .disabled(viewModel.selectedTool == nil || !isValidJson)
+            .controlSize(.small)
+            .disabled(viewModel.selectedTool == nil)
         }
     }
 
     private var isValidJson: Bool {
-        guard let data = viewModel.toolInputJson.data(using: .utf8) else {
-            return false
-        }
+        guard let data = viewModel.toolInputJson.data(using: .utf8) else { return false }
         return (try? JSONSerialization.jsonObject(with: data)) != nil
     }
 }
 
 // MARK: - Tool Call Card
 
-/// Card displaying a single tool call and its UI
 struct ToolCallCard: View {
     @ObservedObject var toolCallInfo: ToolCallInfo
     let onRemove: () -> Void
 
+    @State private var isInputExpanded = false
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            // Header
+        VStack(alignment: .leading, spacing: 8) {
+            // Header with tool name, state, and actions
             HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(toolCallInfo.tool.name)
-                        .font(.headline)
-                    Text(toolCallInfo.state.description)
-                        .font(.caption)
-                        .foregroundColor(stateColor)
-                }
+                Text(toolCallInfo.tool.name)
+                    .font(.headline)
 
                 Spacer()
 
+                Text(toolCallInfo.state.description)
+                    .font(.caption)
+                    .foregroundColor(stateColor)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(stateColor.opacity(0.1))
+                    .cornerRadius(4)
+
+                // Expand/collapse input
+                Button {
+                    withAnimation { isInputExpanded.toggle() }
+                } label: {
+                    Image(systemName: isInputExpanded ? "chevron.up" : "chevron.down")
+                        .foregroundColor(.secondary)
+                }
+
+                // Remove button
                 Button(action: onRemove) {
                     Image(systemName: "xmark.circle.fill")
                         .foregroundColor(.secondary)
                 }
             }
 
-            // Input
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Input:")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
+            // Collapsible input section
+            if isInputExpanded {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Input:")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
 
-                if let jsonData = try? JSONSerialization.data(
-                    withJSONObject: toolCallInfo.input,
-                    options: .prettyPrinted
-                ),
-                   let jsonString = String(data: jsonData, encoding: .utf8) {
-                    Text(jsonString)
-                        .font(.system(.caption, design: .monospaced))
-                        .padding(8)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(Color(UIColor.systemGray6))
-                        .cornerRadius(4)
+                    if let jsonData = try? JSONSerialization.data(
+                        withJSONObject: toolCallInfo.input,
+                        options: .prettyPrinted
+                    ), let jsonString = String(data: jsonData, encoding: .utf8) {
+                        Text(jsonString)
+                            .font(.system(.caption2, design: .monospaced))
+                            .padding(6)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(Color(UIColor.systemGray6))
+                            .cornerRadius(4)
+                    }
                 }
             }
 
-            // Result or UI
+            // Content area (error, WebView, or result)
             if let error = toolCallInfo.error {
-                // Error
-                Text("Error: \(error)")
+                Text(error)
                     .font(.caption)
                     .foregroundColor(.red)
-                    .padding(8)
+                    .padding(6)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .background(Color.red.opacity(0.1))
                     .cornerRadius(4)
             } else if toolCallInfo.state == .ready, toolCallInfo.htmlContent != nil {
-                // WebView UI
                 WebViewContainer(toolCallInfo: toolCallInfo)
-                    .frame(height: 400)
-                    .border(Color.gray.opacity(0.3))
+                    .frame(height: 350)
+                    .cornerRadius(8)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8)
+                            .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+                    )
             } else if toolCallInfo.state == .completed, let result = toolCallInfo.result {
-                // Text result
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Result:")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-
                     ForEach(Array(result.content.enumerated()), id: \.offset) { _, content in
                         switch content {
                         case .text(let text):
                             Text(text)
                                 .font(.system(.caption, design: .monospaced))
-                                .padding(8)
+                                .padding(6)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .background(Color(UIColor.systemGray6))
                                 .cornerRadius(4)
@@ -335,9 +246,19 @@ struct ToolCallCard: View {
                         }
                     }
                 }
+            } else if toolCallInfo.state == .calling || toolCallInfo.state == .loadingUi {
+                HStack {
+                    ProgressView()
+                        .scaleEffect(0.8)
+                    Text(toolCallInfo.state.description)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                .frame(maxWidth: .infinity, alignment: .center)
+                .padding()
             }
         }
-        .padding()
+        .padding(12)
         .background(Color(UIColor.systemBackground))
         .cornerRadius(12)
         .shadow(radius: 2)
@@ -345,17 +266,12 @@ struct ToolCallCard: View {
 
     private var stateColor: Color {
         switch toolCallInfo.state {
-        case .calling, .loadingUi:
-            return .orange
-        case .ready, .completed:
-            return .green
-        case .error:
-            return .red
+        case .calling, .loadingUi: return .orange
+        case .ready, .completed: return .green
+        case .error: return .red
         }
     }
 }
-
-// MARK: - Preview
 
 #Preview {
     ContentView()
