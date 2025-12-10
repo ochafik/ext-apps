@@ -1,6 +1,8 @@
 package com.example.mcpappshost
 
 import android.os.Bundle
+import android.webkit.WebView
+import android.webkit.WebViewClient
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.animation.AnimatedVisibility
@@ -17,6 +19,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.viewmodel.compose.viewModel
 
 class MainActivity : ComponentActivity() {
@@ -258,6 +261,28 @@ fun ToolCallCard(toolCall: ToolCallState, onRemove: () -> Unit) {
                     Surface(color = MaterialTheme.colorScheme.errorContainer, shape = MaterialTheme.shapes.small) {
                         Text(toolCall.error, color = MaterialTheme.colorScheme.onErrorContainer, modifier = Modifier.padding(8.dp))
                     }
+                }
+                toolCall.state == ToolCallState.State.READY && toolCall.htmlContent != null -> {
+                    // WebView for UI resource
+                    AndroidView(
+                        factory = { context ->
+                            WebView(context).apply {
+                                webViewClient = WebViewClient()
+                                settings.javaScriptEnabled = true
+                                settings.domStorageEnabled = true
+                                loadDataWithBaseURL(null, toolCall.htmlContent, "text/html", "UTF-8", null)
+                            }
+                        },
+                        update = { webView ->
+                            // Update WebView if content changes
+                            if (toolCall.htmlContent != null) {
+                                webView.loadDataWithBaseURL(null, toolCall.htmlContent, "text/html", "UTF-8", null)
+                            }
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(toolCall.preferredHeight.dp)
+                    )
                 }
                 toolCall.state == ToolCallState.State.COMPLETED && toolCall.result != null -> {
                     Surface(color = MaterialTheme.colorScheme.surfaceVariant, shape = MaterialTheme.shapes.small) {

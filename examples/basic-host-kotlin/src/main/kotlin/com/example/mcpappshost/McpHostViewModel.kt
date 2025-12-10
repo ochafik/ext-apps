@@ -33,7 +33,8 @@ val knownServers = listOf(
 data class ToolInfo(
     val name: String,
     val description: String?,
-    val inputSchema: JsonElement?
+    val inputSchema: JsonElement?,
+    val uiResourceUri: String? = null  // From _meta["ui/resourceUri"]
 )
 
 sealed class ConnectionState {
@@ -149,10 +150,14 @@ class McpHostViewModel : ViewModel() {
                 // List tools
                 val result = client.listTools()
                 _tools.value = result.tools.map { tool ->
+                    // Extract UI resource URI from _meta
+                    val uiResourceUri = tool.meta?.get("ui/resourceUri") as? String
+                    Log.d(TAG, "Tool ${tool.name} has uiResourceUri: $uiResourceUri")
                     ToolInfo(
                         name = tool.name,
                         description = tool.description,
-                        inputSchema = null // TODO: Parse schema
+                        inputSchema = null,
+                        uiResourceUri = uiResourceUri
                     )
                 }
 
@@ -199,9 +204,13 @@ class McpHostViewModel : ViewModel() {
                 // Call the tool (name, arguments, meta, options)
                 val callResult = client.callTool(tool.name, emptyMap(), emptyMap())
 
-                // Update tool call with result
+                // TODO: UI resource loading requires ReadResourceRequest - implement later
+                // For now, just show text result
                 val resultText = callResult.content.joinToString("\n") { it.toString() }
-
+                Log.i(TAG, "Tool result: $resultText")
+                if (tool.uiResourceUri != null) {
+                    Log.i(TAG, "Tool has UI resource at ${tool.uiResourceUri} - UI loading not implemented yet")
+                }
                 updateToolCall(toolCall.id) { it.copy(
                     state = ToolCallState.State.COMPLETED,
                     result = resultText
