@@ -6,25 +6,26 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
-ROOT_DIR="$(dirname "$(dirname "$PROJECT_DIR")")"
 BUILD_TYPE="${1:-debug}"
 
-cd "$ROOT_DIR"
+# Set up Android SDK paths
+export ANDROID_HOME="${ANDROID_HOME:-/opt/homebrew/share/android-commandlinetools}"
+export PATH="$ANDROID_HOME/platform-tools:$PATH"
+export JAVA_HOME="${JAVA_HOME:-/opt/homebrew/opt/openjdk@21}"
 
-echo "Building MCP Apps Host for Android ($BUILD_TYPE)..."
+cd "$PROJECT_DIR"
+
+echo "🔨 Building MCP Apps Host for Android ($BUILD_TYPE)..."
 
 if [ "$BUILD_TYPE" = "release" ]; then
-    ./gradlew :examples:basic-host-kotlin:assembleRelease
+    ./gradlew assembleRelease
 else
-    ./gradlew :examples:basic-host-kotlin:assembleDebug
+    ./gradlew assembleDebug
 fi
 
-APK_PATH="$PROJECT_DIR/build/outputs/apk/$BUILD_TYPE/basic-host-kotlin-$BUILD_TYPE.apk"
+APK_DIR="$PROJECT_DIR/build/outputs/apk/$BUILD_TYPE"
 
-if [ -f "$APK_PATH" ]; then
-    echo "✅ Build succeeded"
-    echo "   APK: $APK_PATH"
-else
-    echo "✅ Build succeeded"
-    echo "   Output: $PROJECT_DIR/build/outputs/apk/$BUILD_TYPE/"
-fi
+echo ""
+echo "✅ Build succeeded"
+echo "   Output: $APK_DIR/"
+ls -la "$APK_DIR"/*.apk 2>/dev/null || true
