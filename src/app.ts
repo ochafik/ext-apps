@@ -697,7 +697,7 @@ export class App extends Protocol<Request, Notification, Result> {
    */
   sendContext(
     params: McpUiUpdateContextRequest["params"],
-    options?: RequestOptions
+    options?: RequestOptions,
   ) {
     return this.request(
       <McpUiUpdateContextRequest>{
@@ -705,7 +705,7 @@ export class App extends Protocol<Request, Notification, Result> {
         params,
       },
       McpUiUpdateContextResultSchema,
-      options
+      options,
     );
   }
 

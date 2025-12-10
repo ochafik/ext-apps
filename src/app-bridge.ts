@@ -532,13 +532,10 @@ export class AppBridge extends Protocol<Request, Notification, Result> {
   set oncontext(
     callback: (params: McpUiUpdateContextRequest["params"]) => void,
   ) {
-    this.setRequestHandler(
-      McpUiUpdateContextRequestSchema,
-      async (request) => {
-        callback(request.params);
-        return {};
-      },
-    );
+    this.setRequestHandler(McpUiUpdateContextRequestSchema, async (request) => {
+      callback(request.params);
+      return {};
+    });
   }
 
   /**
