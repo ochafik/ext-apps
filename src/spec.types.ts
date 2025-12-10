@@ -37,6 +37,64 @@ export type McpUiTheme = "light" | "dark";
 export type McpUiDisplayMode = "inline" | "fullscreen" | "pip";
 
 /**
+ * @description CSS variable keys available to MCP apps for theming.
+ */
+export type McpUiStyleVariableKey =
+  // Background colors
+  | "--color-background-primary"
+  | "--color-background-secondary"
+  | "--color-background-tertiary"
+  | "--color-background-inverted"
+  // Text colors
+  | "--color-text-primary"
+  | "--color-text-secondary"
+  | "--color-text-tertiary"
+  | "--color-text-inverted"
+  // Icon colors
+  | "--color-icon-primary"
+  | "--color-icon-secondary"
+  | "--color-icon-tertiary"
+  | "--color-icon-inverted"
+  // Border colors
+  | "--color-border-primary"
+  | "--color-border-secondary"
+  // Accent colors
+  | "--color-accent-info"
+  | "--color-accent-danger"
+  | "--color-accent-success"
+  | "--color-accent-warning"
+  // Typography - Family
+  | "--font-family-sans"
+  // Typography - Size
+  | "--font-size-heading"
+  | "--font-size-body"
+  | "--font-size-caption"
+  // Typography - Weight
+  | "--font-weight-regular"
+  | "--font-weight-emphasized"
+  // Typography - Line height
+  | "--font-leading-regular"
+  | "--font-leading-tight"
+  // Typography - Composite styles
+  | "--font-style-heading"
+  | "--font-style-body"
+  | "--font-style-body-emphasized"
+  | "--font-style-caption"
+  | "--font-style-caption-emphasized"
+  // Border radius
+  | "--border-radius-small"
+  | "--border-radius-medium"
+  | "--border-radius-large"
+  | "--border-radius-full"
+  // Border width
+  | "--border-width-regular";
+
+/**
+ * @description Style variables for theming MCP apps.
+ */
+export type McpUiStyles = Record<McpUiStyleVariableKey, string>;
+
+/**
  * @description Request to open an external URL in the host's default browser.
  * @see {@link app.App.sendOpenLink} for the method that sends this request
  */
@@ -195,6 +253,8 @@ export interface McpUiHostContext {
   };
   /** @description Current color theme preference. */
   theme?: McpUiTheme;
+  /** @description CSS variables for theming the app. */
+  styles?: McpUiStyles;
   /** @description How the UI is currently displayed. */
   displayMode?: McpUiDisplayMode;
   /** @description Display modes the host supports. */

@@ -14,6 +14,8 @@ export {
   LATEST_PROTOCOL_VERSION,
   type McpUiTheme,
   type McpUiDisplayMode,
+  type McpUiStyleVariableKey,
+  type McpUiStyles,
   type McpUiOpenLinkRequest,
   type McpUiOpenLinkResult,
   type McpUiMessageRequest,
