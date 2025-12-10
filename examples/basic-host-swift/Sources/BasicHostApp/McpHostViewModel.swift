@@ -15,10 +15,13 @@ class McpHostViewModel: ObservableObject {
     @Published var activeToolCalls: [ToolCallInfo] = []
     @Published var errorMessage: String?
 
+    /// Server URL - editable by user
+    /// Note: From iOS Simulator, use localhost or 127.0.0.1 to reach the Mac host
+    @Published var serverUrlString: String = "http://localhost:3001/mcp"
+
     // MARK: - Private State
 
     private var mcpClient: Client?
-    private var serverUrl: URL
 
     private let hostInfo = Implementation(name: "BasicHostSwift", version: "1.0.0")
 
@@ -29,9 +32,7 @@ class McpHostViewModel: ObservableObject {
         logging: true
     )
 
-    init(serverUrl: URL = URL(string: "http://localhost:3001/mcp")!) {
-        self.serverUrl = serverUrl
-    }
+    init() {}
 
     // MARK: - Connection Management
 
@@ -40,6 +41,10 @@ class McpHostViewModel: ObservableObject {
         errorMessage = nil
 
         do {
+            guard let serverUrl = URL(string: serverUrlString) else {
+                throw ConnectionError.invalidUrl(serverUrlString)
+            }
+
             let client = Client(name: hostInfo.name, version: hostInfo.version)
             let transport = HTTPClientTransport(endpoint: serverUrl)
             _ = try await client.connect(transport: transport)
@@ -366,6 +371,16 @@ enum ToolCallError: LocalizedError {
         case .invalidMimeType(let m): return "Invalid MIME type: \(m)"
         case .invalidHtmlContent: return "Invalid HTML content"
         case .clientNotAvailable: return "MCP client not available"
+        }
+    }
+}
+
+enum ConnectionError: LocalizedError {
+    case invalidUrl(String)
+
+    var errorDescription: String? {
+        switch self {
+        case .invalidUrl(let url): return "Invalid URL: \(url)"
         }
     }
 }

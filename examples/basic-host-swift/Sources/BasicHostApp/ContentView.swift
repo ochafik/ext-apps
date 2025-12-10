@@ -60,9 +60,22 @@ struct ContentView: View {
 
     private var connectionSection: some View {
         VStack(alignment: .leading, spacing: 12) {
+            // Server URL input
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Server URL")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                TextField("http://localhost:3001/mcp", text: $viewModel.serverUrlString)
+                    .textFieldStyle(.roundedBorder)
+                    .font(.system(.body, design: .monospaced))
+                    .autocapitalization(.none)
+                    .disableAutocorrection(true)
+                    .disabled(viewModel.connectionState == .connected || viewModel.connectionState == .connecting)
+            }
+
             HStack {
-                Text("Server Status:")
-                    .font(.headline)
+                Text("Status:")
+                    .font(.subheadline)
                 Spacer()
                 Text(viewModel.connectionState.description)
                     .foregroundColor(connectionColor)
