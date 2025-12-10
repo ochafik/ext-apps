@@ -10,8 +10,16 @@ class McpHostViewModel: ObservableObject {
 
     @Published var connectionState: ConnectionState = .disconnected
     @Published var tools: [Tool] = []
-    @Published var selectedTool: Tool?
     @Published var toolInputJson: String = "{}"
+
+    /// Selected tool - updates input JSON with defaults when changed
+    @Published var selectedTool: Tool? {
+        didSet {
+            if let tool = selectedTool {
+                toolInputJson = generateDefaultInput(for: tool)
+            }
+        }
+    }
     @Published var activeToolCalls: [ToolCallInfo] = []
     @Published var errorMessage: String?
 
@@ -142,6 +150,87 @@ class McpHostViewModel: ObservableObject {
 
         } catch {
             errorMessage = "Failed to call tool: \(error.localizedDescription)"
+        }
+    }
+
+    /// Generate default input JSON from tool's inputSchema
+    private func generateDefaultInput(for tool: Tool) -> String {
+        var defaults: [String: Any] = [:]
+
+        // inputSchema is typically: { "type": "object", "properties": { ... }, "required": [...] }
+        guard case .object(let schema) = tool.inputSchema,
+              case .object(let properties)? = schema["properties"] else {
+            return "{}"
+        }
+
+        // Get required fields
+        var requiredFields = Set<String>()
+        if case .array(let required)? = schema["required"] {
+            for item in required {
+                if case .string(let field) = item {
+                    requiredFields.insert(field)
+                }
+            }
+        }
+
+        for (key, propSchema) in properties {
+            guard case .object(let prop) = propSchema else { continue }
+
+            // Check for explicit default value
+            if let defaultValue = prop["default"] {
+                defaults[key] = valueToAny(defaultValue)
+                continue
+            }
+
+            // For required fields or all fields, generate appropriate defaults
+            if let typeValue = prop["type"] {
+                if case .string(let type) = typeValue {
+                    switch type {
+                    case "string":
+                        // Check for enum values
+                        if case .array(let enumValues)? = prop["enum"], let first = enumValues.first {
+                            defaults[key] = valueToAny(first)
+                        } else {
+                            defaults[key] = ""
+                        }
+                    case "number":
+                        defaults[key] = 0.0
+                    case "integer":
+                        defaults[key] = 0
+                    case "boolean":
+                        defaults[key] = false
+                    case "array":
+                        defaults[key] = []
+                    case "object":
+                        defaults[key] = [:]
+                    default:
+                        if requiredFields.contains(key) {
+                            defaults[key] = NSNull()
+                        }
+                    }
+                }
+            }
+        }
+
+        // Convert to JSON string
+        if let data = try? JSONSerialization.data(withJSONObject: defaults, options: [.prettyPrinted, .sortedKeys]),
+           let json = String(data: data, encoding: .utf8) {
+            return json
+        }
+        return "{}"
+    }
+
+    /// Convert MCP Value to Any for JSON serialization
+    private func valueToAny(_ value: Value) -> Any {
+        switch value {
+        case .string(let s): return s
+        case .int(let i): return i
+        case .double(let d): return d
+        case .bool(let b): return b
+        case .array(let arr): return arr.map { valueToAny($0) }
+        case .object(let obj): return obj.mapValues { valueToAny($0) }
+        case .null: return NSNull()
+        case .data(_, let d): return d.base64EncodedString()
         }
     }
 
