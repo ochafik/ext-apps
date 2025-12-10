@@ -15,9 +15,31 @@ class McpHostViewModel: ObservableObject {
     @Published var activeToolCalls: [ToolCallInfo] = []
     @Published var errorMessage: String?
 
-    /// Server URL - editable by user
-    /// Note: From iOS Simulator, use localhost or 127.0.0.1 to reach the Mac host
-    @Published var serverUrlString: String = "http://localhost:3001/mcp"
+    /// Known MCP servers (matches examples/servers.json)
+    static let knownServers = [
+        ("basic-server-react", "http://localhost:3101/mcp"),
+        ("basic-server-vanillajs", "http://localhost:3102/mcp"),
+        ("budget-allocator-server", "http://localhost:3103/mcp"),
+        ("cohort-heatmap-server", "http://localhost:3104/mcp"),
+        ("customer-segmentation-server", "http://localhost:3105/mcp"),
+        ("scenario-modeler-server", "http://localhost:3106/mcp"),
+        ("system-monitor-server", "http://localhost:3107/mcp"),
+        ("threejs-server", "http://localhost:3108/mcp"),
+    ]
+
+    /// Selected server index (-1 for custom URL)
+    @Published var selectedServerIndex: Int = 0
+
+    /// Custom server URL (used when selectedServerIndex is -1)
+    @Published var customServerUrl: String = ""
+
+    /// Computed server URL based on selection
+    var serverUrlString: String {
+        if selectedServerIndex >= 0 && selectedServerIndex < Self.knownServers.count {
+            return Self.knownServers[selectedServerIndex].1
+        }
+        return customServerUrl
+    }
 
     // MARK: - Private State
 

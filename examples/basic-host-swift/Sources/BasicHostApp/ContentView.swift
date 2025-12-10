@@ -60,17 +60,35 @@ struct ContentView: View {
 
     private var connectionSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            // Server URL input
+            // Server picker
             VStack(alignment: .leading, spacing: 4) {
-                Text("Server URL")
+                Text("MCP Server")
                     .font(.subheadline)
                     .foregroundColor(.secondary)
-                TextField("http://localhost:3001/mcp", text: $viewModel.serverUrlString)
-                    .textFieldStyle(.roundedBorder)
-                    .font(.system(.body, design: .monospaced))
-                    .autocapitalization(.none)
-                    .disableAutocorrection(true)
-                    .disabled(viewModel.connectionState == .connected || viewModel.connectionState == .connecting)
+
+                Picker("Server", selection: $viewModel.selectedServerIndex) {
+                    ForEach(Array(McpHostViewModel.knownServers.enumerated()), id: \.offset) { index, server in
+                        Text(server.0).tag(index)
+                    }
+                    Text("Custom URL...").tag(-1)
+                }
+                .pickerStyle(.menu)
+                .disabled(viewModel.connectionState == .connected || viewModel.connectionState == .connecting)
+
+                // Show custom URL field when "Custom URL..." is selected
+                if viewModel.selectedServerIndex == -1 {
+                    TextField("http://localhost:3001/mcp", text: $viewModel.customServerUrl)
+                        .textFieldStyle(.roundedBorder)
+                        .font(.system(.caption, design: .monospaced))
+                        .autocapitalization(.none)
+                        .disableAutocorrection(true)
+                        .disabled(viewModel.connectionState == .connected || viewModel.connectionState == .connecting)
+                } else {
+                    // Show the URL for the selected server
+                    Text(viewModel.serverUrlString)
+                        .font(.system(.caption, design: .monospaced))
+                        .foregroundColor(.secondary)
+                }
             }
 
             HStack {
