@@ -81,7 +81,7 @@ data class ToolInfo(
     /** JSON-RPC id of the tools/call request */
     val id: kotlinx.serialization.json.JsonElement? = null,
     /** Tool definition */
-    val tool: io.modelcontextprotocol.kotlin.sdk.Tool
+    val tool: io.modelcontextprotocol.kotlin.sdk.types.Tool
 )
 
 /**

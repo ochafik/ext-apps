@@ -341,6 +341,7 @@ data class McpUiResourceTeardownRequest(
 
 @Serializable
 data class McpUiResourceTeardownResult(
+    val _placeholder: Unit = Unit
 
 )
 

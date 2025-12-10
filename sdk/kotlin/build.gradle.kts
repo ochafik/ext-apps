@@ -24,7 +24,7 @@ tasks.withType<JavaCompile> {
 
 dependencies {
     // MCP SDK core types
-    implementation("io.modelcontextprotocol:kotlin-sdk:0.6.0")
+    implementation("io.modelcontextprotocol:kotlin-sdk:0.8.1")
 
     // Kotlin serialization for JSON
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
