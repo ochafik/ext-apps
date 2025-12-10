@@ -2,6 +2,7 @@ plugins {
     id("com.android.application") version "8.2.0"
     kotlin("android") version "2.1.0"
     kotlin("plugin.serialization") version "2.1.0"
+    kotlin("plugin.compose") version "2.1.0"
 }
 
 android {
@@ -41,9 +42,6 @@ android {
         compose = true
     }
 
-    composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.8"
-    }
 
     packaging {
         resources {
