@@ -1,4 +1,25 @@
-import { test, expect, type Page } from "@playwright/test";
+import { test, expect, type Page, type ConsoleMessage } from "@playwright/test";
+
+/**
+ * Helper to get the app frame locator (nested: sandbox > app)
+ */
+function getAppFrame(page: Page) {
+  return page.frameLocator("iframe").first().frameLocator("iframe").first();
+}
+
+/**
+ * Collect console messages with [HOST] prefix
+ */
+function captureHostLogs(page: Page): string[] {
+  const logs: string[] = [];
+  page.on("console", (msg: ConsoleMessage) => {
+    const text = msg.text();
+    if (text.includes("[HOST]")) {
+      logs.push(text);
+    }
+  });
+  return logs;
+}
 
 // Server configurations
 const SERVERS = [
@@ -64,6 +85,56 @@ SERVERS.forEach((server) => {
       await expect(page).toHaveScreenshot(`${server.key}.png`, {
         maxDiffPixelRatio: 0.1,
       });
+    });
+  });
+});
+
+// Interaction tests for basic servers (React and Vanilla JS have identical UIs)
+const BASIC_SERVERS = SERVERS.filter(
+  (s) => s.key === "basic-react" || s.key === "basic-vanillajs",
+);
+
+BASIC_SERVERS.forEach((server) => {
+  test.describe(`${server.name} - Interactions`, () => {
+    test("Send Message button triggers host callback", async ({ page }) => {
+      const logs = captureHostLogs(page);
+      await loadServer(page, server.index);
+
+      const appFrame = getAppFrame(page);
+      await appFrame.locator('button:has-text("Send Message")').click();
+
+      // Wait for the async message to be processed
+      await page.waitForTimeout(500);
+
+      expect(logs.some((log) => log.includes("Message from MCP App"))).toBe(
+        true,
+      );
+    });
+
+    test("Send Log button triggers host callback", async ({ page }) => {
+      const logs = captureHostLogs(page);
+      await loadServer(page, server.index);
+
+      const appFrame = getAppFrame(page);
+      await appFrame.locator('button:has-text("Send Log")').click();
+
+      await page.waitForTimeout(500);
+
+      expect(logs.some((log) => log.includes("Log message from MCP App"))).toBe(
+        true,
+      );
+    });
+
+    test("Open Link button triggers host callback", async ({ page }) => {
+      const logs = captureHostLogs(page);
+      await loadServer(page, server.index);
+
+      const appFrame = getAppFrame(page);
+      await appFrame.locator('button:has-text("Open Link")').click();
+
+      await page.waitForTimeout(500);
+
+      expect(logs.some((log) => log.includes("Open link request"))).toBe(true);
     });
   });
 });
