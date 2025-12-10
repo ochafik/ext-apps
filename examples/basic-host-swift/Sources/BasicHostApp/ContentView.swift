@@ -7,6 +7,14 @@ struct ContentView: View {
     @State private var isInputExpanded = false
 
     var body: some View {
+        content
+            .task {
+                // Auto-connect to first server on launch
+                await viewModel.connect()
+            }
+    }
+
+    private var content: some View {
         NavigationView {
             VStack(spacing: 0) {
                 // Tool calls area (scrollable, like chat)
@@ -97,8 +105,6 @@ struct ContentView: View {
                     .disabled(viewModel.selectedTool == nil || !isValidJson)
                 }
 
-                // Connect/Disconnect button
-                connectionButton
             }
             .padding(.horizontal)
             .padding(.vertical, 8)
@@ -129,8 +135,6 @@ struct ContentView: View {
             }
         } label: {
             HStack {
-                Image(systemName: connectionIcon)
-                    .foregroundColor(connectionColor)
                 Text(serverLabel)
                     .lineLimit(1)
                 Image(systemName: "chevron.down")
@@ -159,52 +163,11 @@ struct ContentView: View {
         .disabled(viewModel.tools.isEmpty)
     }
 
-    private var connectionButton: some View {
-        Group {
-            if viewModel.connectionState == .connecting {
-                ProgressView()
-                    .scaleEffect(0.7)
-            } else if viewModel.connectionState == .connected {
-                Button {
-                    Task { await viewModel.disconnect() }
-                } label: {
-                    Image(systemName: "xmark.circle")
-                        .foregroundColor(.red)
-                }
-            } else {
-                Button {
-                    Task { await viewModel.connect() }
-                } label: {
-                    Image(systemName: "arrow.clockwise")
-                        .foregroundColor(.blue)
-                }
-            }
-        }
-    }
-
     private var serverLabel: String {
         if viewModel.selectedServerIndex >= 0 && viewModel.selectedServerIndex < McpHostViewModel.knownServers.count {
             return McpHostViewModel.knownServers[viewModel.selectedServerIndex].0
         }
         return "Custom"
-    }
-
-    private var connectionIcon: String {
-        switch viewModel.connectionState {
-        case .connected: return "circle.fill"
-        case .connecting: return "circle.dotted"
-        case .error: return "exclamationmark.circle"
-        case .disconnected: return "circle"
-        }
-    }
-
-    private var connectionColor: Color {
-        switch viewModel.connectionState {
-        case .connected: return .green
-        case .connecting: return .orange
-        case .error: return .red
-        case .disconnected: return .gray
-        }
     }
 
     private var isValidJson: Bool {
