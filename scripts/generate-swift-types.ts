@@ -51,37 +51,39 @@ const HEADER_DEFINED_TYPES = new Set([
 // Canonical type names - map verbose inline names to simpler ones
 const CANONICAL_NAMES: Record<string, string> = {
   // Capabilities
-  "McpUiInitializeResultHostCapabilities": "McpUiHostCapabilities",
-  "McpUiInitializeResultHostCapabilitiesServerTools": "ServerToolsCapability",
-  "McpUiInitializeResultHostCapabilitiesServerResources": "ServerResourcesCapability",
-  "McpUiInitializeRequestParamsAppCapabilities": "McpUiAppCapabilities",
-  "McpUiInitializeRequestParamsAppCapabilitiesTools": "AppToolsCapability",
-  "McpUiHostContextChangedNotificationParamsDeviceCapabilities": "DeviceCapabilities",
-  "McpUiInitializeResultHostContextDeviceCapabilities": "DeviceCapabilities",
+  McpUiInitializeResultHostCapabilities: "McpUiHostCapabilities",
+  McpUiInitializeResultHostCapabilitiesServerTools: "ServerToolsCapability",
+  McpUiInitializeResultHostCapabilitiesServerResources:
+    "ServerResourcesCapability",
+  McpUiInitializeRequestParamsAppCapabilities: "McpUiAppCapabilities",
+  McpUiInitializeRequestParamsAppCapabilitiesTools: "AppToolsCapability",
+  McpUiHostContextChangedNotificationParamsDeviceCapabilities:
+    "DeviceCapabilities",
+  McpUiInitializeResultHostContextDeviceCapabilities: "DeviceCapabilities",
 
   // Context types
-  "McpUiInitializeResultHostContext": "McpUiHostContext",
-  "McpUiHostContextChangedNotificationParams": "McpUiHostContext",
+  McpUiInitializeResultHostContext: "McpUiHostContext",
+  McpUiHostContextChangedNotificationParams: "McpUiHostContext",
 
   // Enums
-  "McpUiInitializeResultHostContextTheme": "McpUiTheme",
-  "McpUiHostContextChangedNotificationParamsTheme": "McpUiTheme",
-  "McpUiInitializeResultHostContextDisplayMode": "McpUiDisplayMode",
-  "McpUiHostContextChangedNotificationParamsDisplayMode": "McpUiDisplayMode",
-  "McpUiInitializeResultHostContextPlatform": "McpUiPlatform",
-  "McpUiHostContextChangedNotificationParamsPlatform": "McpUiPlatform",
+  McpUiInitializeResultHostContextTheme: "McpUiTheme",
+  McpUiHostContextChangedNotificationParamsTheme: "McpUiTheme",
+  McpUiInitializeResultHostContextDisplayMode: "McpUiDisplayMode",
+  McpUiHostContextChangedNotificationParamsDisplayMode: "McpUiDisplayMode",
+  McpUiInitializeResultHostContextPlatform: "McpUiPlatform",
+  McpUiHostContextChangedNotificationParamsPlatform: "McpUiPlatform",
 
   // Viewport
-  "McpUiInitializeResultHostContextViewport": "Viewport",
-  "McpUiHostContextChangedNotificationParamsViewport": "Viewport",
+  McpUiInitializeResultHostContextViewport: "Viewport",
+  McpUiHostContextChangedNotificationParamsViewport: "Viewport",
 
   // Safe area
-  "McpUiInitializeResultHostContextSafeAreaInsets": "SafeAreaInsets",
-  "McpUiHostContextChangedNotificationParamsSafeAreaInsets": "SafeAreaInsets",
+  McpUiInitializeResultHostContextSafeAreaInsets: "SafeAreaInsets",
+  McpUiHostContextChangedNotificationParamsSafeAreaInsets: "SafeAreaInsets",
 
   // Implementation
-  "McpUiInitializeResultHostInfo": "Implementation",
-  "McpUiInitializeRequestParamsAppInfo": "Implementation",
+  McpUiInitializeResultHostInfo: "Implementation",
+  McpUiInitializeRequestParamsAppInfo: "Implementation",
 };
 
 // Types to skip (will use the canonical version)
@@ -140,8 +142,8 @@ function isFieldBasedUnion(variants: JsonSchema[]): string | null {
   const req1 = new Set(variants[1].required || []);
 
   // Find fields unique to each variant
-  const unique0 = [...req0].filter(f => !req1.has(f));
-  const unique1 = [...req1].filter(f => !req0.has(f));
+  const unique0 = [...req0].filter((f) => !req1.has(f));
+  const unique1 = [...req1].filter((f) => !req0.has(f));
 
   if (unique0.length === 1 && unique1.length === 1) {
     return `${unique0[0]}|${unique1[0]}`;
@@ -219,8 +221,12 @@ function generateDiscriminatedUnion(
     generateStruct(structName, variant, defs);
 
     cases.push(`    case ${caseName}(${structName})`);
-    decodeCases.push(`        case "${discriminator}": self = .${caseName}(try ${structName}(from: decoder))`);
-    encodeCases.push(`        case .${caseName}(let v): try v.encode(to: encoder)`);
+    decodeCases.push(
+      `        case "${discriminator}": self = .${caseName}(try ${structName}(from: decoder))`,
+    );
+    encodeCases.push(
+      `        case .${caseName}(let v): try v.encode(to: encoder)`,
+    );
   }
 
   typeDefinitions.push(`public enum ${canonical}: Codable, Sendable, Equatable {
@@ -324,8 +330,11 @@ function toSwiftType(
         return canonical;
       }
       // Handle typed additionalProperties (e.g., Record<string, SomeType>)
-      if (schema.additionalProperties && typeof schema.additionalProperties === "object" &&
-          Object.keys(schema.additionalProperties).length > 0) {
+      if (
+        schema.additionalProperties &&
+        typeof schema.additionalProperties === "object" &&
+        Object.keys(schema.additionalProperties).length > 0
+      ) {
         const valueType = toSwiftType(
           schema.additionalProperties,
           contextName + "Value",
@@ -599,7 +608,9 @@ try {
 
   console.log(`✅ Generated: ${OUTPUT_FILE}`);
   console.log(`   Types: ${generatedTypes.size}`);
-  console.log(`   Deduplicated: ${Object.keys(CANONICAL_NAMES).length} inline types`);
+  console.log(
+    `   Deduplicated: ${Object.keys(CANONICAL_NAMES).length} inline types`,
+  );
 } catch (error) {
   console.error("❌ Generation failed:", error);
   process.exit(1);

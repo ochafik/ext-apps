@@ -123,7 +123,10 @@ const server = new McpServer({
       description:
         "Render an interactive 3D scene with custom Three.js code. Available globals: THREE, OrbitControls, EffectComposer, RenderPass, UnrealBloomPass, canvas, width, height.",
       inputSchema: {
-        code: z.string().default(`// Rotating cube example
+        code: z
+          .string()
+          .default(
+            `// Rotating cube example
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000);
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
@@ -146,7 +149,9 @@ function animate() {
   cube.rotation.y += 0.01;
   renderer.render(scene, camera);
 }
-animate();`).describe("JavaScript code to render the 3D scene"),
+animate();`,
+          )
+          .describe("JavaScript code to render the 3D scene"),
         height: z
           .number()
           .int()
