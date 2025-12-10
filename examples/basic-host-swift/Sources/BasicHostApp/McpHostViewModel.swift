@@ -326,38 +326,13 @@ class ToolCallInfo: ObservableObject, Identifiable {
     }
 
     private func getUiResourceUri(from tool: Tool) -> String? {
-        // The MCP Swift SDK doesn't expose tool._meta, so we can't access ui/resourceUri directly.
-        // As a workaround for example servers, try to find a matching UI resource.
-        //
-        // Known UI resource URIs for example servers:
-        // - basic-server-react/vanillajs: ui://get-time/mcp-app.html (tool: get_time)
-        // - budget-allocator-server: ui://budget-allocator/mcp-app.html (tool: create_budget)
-        // - cohort-heatmap-server: ui://get-cohort-data/mcp-app.html (tool: get_cohort_data)
-        // - customer-segmentation-server: ui://customer-segmentation/mcp-app.html (tool: analyze_segments)
-        // - scenario-modeler-server: ui://scenario-modeler/mcp-app.html (tool: run_scenario)
-        // - system-monitor-server: ui://system-monitor/mcp-app.html (tool: get_system_stats)
-        // - threejs-server: ui://threejs/mcp-app.html (tool: render_3d)
-
-        // Tool names from example servers (verified from server.ts files)
-        let knownMappings: [String: String] = [
-            // basic-server-react & basic-server-vanillajs
-            "get-time": "ui://get-time/mcp-app.html",
-            // budget-allocator-server
-            "get-budget-data": "ui://budget-allocator/mcp-app.html",
-            // cohort-heatmap-server
-            "get-cohort-data": "ui://get-cohort-data/mcp-app.html",
-            // customer-segmentation-server
-            "get-customer-data": "ui://customer-segmentation/mcp-app.html",
-            // scenario-modeler-server
-            "get-scenario-data": "ui://scenario-modeler/mcp-app.html",
-            // system-monitor-server
-            "get-system-stats": "ui://system-monitor/mcp-app.html",
-            // threejs-server
-            "show_threejs_scene": "ui://threejs/mcp-app.html",
-            "learn_threejs": "ui://threejs/mcp-app.html",
-        ]
-
-        return knownMappings[tool.name]
+        // Access the _meta field to get the UI resource URI (requires swift-sdk with _meta support)
+        if let meta = tool._meta,
+           let uriValue = meta[McpAppsConfig.resourceUriMetaKey],
+           case .string(let uri) = uriValue {
+            return uri
+        }
+        return nil
     }
 
     private func loadUiResource(uri: String) async throws {

@@ -16,8 +16,8 @@ let package = Package(
         ),
     ],
     dependencies: [
-        // MCP Swift SDK for core types
-        .package(url: "https://github.com/modelcontextprotocol/swift-sdk.git", from: "0.10.0"),
+        // MCP Swift SDK for core types (using spec-update branch with _meta support)
+        .package(url: "https://github.com/ajevans99/swift-sdk.git", branch: "spec-update"),
     ],
     targets: [
         .target(

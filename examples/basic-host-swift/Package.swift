@@ -16,8 +16,8 @@ let package = Package(
     dependencies: [
         // Local MCP Apps Swift SDK
         .package(path: "../../sdk/swift"),
-        // MCP Swift SDK for MCP client
-        .package(url: "https://github.com/modelcontextprotocol/swift-sdk.git", from: "0.10.0"),
+        // MCP Swift SDK for MCP client (using spec-update branch with _meta support)
+        .package(url: "https://github.com/ajevans99/swift-sdk.git", branch: "spec-update"),
     ],
     targets: [
         .executableTarget(
