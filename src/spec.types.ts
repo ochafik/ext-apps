@@ -234,6 +234,39 @@ export interface McpUiHostContextChangedNotification {
 }
 
 /**
+ * @description Request to update the agent's context without requiring a follow-up action (Guest UI -> Host).
+ *
+ * Unlike `notifications/message` which is for debugging/logging, this request is intended
+ * to inform the agent about app-driven updates that should be stored in the conversation context
+ * for future reasoning.
+ *
+ * @see {@link app.App.sendUpdateContext} for the method that sends this request
+ */
+export interface McpUiUpdateContextRequest {
+  method: "ui/update-context";
+  params: {
+    /** @description Message role, currently only "user" is supported. */
+    role: "user";
+    /** @description Context content blocks (text, image, etc.). */
+    content: ContentBlock[];
+  };
+}
+
+/**
+ * @description Result from updating the agent's context.
+ * @see {@link McpUiUpdateContextRequest}
+ */
+export interface McpUiUpdateContextResult {
+  /** @description True if the host rejected or failed to store the context update. */
+  isError?: boolean;
+  /**
+   * Index signature required for MCP SDK `Protocol` class compatibility.
+   * Note: The schema intentionally omits this to enforce strict validation.
+   */
+  [key: string]: unknown;
+}
+
+/**
  * @description Request for graceful shutdown of the Guest UI (Host -> Guest UI).
  * @see {@link app-bridge.AppBridge.sendResourceTeardown} for the host method that sends this
  */
@@ -274,6 +307,8 @@ export interface McpUiHostCapabilities {
   };
   /** @description Host accepts log messages. */
   logging?: {};
+  /** @description Host accepts context updates to be stored in the agent's conversation context. */
+  context?: {};
 }
 
 /**

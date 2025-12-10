@@ -379,7 +379,7 @@ UI iframes can use the following subset of standard MCP protocol messages:
 
 **Notifications:**
 
-- `notifications/message` - Log messages to host
+- `notifications/message` - Log messages to host (for logging)
 
 **Lifecycle:**
 
@@ -532,6 +532,45 @@ Host SHOULD open the URL in the user's default browser or a new tab.
 ```
 
 Host SHOULD add the message to the conversation thread, preserving the specified role.
+
+`ui/update-context` - Update the agent's conversation context
+
+```typescript
+// Request
+{
+  jsonrpc: "2.0",
+  id: 3,
+  method: "ui/update-context",
+  params: {
+    role: "user",
+    content: ContentBlock[]
+  }
+}
+
+// Success Response
+{
+  jsonrpc: "2.0",
+  id: 3,
+  result: {}  // Empty result on success
+}
+
+// Error Response (if denied or failed)
+{
+  jsonrpc: "2.0",
+  id: 3,
+  error: {
+    code: -32000,  // Implementation-defined error
+    message: "Context update denied" | "Invalid content format"
+  }
+}
+```
+
+Guest UI MAY send this request to inform the agent about app state changes that should be stored in the conversation context for future reasoning. This event serves a different use case from `notifications/message` (logging) and `ui/message` (which also trigger followups).
+
+Host behavior:
+- SHOULD store the context update in the conversation context
+- MAY display context updates to the user
+- MAY filter or aggregate context updates
 
 #### Notifications (Host → UI)
 
@@ -765,9 +804,12 @@ sequenceDiagram
     else Message
       UI ->> H: ui/message
       H -->> H: Process message and follow up
-    else Notify
+    else Context update
+      UI ->> H: ui/update-context
+      H ->> H: Process context update and store in conversation context
+    else Log
       UI ->> H: notifications/message
-      H ->> H: Process notification and store in context
+      H ->> H: Record log for debugging/telemetry
     else Resource read
       UI ->> H: resources/read
       H ->> S: resources/read

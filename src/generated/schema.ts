@@ -161,6 +161,20 @@ export const McpUiToolInputPartialNotificationSchema = z.object({
 });
 
 /**
+ * @description Result from updating the agent's context.
+ * @see {@link McpUiUpdateContextRequest}
+ */
+export const McpUiUpdateContextResultSchema = z.looseObject({
+  /** @description True if the host rejected or failed to store the context update. */
+  isError: z
+    .boolean()
+    .optional()
+    .describe(
+      "True if the host rejected or failed to store the context update.",
+    ),
+});
+
+/**
  * @description Request for graceful shutdown of the Guest UI (Host -> Guest UI).
  * @see {@link app-bridge.AppBridge.sendResourceTeardown} for the host method that sends this
  */
@@ -217,6 +231,13 @@ export const McpUiHostCapabilitiesSchema = z.object({
     .describe("Host can proxy resource reads to the MCP server."),
   /** @description Host accepts log messages. */
   logging: z.object({}).optional().describe("Host accepts log messages."),
+  /** @description Host accepts context updates to be stored in the agent's conversation context. */
+  context: z
+    .object({})
+    .optional()
+    .describe(
+      "Host accepts context updates to be stored in the agent's conversation context.",
+    ),
 });
 
 /**
@@ -421,6 +442,29 @@ export const McpUiHostContextChangedNotificationSchema = z.object({
   params: McpUiHostContextSchema.describe(
     "Partial context update containing only changed fields.",
   ),
+});
+
+/**
+ * @description Request to update the agent's context without requiring a follow-up action (Guest UI -> Host).
+ *
+ * Unlike `notifications/message` which is for debugging/logging, this request is intended
+ * to inform the agent about app-driven updates that should be stored in the conversation context
+ * for future reasoning.
+ *
+ * @see {@link app.App.sendUpdateContext} for the method that sends this request
+ */
+export const McpUiUpdateContextRequestSchema = z.object({
+  method: z.literal("ui/update-context"),
+  params: z.object({
+    /** @description Message role, currently only "user" is supported. */
+    role: z
+      .literal("user")
+      .describe('Message role, currently only "user" is supported.'),
+    /** @description Context content blocks (text, image, etc.). */
+    content: z
+      .array(ContentBlockSchema)
+      .describe("Context content blocks (text, image, etc.)."),
+  }),
 });
 
 /**

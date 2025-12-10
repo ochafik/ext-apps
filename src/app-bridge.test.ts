@@ -212,6 +212,52 @@ describe("App <-> AppBridge integration", () => {
         logger: "TestApp",
       });
     });
+
+    it("app.sendContext triggers bridge.oncontext and returns result", async () => {
+      const receivedContexts: unknown[] = [];
+      bridge.oncontext = (params) => {
+        receivedContexts.push(params);
+      };
+
+      await app.connect(appTransport);
+      const result = await app.sendContext({
+        role: "user",
+        content: [{ type: "text", text: "User selected 3 items" }],
+      });
+
+      expect(receivedContexts).toHaveLength(1);
+      expect(receivedContexts[0]).toMatchObject({
+        role: "user",
+        content: [{ type: "text", text: "User selected 3 items" }],
+      });
+      expect(result).toEqual({});
+    });
+
+    it("app.sendContext works with multiple content blocks", async () => {
+      const receivedContexts: unknown[] = [];
+      bridge.oncontext = (params) => {
+        receivedContexts.push(params);
+      };
+
+      await app.connect(appTransport);
+      const result = await app.sendContext({
+        role: "user",
+        content: [
+          { type: "text", text: "Filter applied" },
+          { type: "text", text: "Category: electronics" },
+        ],
+      });
+
+      expect(receivedContexts).toHaveLength(1);
+      expect(receivedContexts[0]).toMatchObject({
+        role: "user",
+        content: [
+          { type: "text", text: "Filter applied" },
+          { type: "text", text: "Category: electronics" },
+        ],
+      });
+      expect(result).toEqual({});
+    });
   });
 
   describe("App -> Host requests", () => {

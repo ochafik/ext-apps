@@ -21,6 +21,8 @@ import {
 import {
   LATEST_PROTOCOL_VERSION,
   McpUiAppCapabilities,
+  McpUiUpdateContextRequest,
+  McpUiUpdateContextResultSchema,
   McpUiHostCapabilities,
   McpUiHostContextChangedNotification,
   McpUiHostContextChangedNotificationSchema,
@@ -671,6 +673,40 @@ export class App extends Protocol<Request, Notification, Result> {
       method: "notifications/message",
       params,
     });
+  }
+
+  /**
+   * Send context updates to the host for storage in the agent's conversation context.
+   *
+   * Unlike `sendLog` which is for debugging/telemetry, context updates are intended
+   * to inform the agent about app state changes that should be available for future
+   * reasoning without requiring a follow-up action (i.e., a prompt).
+   *
+   * @param params - Context role and content (same structure as ui/message)
+   * @param options - Request options (timeout, etc.)
+   *
+   * @example Notify agent of significant state change
+   * ```typescript
+   * await app.sendContext({
+   *   role: "user",
+   *   content: [{ type: "text", text: "User selected 3 items totaling $150.00" }]
+   * });
+   * ```
+   *
+   * @returns Promise that resolves when the context update is acknowledged
+   */
+  sendContext(
+    params: McpUiUpdateContextRequest["params"],
+    options?: RequestOptions
+  ) {
+    return this.request(
+      <McpUiUpdateContextRequest>{
+        method: "ui/update-context",
+        params,
+      },
+      McpUiUpdateContextResultSchema,
+      options
+    );
   }
 
   /**

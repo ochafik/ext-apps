@@ -51,6 +51,10 @@ export type McpUiToolInputPartialNotificationSchemaInferredType = z.infer<
   typeof generated.McpUiToolInputPartialNotificationSchema
 >;
 
+export type McpUiUpdateContextResultSchemaInferredType = z.infer<
+  typeof generated.McpUiUpdateContextResultSchema
+>;
+
 export type McpUiResourceTeardownRequestSchemaInferredType = z.infer<
   typeof generated.McpUiResourceTeardownRequestSchema
 >;
@@ -93,6 +97,10 @@ export type McpUiHostContextSchemaInferredType = z.infer<
 
 export type McpUiHostContextChangedNotificationSchemaInferredType = z.infer<
   typeof generated.McpUiHostContextChangedNotificationSchema
+>;
+
+export type McpUiUpdateContextRequestSchemaInferredType = z.infer<
+  typeof generated.McpUiUpdateContextRequestSchema
 >;
 
 export type McpUiInitializeRequestSchemaInferredType = z.infer<
@@ -151,6 +159,12 @@ expectType<spec.McpUiToolInputPartialNotification>(
 expectType<McpUiToolInputPartialNotificationSchemaInferredType>(
   {} as spec.McpUiToolInputPartialNotification,
 );
+expectType<spec.McpUiUpdateContextResult>(
+  {} as McpUiUpdateContextResultSchemaInferredType,
+);
+expectType<McpUiUpdateContextResultSchemaInferredType>(
+  {} as spec.McpUiUpdateContextResult,
+);
 expectType<spec.McpUiResourceTeardownRequest>(
   {} as McpUiResourceTeardownRequestSchemaInferredType,
 );
@@ -204,6 +218,12 @@ expectType<spec.McpUiHostContextChangedNotification>(
 );
 expectType<McpUiHostContextChangedNotificationSchemaInferredType>(
   {} as spec.McpUiHostContextChangedNotification,
+);
+expectType<spec.McpUiUpdateContextRequest>(
+  {} as McpUiUpdateContextRequestSchemaInferredType,
+);
+expectType<McpUiUpdateContextRequestSchemaInferredType>(
+  {} as spec.McpUiUpdateContextRequest,
 );
 expectType<spec.McpUiInitializeRequest>(
   {} as McpUiInitializeRequestSchemaInferredType,

@@ -39,6 +39,8 @@ import {
   type McpUiToolResultNotification,
   LATEST_PROTOCOL_VERSION,
   McpUiAppCapabilities,
+  McpUiUpdateContextRequest,
+  McpUiUpdateContextRequestSchema,
   McpUiHostCapabilities,
   McpUiHostContext,
   McpUiHostContextChangedNotification,
@@ -498,6 +500,43 @@ export class AppBridge extends Protocol<Request, Notification, Result> {
       LoggingMessageNotificationSchema,
       async (notification) => {
         callback(notification.params);
+      },
+    );
+  }
+
+  /**
+   * Register a handler for context updates from the Guest UI.
+   *
+   * The Guest UI sends `ui/update-context` requests to inform the agent
+   * about app state changes that should be stored in the conversation context for
+   * future reasoning. Unlike logging messages, context updates are intended to be
+   * available to the agent for decision making.
+   *
+   * @param callback - Handler that receives context update params
+   *   - params.role - Message role (currently only "user")
+   *   - params.content - Content blocks (text, image, etc.)
+   *
+   * @example
+   * ```typescript
+   * bridge.oncontext = ({ role, content }) => {
+   *   // Store context update for agent reasoning
+   *   conversationContext.push({
+   *     type: "app_context",
+   *     role,
+   *     content,
+   *     timestamp: Date.now()
+   *   });
+   * };
+   * ```
+   */
+  set oncontext(
+    callback: (params: McpUiUpdateContextRequest["params"]) => void,
+  ) {
+    this.setRequestHandler(
+      McpUiUpdateContextRequestSchema,
+      async (request) => {
+        callback(request.params);
+        return {};
       },
     );
   }
