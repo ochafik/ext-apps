@@ -9,6 +9,7 @@ import io.modelcontextprotocol.kotlin.sdk.client.Client
 import io.modelcontextprotocol.kotlin.sdk.client.SseClientTransport
 import io.ktor.client.*
 import io.ktor.client.engine.cio.*
+import io.ktor.client.plugins.sse.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -130,7 +131,9 @@ class McpHostViewModel : ViewModel() {
                 _connectionState.value = ConnectionState.Connecting
                 Log.i(TAG, "Connecting to $serverUrl")
 
-                val httpClient = HttpClient(CIO)
+                val httpClient = HttpClient(CIO) {
+                    install(SSE)
+                }
                 val transport = SseClientTransport(httpClient, serverUrl)
 
                 val client = Client(
