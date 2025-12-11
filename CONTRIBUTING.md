@@ -77,7 +77,7 @@ npm run test:e2e:update
 npm run test:e2e:update -- --grep "Three.js"
 ```
 
-**Note**: Golden screenshots are platform-specific (e.g., `*-chromium-darwin.png` for macOS). CI runs on Linux, so you may need to update screenshots in both environments or run in a container.
+**Note**: Golden screenshots are platform-agnostic. Tests use canvas masking and tolerance thresholds to handle minor cross-platform rendering differences.
 
 ## Code of Conduct
 
