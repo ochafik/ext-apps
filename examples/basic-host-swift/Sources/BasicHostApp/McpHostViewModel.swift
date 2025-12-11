@@ -239,10 +239,8 @@ class McpHostViewModel: ObservableObject {
         }
     }
 
-    func removeToolCall(_ toolCall: ToolCallInfo) {
-        Task {
-            await toolCall.teardown()
-        }
+    func removeToolCall(_ toolCall: ToolCallInfo) async {
+        await toolCall.teardown()
         activeToolCalls.removeAll { $0.id == toolCall.id }
     }
 }

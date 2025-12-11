@@ -24,7 +24,7 @@ struct ContentView: View {
                             ForEach(viewModel.activeToolCalls) { toolCall in
                                 ToolCallCard(
                                     toolCallInfo: toolCall,
-                                    onRemove: { viewModel.removeToolCall(toolCall) }
+                                    onRemove: { Task { await viewModel.removeToolCall(toolCall) } }
                                 )
                                 .id(toolCall.id)
                             }
