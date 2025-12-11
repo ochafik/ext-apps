@@ -186,7 +186,7 @@ async function main() {
   if (process.argv.includes("--stdio")) {
     await server.connect(new StdioServerTransport());
   } else {
-    const port = parseInt(process.env.PORT ?? "3001", 10);
+    const port = parseInt(process.env.PORT ?? "3108", 10);
     await startServer(server, { port, name: "Three.js Server" });
   }
 }

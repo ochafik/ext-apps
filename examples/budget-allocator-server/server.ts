@@ -297,7 +297,7 @@ async function main() {
   if (process.argv.includes("--stdio")) {
     await server.connect(new StdioServerTransport());
   } else {
-    const port = parseInt(process.env.PORT ?? "3001", 10);
+    const port = parseInt(process.env.PORT ?? "3103", 10);
     await startServer(server, { port, name: "Budget Allocator Server" });
   }
 }
