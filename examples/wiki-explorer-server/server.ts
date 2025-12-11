@@ -86,7 +86,11 @@ const server = new McpServer({
       description:
         "Returns all Wikipedia pages that the given page links to directly.",
       inputSchema: z.object({
-        url: z.string().url().describe("Wikipedia page URL"),
+        url: z
+          .string()
+          .url()
+          .default("https://en.wikipedia.org/wiki/Model_Context_Protocol")
+          .describe("Wikipedia page URL"),
       }),
       _meta: { [RESOURCE_URI_META_KEY]: resourceUri },
     },

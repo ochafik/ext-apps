@@ -16,6 +16,7 @@ const DYNAMIC_MASKS: Record<string, string[]> = {
     "#memory-bar-fill", // Memory bar fill level
     "#info-uptime", // System uptime
   ],
+  "wiki-explorer": ["#graph"], // Force-directed graph (dynamic layout)
 };
 
 // Server configurations
@@ -36,6 +37,7 @@ const SERVERS = [
   { key: "scenario-modeler", index: 5, name: "SaaS Scenario Modeler" },
   { key: "system-monitor", index: 6, name: "System Monitor Server" },
   { key: "threejs", index: 7, name: "Three.js Server" },
+  { key: "wiki-explorer", index: 8, name: "Wiki Explorer" },
 ];
 
 /**
