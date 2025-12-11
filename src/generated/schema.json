@@ -150,7 +150,9 @@
                             }
                           }
                         },
-                        "required": ["src"],
+                        "required": [
+                          "src"
+                        ],
                         "additionalProperties": false
                       }
                     },
@@ -178,7 +180,9 @@
                           }
                         }
                       },
-                      "required": ["type"],
+                      "required": [
+                        "type"
+                      ],
                       "additionalProperties": {}
                     },
                     "outputSchema": {
@@ -202,7 +206,9 @@
                           }
                         }
                       },
-                      "required": ["type"],
+                      "required": [
+                        "type"
+                      ],
                       "additionalProperties": {}
                     },
                     "annotations": {
@@ -231,7 +237,11 @@
                       "properties": {
                         "taskSupport": {
                           "type": "string",
-                          "enum": ["required", "optional", "forbidden"]
+                          "enum": [
+                            "required",
+                            "optional",
+                            "forbidden"
+                          ]
                         }
                       },
                       "additionalProperties": false
@@ -244,11 +254,17 @@
                       "additionalProperties": {}
                     }
                   },
-                  "required": ["name", "inputSchema"],
+                  "required": [
+                    "name",
+                    "inputSchema"
+                  ],
                   "additionalProperties": false
                 }
               },
-              "required": ["id", "tool"],
+              "required": [
+                "id",
+                "tool"
+              ],
               "additionalProperties": false
             },
             "theme": {
@@ -263,6 +279,163 @@
                   "const": "dark"
                 }
               ]
+            },
+            "styles": {
+              "description": "CSS variables for theming the app.",
+              "type": "object",
+              "propertyNames": {
+                "description": "Style variables for theming MCP apps.",
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "const": "--color-background-primary"
+                  },
+                  {
+                    "type": "string",
+                    "const": "--color-background-secondary"
+                  },
+                  {
+                    "type": "string",
+                    "const": "--color-background-tertiary"
+                  },
+                  {
+                    "type": "string",
+                    "const": "--color-background-inverted"
+                  },
+                  {
+                    "type": "string",
+                    "const": "--color-text-primary"
+                  },
+                  {
+                    "type": "string",
+                    "const": "--color-text-secondary"
+                  },
+                  {
+                    "type": "string",
+                    "const": "--color-text-tertiary"
+                  },
+                  {
+                    "type": "string",
+                    "const": "--color-text-inverted"
+                  },
+                  {
+                    "type": "string",
+                    "const": "--color-icon-primary"
+                  },
+                  {
+                    "type": "string",
+                    "const": "--color-icon-secondary"
+                  },
+                  {
+                    "type": "string",
+                    "const": "--color-icon-tertiary"
+                  },
+                  {
+                    "type": "string",
+                    "const": "--color-icon-inverted"
+                  },
+                  {
+                    "type": "string",
+                    "const": "--color-border-primary"
+                  },
+                  {
+                    "type": "string",
+                    "const": "--color-border-secondary"
+                  },
+                  {
+                    "type": "string",
+                    "const": "--color-accent-info"
+                  },
+                  {
+                    "type": "string",
+                    "const": "--color-accent-danger"
+                  },
+                  {
+                    "type": "string",
+                    "const": "--color-accent-success"
+                  },
+                  {
+                    "type": "string",
+                    "const": "--color-accent-warning"
+                  },
+                  {
+                    "type": "string",
+                    "const": "--font-family-sans"
+                  },
+                  {
+                    "type": "string",
+                    "const": "--font-size-heading"
+                  },
+                  {
+                    "type": "string",
+                    "const": "--font-size-body"
+                  },
+                  {
+                    "type": "string",
+                    "const": "--font-size-caption"
+                  },
+                  {
+                    "type": "string",
+                    "const": "--font-weight-regular"
+                  },
+                  {
+                    "type": "string",
+                    "const": "--font-weight-emphasized"
+                  },
+                  {
+                    "type": "string",
+                    "const": "--font-leading-regular"
+                  },
+                  {
+                    "type": "string",
+                    "const": "--font-leading-tight"
+                  },
+                  {
+                    "type": "string",
+                    "const": "--font-style-heading"
+                  },
+                  {
+                    "type": "string",
+                    "const": "--font-style-body"
+                  },
+                  {
+                    "type": "string",
+                    "const": "--font-style-body-emphasized"
+                  },
+                  {
+                    "type": "string",
+                    "const": "--font-style-caption"
+                  },
+                  {
+                    "type": "string",
+                    "const": "--font-style-caption-emphasized"
+                  },
+                  {
+                    "type": "string",
+                    "const": "--border-radius-small"
+                  },
+                  {
+                    "type": "string",
+                    "const": "--border-radius-medium"
+                  },
+                  {
+                    "type": "string",
+                    "const": "--border-radius-large"
+                  },
+                  {
+                    "type": "string",
+                    "const": "--border-radius-full"
+                  },
+                  {
+                    "type": "string",
+                    "const": "--border-width-regular"
+                  }
+                ]
+              },
+              "additionalProperties": {
+                "description": "Style variables for theming MCP apps.",
+                "type": "string"
+              }
             },
             "displayMode": {
               "description": "How the UI is currently displayed.",
@@ -309,7 +482,10 @@
                   "type": "number"
                 }
               },
-              "required": ["width", "height"],
+              "required": [
+                "width",
+                "height"
+              ],
               "additionalProperties": false
             },
             "locale": {
@@ -377,14 +553,22 @@
                   "type": "number"
                 }
               },
-              "required": ["top", "right", "bottom", "left"],
+              "required": [
+                "top",
+                "right",
+                "bottom",
+                "left"
+              ],
               "additionalProperties": false
             }
           },
           "additionalProperties": false
         }
       },
-      "required": ["method", "params"],
+      "required": [
+        "method",
+        "params"
+      ],
       "additionalProperties": false
     },
     "McpUiHostContext": {
@@ -436,7 +620,9 @@
                         }
                       }
                     },
-                    "required": ["src"],
+                    "required": [
+                      "src"
+                    ],
                     "additionalProperties": false
                   }
                 },
@@ -464,7 +650,9 @@
                       }
                     }
                   },
-                  "required": ["type"],
+                  "required": [
+                    "type"
+                  ],
                   "additionalProperties": {}
                 },
                 "outputSchema": {
@@ -488,7 +676,9 @@
                       }
                     }
                   },
-                  "required": ["type"],
+                  "required": [
+                    "type"
+                  ],
                   "additionalProperties": {}
                 },
                 "annotations": {
@@ -517,7 +707,11 @@
                   "properties": {
                     "taskSupport": {
                       "type": "string",
-                      "enum": ["required", "optional", "forbidden"]
+                      "enum": [
+                        "required",
+                        "optional",
+                        "forbidden"
+                      ]
                     }
                   },
                   "additionalProperties": false
@@ -530,11 +724,17 @@
                   "additionalProperties": {}
                 }
               },
-              "required": ["name", "inputSchema"],
+              "required": [
+                "name",
+                "inputSchema"
+              ],
               "additionalProperties": false
             }
           },
-          "required": ["id", "tool"],
+          "required": [
+            "id",
+            "tool"
+          ],
           "additionalProperties": false
         },
         "theme": {
@@ -549,6 +749,163 @@
               "const": "dark"
             }
           ]
+        },
+        "styles": {
+          "description": "CSS variables for theming the app.",
+          "type": "object",
+          "propertyNames": {
+            "description": "Style variables for theming MCP apps.",
+            "anyOf": [
+              {
+                "type": "string",
+                "const": "--color-background-primary"
+              },
+              {
+                "type": "string",
+                "const": "--color-background-secondary"
+              },
+              {
+                "type": "string",
+                "const": "--color-background-tertiary"
+              },
+              {
+                "type": "string",
+                "const": "--color-background-inverted"
+              },
+              {
+                "type": "string",
+                "const": "--color-text-primary"
+              },
+              {
+                "type": "string",
+                "const": "--color-text-secondary"
+              },
+              {
+                "type": "string",
+                "const": "--color-text-tertiary"
+              },
+              {
+                "type": "string",
+                "const": "--color-text-inverted"
+              },
+              {
+                "type": "string",
+                "const": "--color-icon-primary"
+              },
+              {
+                "type": "string",
+                "const": "--color-icon-secondary"
+              },
+              {
+                "type": "string",
+                "const": "--color-icon-tertiary"
+              },
+              {
+                "type": "string",
+                "const": "--color-icon-inverted"
+              },
+              {
+                "type": "string",
+                "const": "--color-border-primary"
+              },
+              {
+                "type": "string",
+                "const": "--color-border-secondary"
+              },
+              {
+                "type": "string",
+                "const": "--color-accent-info"
+              },
+              {
+                "type": "string",
+                "const": "--color-accent-danger"
+              },
+              {
+                "type": "string",
+                "const": "--color-accent-success"
+              },
+              {
+                "type": "string",
+                "const": "--color-accent-warning"
+              },
+              {
+                "type": "string",
+                "const": "--font-family-sans"
+              },
+              {
+                "type": "string",
+                "const": "--font-size-heading"
+              },
+              {
+                "type": "string",
+                "const": "--font-size-body"
+              },
+              {
+                "type": "string",
+                "const": "--font-size-caption"
+              },
+              {
+                "type": "string",
+                "const": "--font-weight-regular"
+              },
+              {
+                "type": "string",
+                "const": "--font-weight-emphasized"
+              },
+              {
+                "type": "string",
+                "const": "--font-leading-regular"
+              },
+              {
+                "type": "string",
+                "const": "--font-leading-tight"
+              },
+              {
+                "type": "string",
+                "const": "--font-style-heading"
+              },
+              {
+                "type": "string",
+                "const": "--font-style-body"
+              },
+              {
+                "type": "string",
+                "const": "--font-style-body-emphasized"
+              },
+              {
+                "type": "string",
+                "const": "--font-style-caption"
+              },
+              {
+                "type": "string",
+                "const": "--font-style-caption-emphasized"
+              },
+              {
+                "type": "string",
+                "const": "--border-radius-small"
+              },
+              {
+                "type": "string",
+                "const": "--border-radius-medium"
+              },
+              {
+                "type": "string",
+                "const": "--border-radius-large"
+              },
+              {
+                "type": "string",
+                "const": "--border-radius-full"
+              },
+              {
+                "type": "string",
+                "const": "--border-width-regular"
+              }
+            ]
+          },
+          "additionalProperties": {
+            "description": "Style variables for theming MCP apps.",
+            "type": "string"
+          }
         },
         "displayMode": {
           "description": "How the UI is currently displayed.",
@@ -595,7 +952,10 @@
               "type": "number"
             }
           },
-          "required": ["width", "height"],
+          "required": [
+            "width",
+            "height"
+          ],
           "additionalProperties": false
         },
         "locale": {
@@ -663,7 +1023,12 @@
               "type": "number"
             }
           },
-          "required": ["top", "right", "bottom", "left"],
+          "required": [
+            "top",
+            "right",
+            "bottom",
+            "left"
+          ],
           "additionalProperties": false
         }
       },
@@ -708,7 +1073,9 @@
                         }
                       }
                     },
-                    "required": ["src"],
+                    "required": [
+                      "src"
+                    ],
                     "additionalProperties": false
                   }
                 },
@@ -719,7 +1086,10 @@
                   "type": "string"
                 }
               },
-              "required": ["name", "version"],
+              "required": [
+                "name",
+                "version"
+              ],
               "additionalProperties": false
             },
             "appCapabilities": {
@@ -751,11 +1121,18 @@
               "type": "string"
             }
           },
-          "required": ["appInfo", "appCapabilities", "protocolVersion"],
+          "required": [
+            "appInfo",
+            "appCapabilities",
+            "protocolVersion"
+          ],
           "additionalProperties": false
         }
       },
-      "required": ["method", "params"],
+      "required": [
+        "method",
+        "params"
+      ],
       "additionalProperties": false
     },
     "McpUiInitializeResult": {
@@ -794,7 +1171,9 @@
                     }
                   }
                 },
-                "required": ["src"],
+                "required": [
+                  "src"
+                ],
                 "additionalProperties": false
               }
             },
@@ -805,7 +1184,10 @@
               "type": "string"
             }
           },
-          "required": ["name", "version"],
+          "required": [
+            "name",
+            "version"
+          ],
           "additionalProperties": false
         },
         "hostCapabilities": {
@@ -904,7 +1286,9 @@
                             }
                           }
                         },
-                        "required": ["src"],
+                        "required": [
+                          "src"
+                        ],
                         "additionalProperties": false
                       }
                     },
@@ -932,7 +1316,9 @@
                           }
                         }
                       },
-                      "required": ["type"],
+                      "required": [
+                        "type"
+                      ],
                       "additionalProperties": {}
                     },
                     "outputSchema": {
@@ -956,7 +1342,9 @@
                           }
                         }
                       },
-                      "required": ["type"],
+                      "required": [
+                        "type"
+                      ],
                       "additionalProperties": {}
                     },
                     "annotations": {
@@ -985,7 +1373,11 @@
                       "properties": {
                         "taskSupport": {
                           "type": "string",
-                          "enum": ["required", "optional", "forbidden"]
+                          "enum": [
+                            "required",
+                            "optional",
+                            "forbidden"
+                          ]
                         }
                       },
                       "additionalProperties": false
@@ -998,11 +1390,17 @@
                       "additionalProperties": {}
                     }
                   },
-                  "required": ["name", "inputSchema"],
+                  "required": [
+                    "name",
+                    "inputSchema"
+                  ],
                   "additionalProperties": false
                 }
               },
-              "required": ["id", "tool"],
+              "required": [
+                "id",
+                "tool"
+              ],
               "additionalProperties": false
             },
             "theme": {
@@ -1017,6 +1415,163 @@
                   "const": "dark"
                 }
               ]
+            },
+            "styles": {
+              "description": "CSS variables for theming the app.",
+              "type": "object",
+              "propertyNames": {
+                "description": "Style variables for theming MCP apps.",
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "const": "--color-background-primary"
+                  },
+                  {
+                    "type": "string",
+                    "const": "--color-background-secondary"
+                  },
+                  {
+                    "type": "string",
+                    "const": "--color-background-tertiary"
+                  },
+                  {
+                    "type": "string",
+                    "const": "--color-background-inverted"
+                  },
+                  {
+                    "type": "string",
+                    "const": "--color-text-primary"
+                  },
+                  {
+                    "type": "string",
+                    "const": "--color-text-secondary"
+                  },
+                  {
+                    "type": "string",
+                    "const": "--color-text-tertiary"
+                  },
+                  {
+                    "type": "string",
+                    "const": "--color-text-inverted"
+                  },
+                  {
+                    "type": "string",
+                    "const": "--color-icon-primary"
+                  },
+                  {
+                    "type": "string",
+                    "const": "--color-icon-secondary"
+                  },
+                  {
+                    "type": "string",
+                    "const": "--color-icon-tertiary"
+                  },
+                  {
+                    "type": "string",
+                    "const": "--color-icon-inverted"
+                  },
+                  {
+                    "type": "string",
+                    "const": "--color-border-primary"
+                  },
+                  {
+                    "type": "string",
+                    "const": "--color-border-secondary"
+                  },
+                  {
+                    "type": "string",
+                    "const": "--color-accent-info"
+                  },
+                  {
+                    "type": "string",
+                    "const": "--color-accent-danger"
+                  },
+                  {
+                    "type": "string",
+                    "const": "--color-accent-success"
+                  },
+                  {
+                    "type": "string",
+                    "const": "--color-accent-warning"
+                  },
+                  {
+                    "type": "string",
+                    "const": "--font-family-sans"
+                  },
+                  {
+                    "type": "string",
+                    "const": "--font-size-heading"
+                  },
+                  {
+                    "type": "string",
+                    "const": "--font-size-body"
+                  },
+                  {
+                    "type": "string",
+                    "const": "--font-size-caption"
+                  },
+                  {
+                    "type": "string",
+                    "const": "--font-weight-regular"
+                  },
+                  {
+                    "type": "string",
+                    "const": "--font-weight-emphasized"
+                  },
+                  {
+                    "type": "string",
+                    "const": "--font-leading-regular"
+                  },
+                  {
+                    "type": "string",
+                    "const": "--font-leading-tight"
+                  },
+                  {
+                    "type": "string",
+                    "const": "--font-style-heading"
+                  },
+                  {
+                    "type": "string",
+                    "const": "--font-style-body"
+                  },
+                  {
+                    "type": "string",
+                    "const": "--font-style-body-emphasized"
+                  },
+                  {
+                    "type": "string",
+                    "const": "--font-style-caption"
+                  },
+                  {
+                    "type": "string",
+                    "const": "--font-style-caption-emphasized"
+                  },
+                  {
+                    "type": "string",
+                    "const": "--border-radius-small"
+                  },
+                  {
+                    "type": "string",
+                    "const": "--border-radius-medium"
+                  },
+                  {
+                    "type": "string",
+                    "const": "--border-radius-large"
+                  },
+                  {
+                    "type": "string",
+                    "const": "--border-radius-full"
+                  },
+                  {
+                    "type": "string",
+                    "const": "--border-width-regular"
+                  }
+                ]
+              },
+              "additionalProperties": {
+                "description": "Style variables for theming MCP apps.",
+                "type": "string"
+              }
             },
             "displayMode": {
               "description": "How the UI is currently displayed.",
@@ -1063,7 +1618,10 @@
                   "type": "number"
                 }
               },
-              "required": ["width", "height"],
+              "required": [
+                "width",
+                "height"
+              ],
               "additionalProperties": false
             },
             "locale": {
@@ -1131,7 +1689,12 @@
                   "type": "number"
                 }
               },
-              "required": ["top", "right", "bottom", "left"],
+              "required": [
+                "top",
+                "right",
+                "bottom",
+                "left"
+              ],
               "additionalProperties": false
             }
           },
@@ -1160,7 +1723,9 @@
           "additionalProperties": false
         }
       },
-      "required": ["method"],
+      "required": [
+        "method"
+      ],
       "additionalProperties": false
     },
     "McpUiMessageRequest": {
@@ -1201,7 +1766,10 @@
                             "type": "array",
                             "items": {
                               "type": "string",
-                              "enum": ["user", "assistant"]
+                              "enum": [
+                                "user",
+                                "assistant"
+                              ]
                             }
                           },
                           "priority": {
@@ -1225,7 +1793,10 @@
                         "additionalProperties": {}
                       }
                     },
-                    "required": ["type", "text"],
+                    "required": [
+                      "type",
+                      "text"
+                    ],
                     "additionalProperties": false
                   },
                   {
@@ -1248,7 +1819,10 @@
                             "type": "array",
                             "items": {
                               "type": "string",
-                              "enum": ["user", "assistant"]
+                              "enum": [
+                                "user",
+                                "assistant"
+                              ]
                             }
                           },
                           "priority": {
@@ -1272,7 +1846,11 @@
                         "additionalProperties": {}
                       }
                     },
-                    "required": ["type", "data", "mimeType"],
+                    "required": [
+                      "type",
+                      "data",
+                      "mimeType"
+                    ],
                     "additionalProperties": false
                   },
                   {
@@ -1295,7 +1873,10 @@
                             "type": "array",
                             "items": {
                               "type": "string",
-                              "enum": ["user", "assistant"]
+                              "enum": [
+                                "user",
+                                "assistant"
+                              ]
                             }
                           },
                           "priority": {
@@ -1319,7 +1900,11 @@
                         "additionalProperties": {}
                       }
                     },
-                    "required": ["type", "data", "mimeType"],
+                    "required": [
+                      "type",
+                      "data",
+                      "mimeType"
+                    ],
                     "additionalProperties": false
                   },
                   {
@@ -1349,7 +1934,9 @@
                               }
                             }
                           },
-                          "required": ["src"],
+                          "required": [
+                            "src"
+                          ],
                           "additionalProperties": false
                         }
                       },
@@ -1369,7 +1956,10 @@
                             "type": "array",
                             "items": {
                               "type": "string",
-                              "enum": ["user", "assistant"]
+                              "enum": [
+                                "user",
+                                "assistant"
+                              ]
                             }
                           },
                           "priority": {
@@ -1395,7 +1985,11 @@
                         "const": "resource_link"
                       }
                     },
-                    "required": ["name", "uri", "type"],
+                    "required": [
+                      "name",
+                      "uri",
+                      "type"
+                    ],
                     "additionalProperties": false
                   },
                   {
@@ -1427,7 +2021,10 @@
                                 "type": "string"
                               }
                             },
-                            "required": ["uri", "text"],
+                            "required": [
+                              "uri",
+                              "text"
+                            ],
                             "additionalProperties": false
                           },
                           {
@@ -1450,7 +2047,10 @@
                                 "type": "string"
                               }
                             },
-                            "required": ["uri", "blob"],
+                            "required": [
+                              "uri",
+                              "blob"
+                            ],
                             "additionalProperties": false
                           }
                         ]
@@ -1462,7 +2062,10 @@
                             "type": "array",
                             "items": {
                               "type": "string",
-                              "enum": ["user", "assistant"]
+                              "enum": [
+                                "user",
+                                "assistant"
+                              ]
                             }
                           },
                           "priority": {
@@ -1486,18 +2089,27 @@
                         "additionalProperties": {}
                       }
                     },
-                    "required": ["type", "resource"],
+                    "required": [
+                      "type",
+                      "resource"
+                    ],
                     "additionalProperties": false
                   }
                 ]
               }
             }
           },
-          "required": ["role", "content"],
+          "required": [
+            "role",
+            "content"
+          ],
           "additionalProperties": false
         }
       },
-      "required": ["method", "params"],
+      "required": [
+        "method",
+        "params"
+      ],
       "additionalProperties": false
     },
     "McpUiMessageResult": {
@@ -1527,11 +2139,16 @@
               "type": "string"
             }
           },
-          "required": ["url"],
+          "required": [
+            "url"
+          ],
           "additionalProperties": false
         }
       },
-      "required": ["method", "params"],
+      "required": [
+        "method",
+        "params"
+      ],
       "additionalProperties": false
     },
     "McpUiOpenLinkResult": {
@@ -1616,7 +2233,10 @@
           "additionalProperties": false
         }
       },
-      "required": ["method", "params"],
+      "required": [
+        "method",
+        "params"
+      ],
       "additionalProperties": false
     },
     "McpUiResourceTeardownResult": {
@@ -1641,7 +2261,10 @@
           "additionalProperties": false
         }
       },
-      "required": ["method", "params"],
+      "required": [
+        "method",
+        "params"
+      ],
       "additionalProperties": false
     },
     "McpUiSandboxResourceReadyNotification": {
@@ -1685,11 +2308,16 @@
               "additionalProperties": false
             }
           },
-          "required": ["html"],
+          "required": [
+            "html"
+          ],
           "additionalProperties": false
         }
       },
-      "required": ["method", "params"],
+      "required": [
+        "method",
+        "params"
+      ],
       "additionalProperties": false
     },
     "McpUiSizeChangedNotification": {
@@ -1715,8 +2343,319 @@
           "additionalProperties": false
         }
       },
-      "required": ["method", "params"],
+      "required": [
+        "method",
+        "params"
+      ],
       "additionalProperties": false
+    },
+    "McpUiStyleVariableKey": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "description": "CSS variable keys available to MCP apps for theming.",
+      "anyOf": [
+        {
+          "type": "string",
+          "const": "--color-background-primary"
+        },
+        {
+          "type": "string",
+          "const": "--color-background-secondary"
+        },
+        {
+          "type": "string",
+          "const": "--color-background-tertiary"
+        },
+        {
+          "type": "string",
+          "const": "--color-background-inverted"
+        },
+        {
+          "type": "string",
+          "const": "--color-text-primary"
+        },
+        {
+          "type": "string",
+          "const": "--color-text-secondary"
+        },
+        {
+          "type": "string",
+          "const": "--color-text-tertiary"
+        },
+        {
+          "type": "string",
+          "const": "--color-text-inverted"
+        },
+        {
+          "type": "string",
+          "const": "--color-icon-primary"
+        },
+        {
+          "type": "string",
+          "const": "--color-icon-secondary"
+        },
+        {
+          "type": "string",
+          "const": "--color-icon-tertiary"
+        },
+        {
+          "type": "string",
+          "const": "--color-icon-inverted"
+        },
+        {
+          "type": "string",
+          "const": "--color-border-primary"
+        },
+        {
+          "type": "string",
+          "const": "--color-border-secondary"
+        },
+        {
+          "type": "string",
+          "const": "--color-accent-info"
+        },
+        {
+          "type": "string",
+          "const": "--color-accent-danger"
+        },
+        {
+          "type": "string",
+          "const": "--color-accent-success"
+        },
+        {
+          "type": "string",
+          "const": "--color-accent-warning"
+        },
+        {
+          "type": "string",
+          "const": "--font-family-sans"
+        },
+        {
+          "type": "string",
+          "const": "--font-size-heading"
+        },
+        {
+          "type": "string",
+          "const": "--font-size-body"
+        },
+        {
+          "type": "string",
+          "const": "--font-size-caption"
+        },
+        {
+          "type": "string",
+          "const": "--font-weight-regular"
+        },
+        {
+          "type": "string",
+          "const": "--font-weight-emphasized"
+        },
+        {
+          "type": "string",
+          "const": "--font-leading-regular"
+        },
+        {
+          "type": "string",
+          "const": "--font-leading-tight"
+        },
+        {
+          "type": "string",
+          "const": "--font-style-heading"
+        },
+        {
+          "type": "string",
+          "const": "--font-style-body"
+        },
+        {
+          "type": "string",
+          "const": "--font-style-body-emphasized"
+        },
+        {
+          "type": "string",
+          "const": "--font-style-caption"
+        },
+        {
+          "type": "string",
+          "const": "--font-style-caption-emphasized"
+        },
+        {
+          "type": "string",
+          "const": "--border-radius-small"
+        },
+        {
+          "type": "string",
+          "const": "--border-radius-medium"
+        },
+        {
+          "type": "string",
+          "const": "--border-radius-large"
+        },
+        {
+          "type": "string",
+          "const": "--border-radius-full"
+        },
+        {
+          "type": "string",
+          "const": "--border-width-regular"
+        }
+      ]
+    },
+    "McpUiStyles": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "description": "Style variables for theming MCP apps.",
+      "type": "object",
+      "propertyNames": {
+        "description": "Style variables for theming MCP apps.",
+        "anyOf": [
+          {
+            "type": "string",
+            "const": "--color-background-primary"
+          },
+          {
+            "type": "string",
+            "const": "--color-background-secondary"
+          },
+          {
+            "type": "string",
+            "const": "--color-background-tertiary"
+          },
+          {
+            "type": "string",
+            "const": "--color-background-inverted"
+          },
+          {
+            "type": "string",
+            "const": "--color-text-primary"
+          },
+          {
+            "type": "string",
+            "const": "--color-text-secondary"
+          },
+          {
+            "type": "string",
+            "const": "--color-text-tertiary"
+          },
+          {
+            "type": "string",
+            "const": "--color-text-inverted"
+          },
+          {
+            "type": "string",
+            "const": "--color-icon-primary"
+          },
+          {
+            "type": "string",
+            "const": "--color-icon-secondary"
+          },
+          {
+            "type": "string",
+            "const": "--color-icon-tertiary"
+          },
+          {
+            "type": "string",
+            "const": "--color-icon-inverted"
+          },
+          {
+            "type": "string",
+            "const": "--color-border-primary"
+          },
+          {
+            "type": "string",
+            "const": "--color-border-secondary"
+          },
+          {
+            "type": "string",
+            "const": "--color-accent-info"
+          },
+          {
+            "type": "string",
+            "const": "--color-accent-danger"
+          },
+          {
+            "type": "string",
+            "const": "--color-accent-success"
+          },
+          {
+            "type": "string",
+            "const": "--color-accent-warning"
+          },
+          {
+            "type": "string",
+            "const": "--font-family-sans"
+          },
+          {
+            "type": "string",
+            "const": "--font-size-heading"
+          },
+          {
+            "type": "string",
+            "const": "--font-size-body"
+          },
+          {
+            "type": "string",
+            "const": "--font-size-caption"
+          },
+          {
+            "type": "string",
+            "const": "--font-weight-regular"
+          },
+          {
+            "type": "string",
+            "const": "--font-weight-emphasized"
+          },
+          {
+            "type": "string",
+            "const": "--font-leading-regular"
+          },
+          {
+            "type": "string",
+            "const": "--font-leading-tight"
+          },
+          {
+            "type": "string",
+            "const": "--font-style-heading"
+          },
+          {
+            "type": "string",
+            "const": "--font-style-body"
+          },
+          {
+            "type": "string",
+            "const": "--font-style-body-emphasized"
+          },
+          {
+            "type": "string",
+            "const": "--font-style-caption"
+          },
+          {
+            "type": "string",
+            "const": "--font-style-caption-emphasized"
+          },
+          {
+            "type": "string",
+            "const": "--border-radius-small"
+          },
+          {
+            "type": "string",
+            "const": "--border-radius-medium"
+          },
+          {
+            "type": "string",
+            "const": "--border-radius-large"
+          },
+          {
+            "type": "string",
+            "const": "--border-radius-full"
+          },
+          {
+            "type": "string",
+            "const": "--border-width-regular"
+          }
+        ]
+      },
+      "additionalProperties": {
+        "description": "Style variables for theming MCP apps.",
+        "type": "string"
+      }
     },
     "McpUiTheme": {
       "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -1757,7 +2696,10 @@
           "additionalProperties": false
         }
       },
-      "required": ["method", "params"],
+      "required": [
+        "method",
+        "params"
+      ],
       "additionalProperties": false
     },
     "McpUiToolInputPartialNotification": {
@@ -1785,7 +2727,10 @@
           "additionalProperties": false
         }
       },
-      "required": ["method", "params"],
+      "required": [
+        "method",
+        "params"
+      ],
       "additionalProperties": false
     },
     "McpUiToolResultNotification": {
@@ -1810,7 +2755,9 @@
                       "type": "string"
                     }
                   },
-                  "required": ["taskId"],
+                  "required": [
+                    "taskId"
+                  ],
                   "additionalProperties": {}
                 }
               },
@@ -1838,7 +2785,10 @@
                             "type": "array",
                             "items": {
                               "type": "string",
-                              "enum": ["user", "assistant"]
+                              "enum": [
+                                "user",
+                                "assistant"
+                              ]
                             }
                           },
                           "priority": {
@@ -1862,7 +2812,10 @@
                         "additionalProperties": {}
                       }
                     },
-                    "required": ["type", "text"],
+                    "required": [
+                      "type",
+                      "text"
+                    ],
                     "additionalProperties": false
                   },
                   {
@@ -1885,7 +2838,10 @@
                             "type": "array",
                             "items": {
                               "type": "string",
-                              "enum": ["user", "assistant"]
+                              "enum": [
+                                "user",
+                                "assistant"
+                              ]
                             }
                           },
                           "priority": {
@@ -1909,7 +2865,11 @@
                         "additionalProperties": {}
                       }
                     },
-                    "required": ["type", "data", "mimeType"],
+                    "required": [
+                      "type",
+                      "data",
+                      "mimeType"
+                    ],
                     "additionalProperties": false
                   },
                   {
@@ -1932,7 +2892,10 @@
                             "type": "array",
                             "items": {
                               "type": "string",
-                              "enum": ["user", "assistant"]
+                              "enum": [
+                                "user",
+                                "assistant"
+                              ]
                             }
                           },
                           "priority": {
@@ -1956,7 +2919,11 @@
                         "additionalProperties": {}
                       }
                     },
-                    "required": ["type", "data", "mimeType"],
+                    "required": [
+                      "type",
+                      "data",
+                      "mimeType"
+                    ],
                     "additionalProperties": false
                   },
                   {
@@ -1986,7 +2953,9 @@
                               }
                             }
                           },
-                          "required": ["src"],
+                          "required": [
+                            "src"
+                          ],
                           "additionalProperties": false
                         }
                       },
@@ -2006,7 +2975,10 @@
                             "type": "array",
                             "items": {
                               "type": "string",
-                              "enum": ["user", "assistant"]
+                              "enum": [
+                                "user",
+                                "assistant"
+                              ]
                             }
                           },
                           "priority": {
@@ -2032,7 +3004,11 @@
                         "const": "resource_link"
                       }
                     },
-                    "required": ["name", "uri", "type"],
+                    "required": [
+                      "name",
+                      "uri",
+                      "type"
+                    ],
                     "additionalProperties": false
                   },
                   {
@@ -2064,7 +3040,10 @@
                                 "type": "string"
                               }
                             },
-                            "required": ["uri", "text"],
+                            "required": [
+                              "uri",
+                              "text"
+                            ],
                             "additionalProperties": false
                           },
                           {
@@ -2087,7 +3066,10 @@
                                 "type": "string"
                               }
                             },
-                            "required": ["uri", "blob"],
+                            "required": [
+                              "uri",
+                              "blob"
+                            ],
                             "additionalProperties": false
                           }
                         ]
@@ -2099,7 +3081,10 @@
                             "type": "array",
                             "items": {
                               "type": "string",
-                              "enum": ["user", "assistant"]
+                              "enum": [
+                                "user",
+                                "assistant"
+                              ]
                             }
                           },
                           "priority": {
@@ -2123,7 +3108,10 @@
                         "additionalProperties": {}
                       }
                     },
-                    "required": ["type", "resource"],
+                    "required": [
+                      "type",
+                      "resource"
+                    ],
                     "additionalProperties": false
                   }
                 ]
@@ -2140,11 +3128,16 @@
               "type": "boolean"
             }
           },
-          "required": ["content"],
+          "required": [
+            "content"
+          ],
           "additionalProperties": {}
         }
       },
-      "required": ["method", "params"],
+      "required": [
+        "method",
+        "params"
+      ],
       "additionalProperties": false
     }
   }
