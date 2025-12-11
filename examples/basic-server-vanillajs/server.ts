@@ -4,7 +4,7 @@ import type { CallToolResult, ReadResourceResult } from "@modelcontextprotocol/s
 import fs from "node:fs/promises";
 import path from "node:path";
 import { RESOURCE_MIME_TYPE, RESOURCE_URI_META_KEY } from "../../dist/src/app";
-import { startServer } from "../shared/server-utils.js";
+import { makeToolResult, startServer } from "../shared/server-utils.js";
 
 const DIST_DIR = path.join(import.meta.dirname, "dist");
 
@@ -29,9 +29,7 @@ const server = new McpServer({
     },
     async (): Promise<CallToolResult> => {
       const time = new Date().toISOString();
-      return {
-        content: [{ type: "text", text: JSON.stringify({ time }) }],
-      };
+      return makeToolResult({ time });
     },
   );
 

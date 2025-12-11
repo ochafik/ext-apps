@@ -8,7 +8,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { z } from "zod";
 import { RESOURCE_MIME_TYPE, RESOURCE_URI_META_KEY } from "../../dist/src/app";
-import { startServer } from "../shared/server-utils.js";
+import { makeToolResult, startServer } from "../shared/server-utils.js";
 import {
   generateCustomers,
   generateSegmentSummaries,
@@ -72,9 +72,7 @@ const server = new McpServer({
     async ({ segment }): Promise<CallToolResult> => {
       const data = getCustomerData(segment);
 
-      return {
-        content: [{ type: "text", text: JSON.stringify(data) }],
-      };
+      return makeToolResult(data);
     },
   );
 
