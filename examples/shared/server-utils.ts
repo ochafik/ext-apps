@@ -140,18 +140,27 @@ export async function startServer(
     }
   });
 
-  const httpServer = app.listen(port, () => {
-    console.log(`${name} listening on http://localhost:${port}/mcp`);
+  return new Promise<void>((resolve, reject) => {
+    const httpServer = app.listen(port);
+
+    httpServer.on("listening", () => {
+      console.log(`${name} listening on http://localhost:${port}/mcp`);
+      resolve();
+    });
+
+    httpServer.on("error", (err: Error) => {
+      reject(err);
+    });
+
+    const shutdown = () => {
+      console.log("\nShutting down...");
+      sessions.forEach((t) => t.close().catch(() => {}));
+      httpServer.close(() => process.exit(0));
+    };
+
+    process.on("SIGINT", shutdown);
+    process.on("SIGTERM", shutdown);
   });
-
-  const shutdown = () => {
-    console.log("\nShutting down...");
-    sessions.forEach((t) => t.close().catch(() => {}));
-    httpServer.close(() => process.exit(0));
-  };
-
-  process.on("SIGINT", shutdown);
-  process.on("SIGTERM", shutdown);
 }
 
 /** Helper to get port from args/env, returns undefined for stdio mode */
