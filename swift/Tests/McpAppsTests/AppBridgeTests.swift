@@ -6,9 +6,9 @@ final class AppBridgeTests: XCTestCase {
     let testHostInfo = Implementation(name: "TestHost", version: "1.0.0")
     let testAppInfo = Implementation(name: "TestApp", version: "1.0.0")
     let testHostCapabilities = McpUiHostCapabilities(
-        openLinks: true,
+        openLinks: EmptyCapability(),
         serverTools: ServerToolsCapability(),
-        logging: true
+        logging: EmptyCapability()
     )
 
     func testMessageTypes() throws {
@@ -58,7 +58,7 @@ final class AppBridgeTests: XCTestCase {
     }
 
     func testToolInputParams() throws {
-        let params = McpUiToolInputParams(
+        let params = McpUiToolInputNotificationParams(
             arguments: [
                 "query": AnyCodable("weather in NYC"),
                 "count": AnyCodable(5)
@@ -69,7 +69,7 @@ final class AppBridgeTests: XCTestCase {
         let decoder = JSONDecoder()
 
         let encoded = try encoder.encode(params)
-        let decoded = try decoder.decode(McpUiToolInputParams.self, from: encoded)
+        let decoded = try decoder.decode(McpUiToolInputNotificationParams.self, from: encoded)
 
         XCTAssertEqual(decoded.arguments?["query"]?.value as? String, "weather in NYC")
         XCTAssertEqual(decoded.arguments?["count"]?.value as? Int, 5)
@@ -136,9 +136,13 @@ final class AppBridgeTests: XCTestCase {
             hostCapabilities: testHostCapabilities
         )
 
-        XCTAssertFalse(await bridge.isReady())
-        XCTAssertNil(await bridge.getAppCapabilities())
-        XCTAssertNil(await bridge.getAppVersion())
+        let isReady = await bridge.isReady()
+        let capabilities = await bridge.getAppCapabilities()
+        let version = await bridge.getAppVersion()
+
+        XCTAssertFalse(isReady)
+        XCTAssertNil(capabilities)
+        XCTAssertNil(version)
     }
 
     func testInMemoryTransportCreation() async throws {
@@ -168,32 +172,25 @@ final class AppBridgeTests: XCTestCase {
 
         XCTAssertEqual(decoded.protocolVersion, McpAppsConfig.latestProtocolVersion)
         XCTAssertEqual(decoded.hostInfo.name, testHostInfo.name)
-        XCTAssertEqual(decoded.hostContext.theme, .light)
+        XCTAssertEqual(decoded.hostContext.theme, McpUiTheme.light)
     }
 
     func testLogLevel() throws {
         let levels: [LogLevel] = [.debug, .info, .notice, .warning, .error, .critical, .alert, .emergency]
 
+        let encoder = JSONEncoder()
+        let decoder = JSONDecoder()
+
         for level in levels {
-            let params = LoggingMessageParams(
-                level: level,
-                data: AnyCodable("Test message"),
-                logger: "TestLogger"
-            )
-
-            let encoder = JSONEncoder()
-            let decoder = JSONDecoder()
-
-            let encoded = try encoder.encode(params)
-            let decoded = try decoder.decode(LoggingMessageParams.self, from: encoded)
-
-            XCTAssertEqual(decoded.level, level)
+            let encoded = try encoder.encode(level)
+            let decoded = try decoder.decode(LogLevel.self, from: encoded)
+            XCTAssertEqual(decoded, level)
         }
     }
 
     func testResourceMeta() throws {
         let meta = McpUiResourceMeta(
-            csp: McpUiResourceCsp(
+            csp: McpUiResourceMetaCsp(
                 connectDomains: ["https://api.example.com"],
                 resourceDomains: ["https://cdn.example.com"]
             ),
@@ -218,12 +215,19 @@ final class AppBridgeTests: XCTestCase {
             hostCapabilities: testHostCapabilities
         )
 
-        // Set up callback to handle tools/call
-        var receivedToolName: String?
-        var receivedArguments: [String: AnyCodable]?
+        // Use actors for thread-safe state capture
+        actor CallState {
+            var toolName: String?
+            var arguments: [String: AnyCodable]?
+            func set(name: String, args: [String: AnyCodable]?) {
+                self.toolName = name
+                self.arguments = args
+            }
+        }
+        let state = CallState()
+
         await bridge.setOnToolCall { name, arguments in
-            receivedToolName = name
-            receivedArguments = arguments
+            await state.set(name: name, args: arguments)
             return [
                 "content": AnyCodable([
                     ["type": "text", "text": "Tool result"]
@@ -255,6 +259,8 @@ final class AppBridgeTests: XCTestCase {
         try await Task.sleep(nanoseconds: 100_000_000) // 100ms
 
         // Verify callback was called
+        let receivedToolName = await state.toolName
+        let receivedArguments = await state.arguments
         XCTAssertEqual(receivedToolName, "test_tool")
         XCTAssertNotNil(receivedArguments)
         XCTAssertEqual(receivedArguments?["param1"]?.value as? String, "value1")
@@ -270,10 +276,15 @@ final class AppBridgeTests: XCTestCase {
             hostCapabilities: testHostCapabilities
         )
 
-        // Set up callback to handle resources/read
-        var receivedUri: String?
+        // Use actor for thread-safe state capture
+        actor UriState {
+            var uri: String?
+            func set(_ value: String) { uri = value }
+        }
+        let state = UriState()
+
         await bridge.setOnResourceRead { uri in
-            receivedUri = uri
+            await state.set(uri)
             return [
                 "contents": AnyCodable([
                     [
@@ -305,6 +316,7 @@ final class AppBridgeTests: XCTestCase {
         try await Task.sleep(nanoseconds: 100_000_000) // 100ms
 
         // Verify callback was called
+        let receivedUri = await state.uri
         XCTAssertEqual(receivedUri, "ui://test-app")
 
         await bridge.close()
@@ -340,7 +352,8 @@ final class AppBridgeTests: XCTestCase {
 
         // Verify error response was sent (we can't easily check the response without more infrastructure)
         // Just verify the bridge is still functional
-        XCTAssertFalse(await bridge.isReady())
+        let isReady = await bridge.isReady()
+        XCTAssertFalse(isReady)
 
         await bridge.close()
         await guestTransport.close()

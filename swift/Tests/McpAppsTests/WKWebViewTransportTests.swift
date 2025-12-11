@@ -2,9 +2,10 @@ import XCTest
 import WebKit
 @testable import McpApps
 
-@available(iOS 15.0, macOS 12.0, tvOS 15.0, watchOS 8.0, *)
+@available(iOS 16.0, macOS 13.0, tvOS 16.0, watchOS 9.0, *)
 final class WKWebViewTransportTests: XCTestCase {
 
+    @MainActor
     func testTransportCreation() async throws {
         let webView = WKWebView()
         let transport = WKWebViewTransport(webView: webView)
@@ -13,6 +14,7 @@ final class WKWebViewTransportTests: XCTestCase {
         XCTAssertNotNil(transport)
     }
 
+    @MainActor
     func testTransportStartAndClose() async throws {
         let webView = WKWebView()
         let transport = WKWebViewTransport(webView: webView)
@@ -24,6 +26,7 @@ final class WKWebViewTransportTests: XCTestCase {
         await transport.close()
     }
 
+    @MainActor
     func testTransportSendRequest() async throws {
         let webView = WKWebView()
         let transport = WKWebViewTransport(webView: webView)
@@ -43,6 +46,7 @@ final class WKWebViewTransportTests: XCTestCase {
         await transport.close()
     }
 
+    @MainActor
     func testTransportSendNotification() async throws {
         let webView = WKWebView()
         let transport = WKWebViewTransport(webView: webView)
@@ -61,6 +65,7 @@ final class WKWebViewTransportTests: XCTestCase {
         await transport.close()
     }
 
+    @MainActor
     func testTransportSendResponse() async throws {
         let webView = WKWebView()
         let transport = WKWebViewTransport(webView: webView)
@@ -79,6 +84,7 @@ final class WKWebViewTransportTests: XCTestCase {
         await transport.close()
     }
 
+    @MainActor
     func testTransportSendError() async throws {
         let webView = WKWebView()
         let transport = WKWebViewTransport(webView: webView)
@@ -100,6 +106,7 @@ final class WKWebViewTransportTests: XCTestCase {
         await transport.close()
     }
 
+    @MainActor
     func testCustomHandlerName() async throws {
         let webView = WKWebView()
         let customHandlerName = "customBridge"
@@ -115,6 +122,7 @@ final class WKWebViewTransportTests: XCTestCase {
         await transport.close()
     }
 
+    @MainActor
     func testMultipleStartCallsAreIdempotent() async throws {
         let webView = WKWebView()
         let transport = WKWebViewTransport(webView: webView)
@@ -127,6 +135,7 @@ final class WKWebViewTransportTests: XCTestCase {
         await transport.close()
     }
 
+    @MainActor
     func testSendWithoutStartThrows() async throws {
         let webView = WKWebView()
         let transport = WKWebViewTransport(webView: webView)
@@ -149,6 +158,7 @@ final class WKWebViewTransportTests: XCTestCase {
         }
     }
 
+    @MainActor
     func testJSONEncodingWithSpecialCharacters() async throws {
         let webView = WKWebView()
         let transport = WKWebViewTransport(webView: webView)
@@ -171,6 +181,7 @@ final class WKWebViewTransportTests: XCTestCase {
         await transport.close()
     }
 
+    @MainActor
     func testMessageReception() async throws {
         let webView = WKWebView()
         let transport = WKWebViewTransport(webView: webView)
@@ -199,6 +210,7 @@ final class WKWebViewTransportTests: XCTestCase {
         await transport.close()
     }
 
+    @MainActor
     func testTransportWithNilWebView() async throws {
         // Create a weak reference to test behavior with deallocated webView
         var webView: WKWebView? = WKWebView()
@@ -224,6 +236,7 @@ final class WKWebViewTransportTests: XCTestCase {
         await transport.close()
     }
 
+    @MainActor
     func testConcurrentSends() async throws {
         let webView = WKWebView()
         let transport = WKWebViewTransport(webView: webView)
@@ -249,6 +262,7 @@ final class WKWebViewTransportTests: XCTestCase {
         await transport.close()
     }
 
+    @MainActor
     func testMessageWithDifferentIdTypes() async throws {
         let webView = WKWebView()
         let transport = WKWebViewTransport(webView: webView)
@@ -274,6 +288,7 @@ final class WKWebViewTransportTests: XCTestCase {
         await transport.close()
     }
 
+    @MainActor
     func testComplexNestedParams() async throws {
         let webView = WKWebView()
         let transport = WKWebViewTransport(webView: webView)
@@ -305,6 +320,7 @@ final class WKWebViewTransportTests: XCTestCase {
         await transport.close()
     }
 
+    @MainActor
     func testMessageEventFormat() async throws {
         let webView = WKWebView()
         let transport = WKWebViewTransport(webView: webView)
@@ -334,9 +350,7 @@ final class WKWebViewTransportTests: XCTestCase {
         </html>
         """
 
-        await MainActor.run {
-            webView.loadHTMLString(html, baseURL: nil)
-        }
+        webView.loadHTMLString(html, baseURL: nil)
 
         // Wait for page to load
         try await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
@@ -354,18 +368,14 @@ final class WKWebViewTransportTests: XCTestCase {
         try await Task.sleep(nanoseconds: 100_000_000) // 0.1 seconds
 
         // Verify the event was captured correctly
-        let result = try await MainActor.run {
-            try await webView.evaluateJavaScript("window.capturedEvents.length")
-        }
+        let result = try await webView.evaluateJavaScript("window.capturedEvents.length")
 
         // Should have captured at least one event
         if let count = result as? Int {
             XCTAssertGreaterThan(count, 0, "Should have captured at least one message event")
 
             // Check the format of the first event
-            let firstEvent = try await MainActor.run {
-                try await webView.evaluateJavaScript("JSON.stringify(window.capturedEvents[0])")
-            }
+            let firstEvent = try await webView.evaluateJavaScript("JSON.stringify(window.capturedEvents[0])")
 
             if let eventJson = firstEvent as? String {
                 // Parse and verify the event structure
@@ -382,6 +392,7 @@ final class WKWebViewTransportTests: XCTestCase {
         await transport.close()
     }
 
+    @MainActor
     func testBridgeScriptPostMessage() async throws {
         let webView = WKWebView()
         let transport = WKWebViewTransport(webView: webView)
@@ -422,9 +433,7 @@ final class WKWebViewTransportTests: XCTestCase {
             }
         }
 
-        await MainActor.run {
-            webView.loadHTMLString(html, baseURL: nil)
-        }
+        webView.loadHTMLString(html, baseURL: nil)
 
         await fulfillment(of: [expectation], timeout: 2.0)
 
