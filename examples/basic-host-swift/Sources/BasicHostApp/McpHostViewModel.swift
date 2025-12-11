@@ -134,7 +134,12 @@ class McpHostViewModel: ObservableObject {
                 throw ToolCallError.invalidJson
             }
 
+            let serverName = selectedServerIndex >= 0 && selectedServerIndex < Self.knownServers.count
+                ? Self.knownServers[selectedServerIndex].0
+                : "Custom Server"
+
             let toolCallInfo = ToolCallInfo(
+                serverName: serverName,
                 tool: tool,
                 input: inputDict,
                 client: client,
@@ -268,6 +273,7 @@ struct ToolResult {
 @MainActor
 class ToolCallInfo: ObservableObject, Identifiable {
     let id = UUID()
+    let serverName: String
     let tool: Tool
     let input: [String: Any]
     let client: Client
@@ -283,12 +289,14 @@ class ToolCallInfo: ObservableObject, Identifiable {
     @Published var error: String?
 
     init(
+        serverName: String,
         tool: Tool,
         input: [String: Any],
         client: Client,
         hostInfo: Implementation,
         hostCapabilities: McpUiHostCapabilities
     ) {
+        self.serverName = serverName
         self.tool = tool
         self.input = input
         self.client = client

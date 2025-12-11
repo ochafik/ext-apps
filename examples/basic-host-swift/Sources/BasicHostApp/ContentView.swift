@@ -188,9 +188,14 @@ struct ToolCallCard: View {
         VStack(alignment: .leading, spacing: 8) {
             // Header
             HStack {
-                Text(toolCallInfo.tool.name)
-                    .font(.subheadline.bold())
-                    .foregroundColor(.primary)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(toolCallInfo.serverName)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    Text(toolCallInfo.tool.name)
+                        .font(.subheadline.bold())
+                        .foregroundColor(.primary)
+                }
 
                 Spacer()
 

@@ -185,7 +185,7 @@ function AppIFramePanel({ toolCallInfo }: AppIFramePanelProps) {
       // Outside of Strict Mode, this `useEffect` runs only once per
       // `toolCallInfo`.
       if (firstTime) {
-        const appBridge = newAppBridge(toolCallInfo.serverInfo, iframe);
+        const appBridge = newAppBridge(toolCallInfo.serverInfo, toolCallInfo, iframe);
         initializeApp(iframe, appBridge, toolCallInfo);
       }
     });
