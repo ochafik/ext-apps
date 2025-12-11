@@ -292,4 +292,4 @@ server.registerResource(
 // Server Startup
 // ---------------------------------------------------------------------------
 
-startServer(server, { port: getPort(), name: "Budget Allocator Server" });
+startServer(server, { port: getPort(), name: "Budget Allocator Server" }).catch((e) => { console.error(e); process.exit(1); });

@@ -52,4 +52,4 @@ const server = new McpServer({
   );
 }
 
-startServer(server, { port: getPort(), name: "Basic MCP App Server (React-based)" });
+startServer(server, { port: getPort(), name: "Basic MCP App Server (React-based)" }).catch((e) => { console.error(e); process.exit(1); });

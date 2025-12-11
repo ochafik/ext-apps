@@ -100,4 +100,4 @@ const server = new McpServer({
   );
 }
 
-startServer(server, { port: getPort(), name: "Customer Segmentation Server" });
+startServer(server, { port: getPort(), name: "Customer Segmentation Server" }).catch((e) => { console.error(e); process.exit(1); });

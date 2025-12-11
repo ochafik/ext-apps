@@ -201,4 +201,4 @@ const server = new McpServer({
   );
 }
 
-startServer(server, { port: getPort(), name: "Cohort Heatmap Server" });
+startServer(server, { port: getPort(), name: "Cohort Heatmap Server" }).catch((e) => { console.error(e); process.exit(1); });

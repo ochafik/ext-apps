@@ -171,4 +171,4 @@ const server = new McpServer({
   );
 }
 
-startServer(server, { port: getPort(), name: "System Monitor Server" });
+startServer(server, { port: getPort(), name: "System Monitor Server" }).catch((e) => { console.error(e); process.exit(1); });

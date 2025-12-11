@@ -308,4 +308,4 @@ const server = new McpServer({
 // Server Startup
 // ============================================================================
 
-startServer(server, { port: getPort(), name: "SaaS Scenario Modeler Server" });
+startServer(server, { port: getPort(), name: "SaaS Scenario Modeler Server" }).catch((e) => { console.error(e); process.exit(1); });

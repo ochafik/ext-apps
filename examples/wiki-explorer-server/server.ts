@@ -138,4 +138,4 @@ const server = new McpServer({
   );
 }
 
-startServer(server, { port: getPort(), name: "Wiki Explorer" });
+startServer(server, { port: getPort(), name: "Wiki Explorer" }).catch((e) => { console.error(e); process.exit(1); });
