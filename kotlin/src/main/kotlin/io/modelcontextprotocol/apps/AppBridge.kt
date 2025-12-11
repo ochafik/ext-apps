@@ -33,16 +33,31 @@ class AppBridge(
     private var hostContext: McpUiHostContext = options.hostContext
     private var isInitialized: Boolean = false
 
-    // Callbacks
+    // Notification handlers (App → Host)
+    /** Called when Guest UI completes initialization. */
     var onInitialized: (() -> Unit)? = null
-    var onSizeChange: ((width: Int?, height: Int?) -> Unit)? = null
-    var onMessage: (suspend (role: String, content: List<JsonElement>) -> McpUiMessageResult)? = null
-    var onOpenLink: (suspend (url: String) -> McpUiOpenLinkResult)? = null
-    var onLoggingMessage: ((level: String, data: JsonElement, logger: String?) -> Unit)? = null
+
+    /** Called when Guest UI reports a size change. */
+    var onSizeChange: ((McpUiSizeChangedParams) -> Unit)? = null
+
+    /** Called when Guest UI sends a logging message. */
+    var onLoggingMessage: ((LoggingMessageParams) -> Unit)? = null
+
+    /** Called when Guest UI sends a ping request. */
     var onPing: (() -> Unit)? = null
 
-    // MCP Server forwarding callbacks
+    // Request handlers (App → Host, must return result)
+    /** Called when Guest UI wants to add a message to the conversation. */
+    var onMessage: (suspend (McpUiMessageParams) -> McpUiMessageResult)? = null
+
+    /** Called when Guest UI wants to open an external link. */
+    var onOpenLink: (suspend (McpUiOpenLinkParams) -> McpUiOpenLinkResult)? = null
+
+    // MCP Server forwarding callbacks (App → Server via Host)
+    /** Called when Guest UI wants to call a server tool. */
     var onToolCall: (suspend (name: String, arguments: JsonObject?) -> JsonElement)? = null
+
+    /** Called when Guest UI wants to read a server resource. */
     var onResourceRead: (suspend (uri: String) -> JsonElement)? = null
 
     init {
@@ -79,7 +94,7 @@ class AppBridge(
                 json.decodeFromJsonElement<McpUiSizeChangedParams>(params ?: JsonObject(emptyMap()))
             }
         ) { params ->
-            onSizeChange?.invoke(params.width?.toInt(), params.height?.toInt())
+            onSizeChange?.invoke(params)
         }
 
         // Handle ui/message request
@@ -92,7 +107,7 @@ class AppBridge(
                 json.encodeToJsonElement(result)
             }
         ) { params ->
-            onMessage?.invoke(params.role, params.content) ?: McpUiMessageResult(isError = true)
+            onMessage?.invoke(params) ?: McpUiMessageResult(isError = true)
         }
 
         // Handle ui/open-link request
@@ -105,7 +120,7 @@ class AppBridge(
                 json.encodeToJsonElement(result)
             }
         ) { params ->
-            onOpenLink?.invoke(params.url) ?: McpUiOpenLinkResult(isError = true)
+            onOpenLink?.invoke(params) ?: McpUiOpenLinkResult(isError = true)
         }
 
         // Handle notifications/message (logging)
@@ -115,7 +130,7 @@ class AppBridge(
                 json.decodeFromJsonElement<LoggingMessageParams>(params ?: JsonObject(emptyMap()))
             }
         ) { params ->
-            onLoggingMessage?.invoke(params.level.name.lowercase(), params.data, params.logger)
+            onLoggingMessage?.invoke(params)
         }
 
         // Handle ping request
@@ -187,27 +202,50 @@ class AppBridge(
         }
     }
 
-    suspend fun sendToolInput(arguments: Map<String, JsonElement>?) {
+    /**
+     * Send complete tool arguments to the Guest UI.
+     * Must be called after initialization completes.
+     */
+    suspend fun sendToolInput(params: McpUiToolInputParams) {
         notification(
             method = "ui/notifications/tool-input",
-            params = McpUiToolInputParams(arguments = arguments),
+            params = params,
             paramsSerializer = { json.encodeToJsonElement(it) as JsonObject }
         )
     }
 
-    suspend fun sendToolInputPartial(arguments: Map<String, JsonElement>?) {
+    /**
+     * Send streaming partial tool arguments to the Guest UI.
+     * May be called zero or more times before sendToolInput.
+     */
+    suspend fun sendToolInputPartial(params: McpUiToolInputPartialParams) {
         notification(
             method = "ui/notifications/tool-input-partial",
-            params = McpUiToolInputPartialParams(arguments = arguments),
+            params = params,
             paramsSerializer = { json.encodeToJsonElement(it) as JsonObject }
         )
     }
 
-    suspend fun sendToolResult(result: JsonObject) {
+    /**
+     * Send tool execution result to the Guest UI.
+     * Must be called after sendToolInput.
+     */
+    suspend fun sendToolResult(params: McpUiToolResultParams) {
         notification(
             method = "ui/notifications/tool-result",
-            params = result,
-            paramsSerializer = { it }
+            params = params,
+            paramsSerializer = { json.encodeToJsonElement(it) as JsonObject }
+        )
+    }
+
+    /**
+     * Notify the Guest UI that tool execution was cancelled.
+     */
+    suspend fun sendToolCancelled(params: McpUiToolCancelledParams = McpUiToolCancelledParams()) {
+        notification(
+            method = "ui/notifications/tool-cancelled",
+            params = params,
+            paramsSerializer = { json.encodeToJsonElement(it) as JsonObject }
         )
     }
 

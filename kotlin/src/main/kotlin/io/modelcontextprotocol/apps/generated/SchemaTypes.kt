@@ -442,12 +442,25 @@ data class McpUiToolResultNotification(
 
 // Additional type aliases for compatibility
 typealias McpUiSizeChangedParams = McpUiSizeChangedNotificationParams
-typealias McpUiToolInputParams = McpUiToolInputNotificationParams  
+typealias McpUiToolInputParams = McpUiToolInputNotificationParams
 typealias McpUiToolInputPartialParams = McpUiToolInputPartialNotificationParams
+typealias McpUiToolResultParams = McpUiToolResultNotificationParams
 typealias McpUiSandboxResourceReadyParams = McpUiSandboxResourceReadyNotificationParams
 @Serializable
 data class McpUiResourceTeardownParams(val _placeholder: Unit = Unit)
 typealias CspConfig = McpUiSandboxResourceReadyNotificationParamsCsp
+
+// Tool cancelled notification (Host → App)
+@Serializable
+data class McpUiToolCancelledParams(
+    val reason: String? = null
+)
+
+@Serializable
+data class McpUiToolCancelledNotification(
+    val method: String = "ui/notifications/tool-cancelled",
+    val params: McpUiToolCancelledParams = McpUiToolCancelledParams()
+)
 
 // Logging message params (standard MCP type)
 @Serializable

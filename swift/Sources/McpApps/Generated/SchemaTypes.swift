@@ -1628,3 +1628,48 @@ public struct McpUiToolResultNotification: Codable, Sendable, Equatable {
         self.params = params
     }
 }
+
+// MARK: - Tool Cancelled Notification
+
+public struct McpUiToolCancelledParams: Codable, Sendable, Equatable {
+    public var reason: String?
+
+    public init(reason: String? = nil) {
+        self.reason = reason
+    }
+}
+
+public struct McpUiToolCancelledNotification: Codable, Sendable, Equatable {
+    public var method: String
+    public var params: McpUiToolCancelledParams
+
+    public init(
+        method: String = "ui/notifications/tool-cancelled",
+        params: McpUiToolCancelledParams = McpUiToolCancelledParams()
+    ) {
+        self.method = method
+        self.params = params
+    }
+}
+
+// MARK: - Additional Type Aliases
+
+public typealias McpUiSizeChangedParams = McpUiSizeChangedNotificationParams
+public typealias McpUiToolInputParams = McpUiToolInputNotificationParams
+public typealias McpUiToolInputPartialParams = McpUiToolInputPartialNotificationParams
+public typealias McpUiToolResultParams = McpUiToolResultNotificationParams
+public typealias McpUiSandboxResourceReadyParams = McpUiSandboxResourceReadyNotificationParams
+
+// MARK: - Logging
+
+public struct LoggingMessageParams: Codable, Sendable, Equatable {
+    public var level: LogLevel
+    public var data: AnyCodable
+    public var logger: String?
+
+    public init(level: LogLevel, data: AnyCodable, logger: String? = nil) {
+        self.level = level
+        self.data = data
+        self.logger = logger
+    }
+}

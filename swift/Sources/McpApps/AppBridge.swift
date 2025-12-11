@@ -20,14 +20,34 @@ public actor AppBridge {
 
     private var pendingRequests: [JSONRPCId: CheckedContinuation<AnyCodable, Error>] = [:]
 
-    // Callbacks - using nonisolated(unsafe) for callback storage
+    // MARK: - Notification Handlers (App → Host)
+
+    /// Called when Guest UI completes initialization.
     nonisolated(unsafe) public var onInitialized: (@Sendable () -> Void)?
-    nonisolated(unsafe) public var onSizeChange: (@Sendable (Int?, Int?) -> Void)?
-    nonisolated(unsafe) public var onMessage: (@Sendable (String, [ContentBlock]) async -> McpUiMessageResult)?
-    nonisolated(unsafe) public var onOpenLink: (@Sendable (String) async -> McpUiOpenLinkResult)?
-    nonisolated(unsafe) public var onLoggingMessage: (@Sendable (LogLevel, AnyCodable, String?) -> Void)?
+
+    /// Called when Guest UI reports a size change.
+    nonisolated(unsafe) public var onSizeChange: (@Sendable (McpUiSizeChangedParams) -> Void)?
+
+    /// Called when Guest UI sends a logging message.
+    nonisolated(unsafe) public var onLoggingMessage: (@Sendable (LoggingMessageParams) -> Void)?
+
+    /// Called when Guest UI sends a ping request.
     nonisolated(unsafe) public var onPing: (@Sendable () -> Void)?
+
+    // MARK: - Request Handlers (App → Host, must return result)
+
+    /// Called when Guest UI wants to add a message to the conversation.
+    nonisolated(unsafe) public var onMessage: (@Sendable (McpUiMessageParams) async -> McpUiMessageResult)?
+
+    /// Called when Guest UI wants to open an external link.
+    nonisolated(unsafe) public var onOpenLink: (@Sendable (McpUiOpenLinkParams) async -> McpUiOpenLinkResult)?
+
+    // MARK: - MCP Server Forwarding (App → Server via Host)
+
+    /// Called when Guest UI wants to call a server tool.
     nonisolated(unsafe) public var onToolCall: (@Sendable (String, [String: AnyCodable]?) async throws -> [String: AnyCodable])?
+
+    /// Called when Guest UI wants to read a server resource.
     nonisolated(unsafe) public var onResourceRead: (@Sendable (String) async throws -> [String: AnyCodable])?
 
     public init(
@@ -107,15 +127,17 @@ public actor AppBridge {
             isInitialized = true
             onInitialized?()
         case "ui/notifications/size-changed":
-            let width = notification.params?["width"]?.value as? Int
-            let height = notification.params?["height"]?.value as? Int
-            onSizeChange?(width, height)
+            let width = notification.params?["width"]?.value as? Double
+            let height = notification.params?["height"]?.value as? Double
+            let params = McpUiSizeChangedParams(width: width, height: height)
+            onSizeChange?(params)
         case "notifications/message":
             if let level = notification.params?["level"]?.value as? String,
                let logLevel = LogLevel(rawValue: level),
                let data = notification.params?["data"] {
                 let logger = notification.params?["logger"]?.value as? String
-                onLoggingMessage?(logLevel, data, logger)
+                let params = LoggingMessageParams(level: logLevel, data: data, logger: logger)
+                onLoggingMessage?(params)
             }
         default:
             break
@@ -160,14 +182,14 @@ public actor AppBridge {
     private func handleMessageRequest(_ params: [String: AnyCodable]?) async throws -> AnyCodable {
         let data = try JSONSerialization.data(withJSONObject: params?.mapValues { $0.value } ?? [:])
         let msgParams = try JSONDecoder().decode(McpUiMessageParams.self, from: data)
-        let result = await onMessage?(msgParams.role, msgParams.content) ?? McpUiMessageResult(isError: true)
+        let result = await onMessage?(msgParams) ?? McpUiMessageResult(isError: true)
         return AnyCodable(["isError": result.isError ?? false])
     }
 
     private func handleOpenLink(_ params: [String: AnyCodable]?) async throws -> AnyCodable {
         let data = try JSONSerialization.data(withJSONObject: params?.mapValues { $0.value } ?? [:])
         let linkParams = try JSONDecoder().decode(McpUiOpenLinkParams.self, from: data)
-        let result = await onOpenLink?(linkParams.url) ?? McpUiOpenLinkResult(isError: true)
+        let result = await onOpenLink?(linkParams) ?? McpUiOpenLinkResult(isError: true)
         return AnyCodable(["isError": result.isError ?? false])
     }
 
@@ -208,18 +230,39 @@ public actor AppBridge {
     public func getAppVersion() -> Implementation? { appInfo }
     public func isReady() -> Bool { isInitialized }
 
-    public func sendToolInput(arguments: [String: AnyCodable]?) async throws {
+    /// Send complete tool arguments to the Guest UI.
+    /// Must be called after initialization completes.
+    public func sendToolInput(_ params: McpUiToolInputParams) async throws {
+        let data = try JSONEncoder().encode(params)
+        let dict = try JSONSerialization.jsonObject(with: data) as? [String: Any] ?? [:]
         try await sendNotification(method: "ui/notifications/tool-input",
-            params: ["arguments": AnyCodable(arguments?.mapValues { $0.value } ?? [:])])
+            params: dict.mapValues { AnyCodable($0) })
     }
 
-    public func sendToolInputPartial(arguments: [String: AnyCodable]?) async throws {
+    /// Send streaming partial tool arguments to the Guest UI.
+    /// May be called zero or more times before sendToolInput.
+    public func sendToolInputPartial(_ params: McpUiToolInputPartialParams) async throws {
+        let data = try JSONEncoder().encode(params)
+        let dict = try JSONSerialization.jsonObject(with: data) as? [String: Any] ?? [:]
         try await sendNotification(method: "ui/notifications/tool-input-partial",
-            params: ["arguments": AnyCodable(arguments?.mapValues { $0.value } ?? [:])])
+            params: dict.mapValues { AnyCodable($0) })
     }
 
-    public func sendToolResult(_ result: [String: AnyCodable]) async throws {
-        try await sendNotification(method: "ui/notifications/tool-result", params: result)
+    /// Send tool execution result to the Guest UI.
+    /// Must be called after sendToolInput.
+    public func sendToolResult(_ params: McpUiToolResultParams) async throws {
+        let data = try JSONEncoder().encode(params)
+        let dict = try JSONSerialization.jsonObject(with: data) as? [String: Any] ?? [:]
+        try await sendNotification(method: "ui/notifications/tool-result",
+            params: dict.mapValues { AnyCodable($0) })
+    }
+
+    /// Notify the Guest UI that tool execution was cancelled.
+    public func sendToolCancelled(_ params: McpUiToolCancelledParams = McpUiToolCancelledParams()) async throws {
+        let data = try JSONEncoder().encode(params)
+        let dict = try JSONSerialization.jsonObject(with: data) as? [String: Any] ?? [:]
+        try await sendNotification(method: "ui/notifications/tool-cancelled",
+            params: dict.mapValues { AnyCodable($0) })
     }
 
     public func setHostContext(_ newContext: McpUiHostContext) async throws {
