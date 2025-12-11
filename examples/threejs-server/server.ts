@@ -151,16 +151,9 @@ const server = new McpServer({
       inputSchema: {
         code: z
           .string()
-          .optional()
-          .describe(
-            "JavaScript code to render the 3D scene (defaults to a rotating cube demo)",
-          ),
-        height: z
-          .number()
-          .int()
-          .positive()
-          .optional()
-          .describe("Height in pixels (default: 400)"),
+          .default(DEFAULT_THREEJS_CODE)
+          .describe("JavaScript code to render the 3D scene"),
+        height: z.number().int().positive().default(400).describe("Height in pixels"),
       },
       _meta: { [RESOURCE_URI_META_KEY]: resourceUri },
     },
@@ -169,10 +162,7 @@ const server = new McpServer({
         content: [
           {
             type: "text",
-            text: JSON.stringify({
-              code: code || DEFAULT_THREEJS_CODE,
-              height: height || 400,
-            }),
+            text: JSON.stringify({ code, height }),
           },
         ],
       };
