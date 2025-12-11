@@ -1,22 +1,16 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
-import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import type { CallToolResult, ReadResourceResult } from "@modelcontextprotocol/sdk/types.js";
-import cors from "cors";
-import express, { type Request, type Response } from "express";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { RESOURCE_MIME_TYPE, RESOURCE_URI_META_KEY } from "../../dist/src/app";
+import { startServer } from "../shared/server-utils.js";
 
-const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3001;
 const DIST_DIR = path.join(import.meta.dirname, "dist");
-
 
 const server = new McpServer({
   name: "Basic MCP App Server (React-based)",
   version: "1.0.0",
 });
-
 
 // MCP Apps require two-part registration: a tool (what the LLM calls) and a
 // resource (the UI it renders). The `_meta` field on the tool links to the
@@ -58,70 +52,4 @@ const server = new McpServer({
   );
 }
 
-
-const app = express();
-app.use(cors());
-app.use(express.json());
-
-// Streamable HTTP transport (current spec) - handles GET, POST, DELETE
-app.all("/mcp", async (req: Request, res: Response) => {
-  try {
-    const transport = new StreamableHTTPServerTransport({
-      sessionIdGenerator: undefined,
-      enableJsonResponse: true,
-    });
-    res.on("close", () => { transport.close(); });
-
-    await server.connect(transport);
-
-    await transport.handleRequest(req, res, req.body);
-  } catch (error) {
-    console.error("Error handling MCP request:", error);
-    if (!res.headersSent) {
-      res.status(500).json({
-        jsonrpc: "2.0",
-        error: { code: -32603, message: "Internal server error" },
-        id: null,
-      });
-    }
-  }
-});
-
-// Legacy SSE transport (deprecated) - for backwards compatibility
-const sseTransports = new Map<string, SSEServerTransport>();
-
-app.get("/sse", async (_req: Request, res: Response) => {
-  const transport = new SSEServerTransport("/messages", res);
-  sseTransports.set(transport.sessionId, transport);
-  res.on("close", () => { sseTransports.delete(transport.sessionId); });
-  await server.connect(transport);
-});
-
-app.post("/messages", async (req: Request, res: Response) => {
-  const sessionId = req.query.sessionId as string;
-  const transport = sseTransports.get(sessionId);
-  if (!transport) {
-    res.status(404).json({ error: "Session not found" });
-    return;
-  }
-  await transport.handlePostMessage(req, res, req.body);
-});
-
-const httpServer = app.listen(PORT, (err) => {
-  if (err) {
-    console.error("Error starting server:", err);
-    process.exit(1);
-  }
-  console.log(`Server listening on http://localhost:${PORT}/mcp`);
-});
-
-function shutdown() {
-  console.log("\nShutting down...");
-  httpServer.close(() => {
-    console.log("Server closed");
-    process.exit(0);
-  });
-}
-
-process.on("SIGINT", shutdown);
-process.on("SIGTERM", shutdown);
+startServer(server, { name: "Basic MCP App Server (React-based)" });
