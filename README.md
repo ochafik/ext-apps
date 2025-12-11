@@ -50,6 +50,7 @@ Start with these foundational examples to learn the SDK:
 - [`examples/basic-server-vanillajs`](https://github.com/modelcontextprotocol/ext-apps/tree/main/examples/basic-server-vanillajs) — MCP server + MCP App using vanilla JS
 - [`examples/basic-server-react`](https://github.com/modelcontextprotocol/ext-apps/tree/main/examples/basic-server-react) — MCP server + MCP App using React
 - [`examples/basic-server-vue`](https://github.com/modelcontextprotocol/ext-apps/tree/main/examples/basic-server-vue) — MCP server + MCP App using Vue
+- [`examples/basic-server-svelte`](https://github.com/modelcontextprotocol/ext-apps/tree/main/examples/basic-server-svelte) — MCP server + MCP App using Svelte
 - [`examples/basic-host`](https://github.com/modelcontextprotocol/ext-apps/tree/main/examples/basic-host) — MCP host application supporting MCP Apps
 
 The [`examples/`](https://github.com/modelcontextprotocol/ext-apps/tree/main/examples) directory contains additional demo apps showcasing real-world use cases.
