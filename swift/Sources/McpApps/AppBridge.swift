@@ -231,7 +231,10 @@ public actor AppBridge {
             params: dict.mapValues { AnyCodable($0) })
     }
 
-    public func sendResourceTeardown(timeout: TimeInterval = 5) async throws -> McpUiResourceTeardownResult {
+    /// Request the App to perform cleanup before the resource is torn down.
+    ///
+    /// - Parameter timeout: Maximum time to wait for the App to respond (default 0.5s)
+    public func sendResourceTeardown(timeout: TimeInterval = 0.5) async throws -> McpUiResourceTeardownResult {
         _ = try await sendRequest(method: "ui/resource-teardown", params: [:], timeout: timeout)
         return McpUiResourceTeardownResult()
     }
