@@ -240,6 +240,9 @@ class McpHostViewModel: ObservableObject {
     }
 
     func removeToolCall(_ toolCall: ToolCallInfo) {
+        Task {
+            await toolCall.teardown()
+        }
         activeToolCalls.removeAll { $0.id == toolCall.id }
     }
 }
@@ -481,6 +484,19 @@ class ToolCallInfo: ObservableObject, Identifiable {
             }),
             "isError": AnyCodable(result.isError ?? false)
         ])
+    }
+
+    /// Teardown the app bridge before removing the tool call
+    func teardown() async {
+        if let bridge = appBridge {
+            do {
+                _ = try await bridge.sendResourceTeardown()
+            } catch {
+                print("[Host] Teardown failed: \(error)")
+            }
+            await bridge.close()
+        }
+        appBridge = nil
     }
 }
 
