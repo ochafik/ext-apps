@@ -288,7 +288,31 @@
                       },
                       {
                         "type": "string",
-                        "const": "--color-background-inverted"
+                        "const": "--color-background-inverse"
+                      },
+                      {
+                        "type": "string",
+                        "const": "--color-background-ghost"
+                      },
+                      {
+                        "type": "string",
+                        "const": "--color-background-info"
+                      },
+                      {
+                        "type": "string",
+                        "const": "--color-background-danger"
+                      },
+                      {
+                        "type": "string",
+                        "const": "--color-background-success"
+                      },
+                      {
+                        "type": "string",
+                        "const": "--color-background-warning"
+                      },
+                      {
+                        "type": "string",
+                        "const": "--color-background-disabled"
                       },
                       {
                         "type": "string",
@@ -304,23 +328,27 @@
                       },
                       {
                         "type": "string",
-                        "const": "--color-text-inverted"
+                        "const": "--color-text-inverse"
                       },
                       {
                         "type": "string",
-                        "const": "--color-icon-primary"
+                        "const": "--color-text-info"
                       },
                       {
                         "type": "string",
-                        "const": "--color-icon-secondary"
+                        "const": "--color-text-danger"
                       },
                       {
                         "type": "string",
-                        "const": "--color-icon-tertiary"
+                        "const": "--color-text-success"
                       },
                       {
                         "type": "string",
-                        "const": "--color-icon-inverted"
+                        "const": "--color-text-warning"
+                      },
+                      {
+                        "type": "string",
+                        "const": "--color-text-disabled"
                       },
                       {
                         "type": "string",
@@ -332,83 +360,195 @@
                       },
                       {
                         "type": "string",
-                        "const": "--color-accent-info"
+                        "const": "--color-border-tertiary"
                       },
                       {
                         "type": "string",
-                        "const": "--color-accent-danger"
+                        "const": "--color-border-inverse"
                       },
                       {
                         "type": "string",
-                        "const": "--color-accent-success"
+                        "const": "--color-border-ghost"
                       },
                       {
                         "type": "string",
-                        "const": "--color-accent-warning"
+                        "const": "--color-border-info"
                       },
                       {
                         "type": "string",
-                        "const": "--font-family-sans"
+                        "const": "--color-border-danger"
                       },
                       {
                         "type": "string",
-                        "const": "--font-size-heading"
+                        "const": "--color-border-success"
                       },
                       {
                         "type": "string",
-                        "const": "--font-size-body"
+                        "const": "--color-border-warning"
                       },
                       {
                         "type": "string",
-                        "const": "--font-size-caption"
+                        "const": "--color-border-disabled"
                       },
                       {
                         "type": "string",
-                        "const": "--font-weight-regular"
+                        "const": "--color-ring-primary"
                       },
                       {
                         "type": "string",
-                        "const": "--font-weight-emphasized"
+                        "const": "--color-ring-secondary"
                       },
                       {
                         "type": "string",
-                        "const": "--font-leading-regular"
+                        "const": "--color-ring-inverse"
                       },
                       {
                         "type": "string",
-                        "const": "--font-leading-tight"
+                        "const": "--color-ring-info"
                       },
                       {
                         "type": "string",
-                        "const": "--font-style-heading"
+                        "const": "--color-ring-danger"
                       },
                       {
                         "type": "string",
-                        "const": "--font-style-body"
+                        "const": "--color-ring-success"
                       },
                       {
                         "type": "string",
-                        "const": "--font-style-body-emphasized"
+                        "const": "--color-ring-warning"
                       },
                       {
                         "type": "string",
-                        "const": "--font-style-caption"
+                        "const": "--font-sans"
                       },
                       {
                         "type": "string",
-                        "const": "--font-style-caption-emphasized"
+                        "const": "--font-mono"
                       },
                       {
                         "type": "string",
-                        "const": "--border-radius-small"
+                        "const": "--font-weight-normal"
                       },
                       {
                         "type": "string",
-                        "const": "--border-radius-medium"
+                        "const": "--font-weight-medium"
                       },
                       {
                         "type": "string",
-                        "const": "--border-radius-large"
+                        "const": "--font-weight-semibold"
+                      },
+                      {
+                        "type": "string",
+                        "const": "--font-weight-bold"
+                      },
+                      {
+                        "type": "string",
+                        "const": "--font-text-xs-size"
+                      },
+                      {
+                        "type": "string",
+                        "const": "--font-text-sm-size"
+                      },
+                      {
+                        "type": "string",
+                        "const": "--font-text-md-size"
+                      },
+                      {
+                        "type": "string",
+                        "const": "--font-text-lg-size"
+                      },
+                      {
+                        "type": "string",
+                        "const": "--font-heading-xs-size"
+                      },
+                      {
+                        "type": "string",
+                        "const": "--font-heading-sm-size"
+                      },
+                      {
+                        "type": "string",
+                        "const": "--font-heading-md-size"
+                      },
+                      {
+                        "type": "string",
+                        "const": "--font-heading-lg-size"
+                      },
+                      {
+                        "type": "string",
+                        "const": "--font-heading-xl-size"
+                      },
+                      {
+                        "type": "string",
+                        "const": "--font-heading-2xl-size"
+                      },
+                      {
+                        "type": "string",
+                        "const": "--font-heading-3xl-size"
+                      },
+                      {
+                        "type": "string",
+                        "const": "--font-text-xs-line-height"
+                      },
+                      {
+                        "type": "string",
+                        "const": "--font-text-sm-line-height"
+                      },
+                      {
+                        "type": "string",
+                        "const": "--font-text-md-line-height"
+                      },
+                      {
+                        "type": "string",
+                        "const": "--font-text-lg-line-height"
+                      },
+                      {
+                        "type": "string",
+                        "const": "--font-heading-xs-line-height"
+                      },
+                      {
+                        "type": "string",
+                        "const": "--font-heading-sm-line-height"
+                      },
+                      {
+                        "type": "string",
+                        "const": "--font-heading-md-line-height"
+                      },
+                      {
+                        "type": "string",
+                        "const": "--font-heading-lg-line-height"
+                      },
+                      {
+                        "type": "string",
+                        "const": "--font-heading-xl-line-height"
+                      },
+                      {
+                        "type": "string",
+                        "const": "--font-heading-2xl-line-height"
+                      },
+                      {
+                        "type": "string",
+                        "const": "--font-heading-3xl-line-height"
+                      },
+                      {
+                        "type": "string",
+                        "const": "--border-radius-xs"
+                      },
+                      {
+                        "type": "string",
+                        "const": "--border-radius-sm"
+                      },
+                      {
+                        "type": "string",
+                        "const": "--border-radius-md"
+                      },
+                      {
+                        "type": "string",
+                        "const": "--border-radius-lg"
+                      },
+                      {
+                        "type": "string",
+                        "const": "--border-radius-xl"
                       },
                       {
                         "type": "string",
@@ -417,6 +557,22 @@
                       {
                         "type": "string",
                         "const": "--border-width-regular"
+                      },
+                      {
+                        "type": "string",
+                        "const": "--shadow-hairline"
+                      },
+                      {
+                        "type": "string",
+                        "const": "--shadow-sm"
+                      },
+                      {
+                        "type": "string",
+                        "const": "--shadow-md"
+                      },
+                      {
+                        "type": "string",
+                        "const": "--shadow-lg"
                       }
                     ]
                   },
@@ -743,7 +899,31 @@
                   },
                   {
                     "type": "string",
-                    "const": "--color-background-inverted"
+                    "const": "--color-background-inverse"
+                  },
+                  {
+                    "type": "string",
+                    "const": "--color-background-ghost"
+                  },
+                  {
+                    "type": "string",
+                    "const": "--color-background-info"
+                  },
+                  {
+                    "type": "string",
+                    "const": "--color-background-danger"
+                  },
+                  {
+                    "type": "string",
+                    "const": "--color-background-success"
+                  },
+                  {
+                    "type": "string",
+                    "const": "--color-background-warning"
+                  },
+                  {
+                    "type": "string",
+                    "const": "--color-background-disabled"
                   },
                   {
                     "type": "string",
@@ -759,23 +939,27 @@
                   },
                   {
                     "type": "string",
-                    "const": "--color-text-inverted"
+                    "const": "--color-text-inverse"
                   },
                   {
                     "type": "string",
-                    "const": "--color-icon-primary"
+                    "const": "--color-text-info"
                   },
                   {
                     "type": "string",
-                    "const": "--color-icon-secondary"
+                    "const": "--color-text-danger"
                   },
                   {
                     "type": "string",
-                    "const": "--color-icon-tertiary"
+                    "const": "--color-text-success"
                   },
                   {
                     "type": "string",
-                    "const": "--color-icon-inverted"
+                    "const": "--color-text-warning"
+                  },
+                  {
+                    "type": "string",
+                    "const": "--color-text-disabled"
                   },
                   {
                     "type": "string",
@@ -787,83 +971,195 @@
                   },
                   {
                     "type": "string",
-                    "const": "--color-accent-info"
+                    "const": "--color-border-tertiary"
                   },
                   {
                     "type": "string",
-                    "const": "--color-accent-danger"
+                    "const": "--color-border-inverse"
                   },
                   {
                     "type": "string",
-                    "const": "--color-accent-success"
+                    "const": "--color-border-ghost"
                   },
                   {
                     "type": "string",
-                    "const": "--color-accent-warning"
+                    "const": "--color-border-info"
                   },
                   {
                     "type": "string",
-                    "const": "--font-family-sans"
+                    "const": "--color-border-danger"
                   },
                   {
                     "type": "string",
-                    "const": "--font-size-heading"
+                    "const": "--color-border-success"
                   },
                   {
                     "type": "string",
-                    "const": "--font-size-body"
+                    "const": "--color-border-warning"
                   },
                   {
                     "type": "string",
-                    "const": "--font-size-caption"
+                    "const": "--color-border-disabled"
                   },
                   {
                     "type": "string",
-                    "const": "--font-weight-regular"
+                    "const": "--color-ring-primary"
                   },
                   {
                     "type": "string",
-                    "const": "--font-weight-emphasized"
+                    "const": "--color-ring-secondary"
                   },
                   {
                     "type": "string",
-                    "const": "--font-leading-regular"
+                    "const": "--color-ring-inverse"
                   },
                   {
                     "type": "string",
-                    "const": "--font-leading-tight"
+                    "const": "--color-ring-info"
                   },
                   {
                     "type": "string",
-                    "const": "--font-style-heading"
+                    "const": "--color-ring-danger"
                   },
                   {
                     "type": "string",
-                    "const": "--font-style-body"
+                    "const": "--color-ring-success"
                   },
                   {
                     "type": "string",
-                    "const": "--font-style-body-emphasized"
+                    "const": "--color-ring-warning"
                   },
                   {
                     "type": "string",
-                    "const": "--font-style-caption"
+                    "const": "--font-sans"
                   },
                   {
                     "type": "string",
-                    "const": "--font-style-caption-emphasized"
+                    "const": "--font-mono"
                   },
                   {
                     "type": "string",
-                    "const": "--border-radius-small"
+                    "const": "--font-weight-normal"
                   },
                   {
                     "type": "string",
-                    "const": "--border-radius-medium"
+                    "const": "--font-weight-medium"
                   },
                   {
                     "type": "string",
-                    "const": "--border-radius-large"
+                    "const": "--font-weight-semibold"
+                  },
+                  {
+                    "type": "string",
+                    "const": "--font-weight-bold"
+                  },
+                  {
+                    "type": "string",
+                    "const": "--font-text-xs-size"
+                  },
+                  {
+                    "type": "string",
+                    "const": "--font-text-sm-size"
+                  },
+                  {
+                    "type": "string",
+                    "const": "--font-text-md-size"
+                  },
+                  {
+                    "type": "string",
+                    "const": "--font-text-lg-size"
+                  },
+                  {
+                    "type": "string",
+                    "const": "--font-heading-xs-size"
+                  },
+                  {
+                    "type": "string",
+                    "const": "--font-heading-sm-size"
+                  },
+                  {
+                    "type": "string",
+                    "const": "--font-heading-md-size"
+                  },
+                  {
+                    "type": "string",
+                    "const": "--font-heading-lg-size"
+                  },
+                  {
+                    "type": "string",
+                    "const": "--font-heading-xl-size"
+                  },
+                  {
+                    "type": "string",
+                    "const": "--font-heading-2xl-size"
+                  },
+                  {
+                    "type": "string",
+                    "const": "--font-heading-3xl-size"
+                  },
+                  {
+                    "type": "string",
+                    "const": "--font-text-xs-line-height"
+                  },
+                  {
+                    "type": "string",
+                    "const": "--font-text-sm-line-height"
+                  },
+                  {
+                    "type": "string",
+                    "const": "--font-text-md-line-height"
+                  },
+                  {
+                    "type": "string",
+                    "const": "--font-text-lg-line-height"
+                  },
+                  {
+                    "type": "string",
+                    "const": "--font-heading-xs-line-height"
+                  },
+                  {
+                    "type": "string",
+                    "const": "--font-heading-sm-line-height"
+                  },
+                  {
+                    "type": "string",
+                    "const": "--font-heading-md-line-height"
+                  },
+                  {
+                    "type": "string",
+                    "const": "--font-heading-lg-line-height"
+                  },
+                  {
+                    "type": "string",
+                    "const": "--font-heading-xl-line-height"
+                  },
+                  {
+                    "type": "string",
+                    "const": "--font-heading-2xl-line-height"
+                  },
+                  {
+                    "type": "string",
+                    "const": "--font-heading-3xl-line-height"
+                  },
+                  {
+                    "type": "string",
+                    "const": "--border-radius-xs"
+                  },
+                  {
+                    "type": "string",
+                    "const": "--border-radius-sm"
+                  },
+                  {
+                    "type": "string",
+                    "const": "--border-radius-md"
+                  },
+                  {
+                    "type": "string",
+                    "const": "--border-radius-lg"
+                  },
+                  {
+                    "type": "string",
+                    "const": "--border-radius-xl"
                   },
                   {
                     "type": "string",
@@ -872,6 +1168,22 @@
                   {
                     "type": "string",
                     "const": "--border-width-regular"
+                  },
+                  {
+                    "type": "string",
+                    "const": "--shadow-hairline"
+                  },
+                  {
+                    "type": "string",
+                    "const": "--shadow-sm"
+                  },
+                  {
+                    "type": "string",
+                    "const": "--shadow-md"
+                  },
+                  {
+                    "type": "string",
+                    "const": "--shadow-lg"
                   }
                 ]
               },
@@ -1031,7 +1343,31 @@
               },
               {
                 "type": "string",
-                "const": "--color-background-inverted"
+                "const": "--color-background-inverse"
+              },
+              {
+                "type": "string",
+                "const": "--color-background-ghost"
+              },
+              {
+                "type": "string",
+                "const": "--color-background-info"
+              },
+              {
+                "type": "string",
+                "const": "--color-background-danger"
+              },
+              {
+                "type": "string",
+                "const": "--color-background-success"
+              },
+              {
+                "type": "string",
+                "const": "--color-background-warning"
+              },
+              {
+                "type": "string",
+                "const": "--color-background-disabled"
               },
               {
                 "type": "string",
@@ -1047,23 +1383,27 @@
               },
               {
                 "type": "string",
-                "const": "--color-text-inverted"
+                "const": "--color-text-inverse"
               },
               {
                 "type": "string",
-                "const": "--color-icon-primary"
+                "const": "--color-text-info"
               },
               {
                 "type": "string",
-                "const": "--color-icon-secondary"
+                "const": "--color-text-danger"
               },
               {
                 "type": "string",
-                "const": "--color-icon-tertiary"
+                "const": "--color-text-success"
               },
               {
                 "type": "string",
-                "const": "--color-icon-inverted"
+                "const": "--color-text-warning"
+              },
+              {
+                "type": "string",
+                "const": "--color-text-disabled"
               },
               {
                 "type": "string",
@@ -1075,83 +1415,195 @@
               },
               {
                 "type": "string",
-                "const": "--color-accent-info"
+                "const": "--color-border-tertiary"
               },
               {
                 "type": "string",
-                "const": "--color-accent-danger"
+                "const": "--color-border-inverse"
               },
               {
                 "type": "string",
-                "const": "--color-accent-success"
+                "const": "--color-border-ghost"
               },
               {
                 "type": "string",
-                "const": "--color-accent-warning"
+                "const": "--color-border-info"
               },
               {
                 "type": "string",
-                "const": "--font-family-sans"
+                "const": "--color-border-danger"
               },
               {
                 "type": "string",
-                "const": "--font-size-heading"
+                "const": "--color-border-success"
               },
               {
                 "type": "string",
-                "const": "--font-size-body"
+                "const": "--color-border-warning"
               },
               {
                 "type": "string",
-                "const": "--font-size-caption"
+                "const": "--color-border-disabled"
               },
               {
                 "type": "string",
-                "const": "--font-weight-regular"
+                "const": "--color-ring-primary"
               },
               {
                 "type": "string",
-                "const": "--font-weight-emphasized"
+                "const": "--color-ring-secondary"
               },
               {
                 "type": "string",
-                "const": "--font-leading-regular"
+                "const": "--color-ring-inverse"
               },
               {
                 "type": "string",
-                "const": "--font-leading-tight"
+                "const": "--color-ring-info"
               },
               {
                 "type": "string",
-                "const": "--font-style-heading"
+                "const": "--color-ring-danger"
               },
               {
                 "type": "string",
-                "const": "--font-style-body"
+                "const": "--color-ring-success"
               },
               {
                 "type": "string",
-                "const": "--font-style-body-emphasized"
+                "const": "--color-ring-warning"
               },
               {
                 "type": "string",
-                "const": "--font-style-caption"
+                "const": "--font-sans"
               },
               {
                 "type": "string",
-                "const": "--font-style-caption-emphasized"
+                "const": "--font-mono"
               },
               {
                 "type": "string",
-                "const": "--border-radius-small"
+                "const": "--font-weight-normal"
               },
               {
                 "type": "string",
-                "const": "--border-radius-medium"
+                "const": "--font-weight-medium"
               },
               {
                 "type": "string",
-                "const": "--border-radius-large"
+                "const": "--font-weight-semibold"
+              },
+              {
+                "type": "string",
+                "const": "--font-weight-bold"
+              },
+              {
+                "type": "string",
+                "const": "--font-text-xs-size"
+              },
+              {
+                "type": "string",
+                "const": "--font-text-sm-size"
+              },
+              {
+                "type": "string",
+                "const": "--font-text-md-size"
+              },
+              {
+                "type": "string",
+                "const": "--font-text-lg-size"
+              },
+              {
+                "type": "string",
+                "const": "--font-heading-xs-size"
+              },
+              {
+                "type": "string",
+                "const": "--font-heading-sm-size"
+              },
+              {
+                "type": "string",
+                "const": "--font-heading-md-size"
+              },
+              {
+                "type": "string",
+                "const": "--font-heading-lg-size"
+              },
+              {
+                "type": "string",
+                "const": "--font-heading-xl-size"
+              },
+              {
+                "type": "string",
+                "const": "--font-heading-2xl-size"
+              },
+              {
+                "type": "string",
+                "const": "--font-heading-3xl-size"
+              },
+              {
+                "type": "string",
+                "const": "--font-text-xs-line-height"
+              },
+              {
+                "type": "string",
+                "const": "--font-text-sm-line-height"
+              },
+              {
+                "type": "string",
+                "const": "--font-text-md-line-height"
+              },
+              {
+                "type": "string",
+                "const": "--font-text-lg-line-height"
+              },
+              {
+                "type": "string",
+                "const": "--font-heading-xs-line-height"
+              },
+              {
+                "type": "string",
+                "const": "--font-heading-sm-line-height"
+              },
+              {
+                "type": "string",
+                "const": "--font-heading-md-line-height"
+              },
+              {
+                "type": "string",
+                "const": "--font-heading-lg-line-height"
+              },
+              {
+                "type": "string",
+                "const": "--font-heading-xl-line-height"
+              },
+              {
+                "type": "string",
+                "const": "--font-heading-2xl-line-height"
+              },
+              {
+                "type": "string",
+                "const": "--font-heading-3xl-line-height"
+              },
+              {
+                "type": "string",
+                "const": "--border-radius-xs"
+              },
+              {
+                "type": "string",
+                "const": "--border-radius-sm"
+              },
+              {
+                "type": "string",
+                "const": "--border-radius-md"
+              },
+              {
+                "type": "string",
+                "const": "--border-radius-lg"
+              },
+              {
+                "type": "string",
+                "const": "--border-radius-xl"
               },
               {
                 "type": "string",
@@ -1160,6 +1612,22 @@
               {
                 "type": "string",
                 "const": "--border-width-regular"
+              },
+              {
+                "type": "string",
+                "const": "--shadow-hairline"
+              },
+              {
+                "type": "string",
+                "const": "--shadow-sm"
+              },
+              {
+                "type": "string",
+                "const": "--shadow-md"
+              },
+              {
+                "type": "string",
+                "const": "--shadow-lg"
               }
             ]
           },
@@ -1549,7 +2017,31 @@
                       },
                       {
                         "type": "string",
-                        "const": "--color-background-inverted"
+                        "const": "--color-background-inverse"
+                      },
+                      {
+                        "type": "string",
+                        "const": "--color-background-ghost"
+                      },
+                      {
+                        "type": "string",
+                        "const": "--color-background-info"
+                      },
+                      {
+                        "type": "string",
+                        "const": "--color-background-danger"
+                      },
+                      {
+                        "type": "string",
+                        "const": "--color-background-success"
+                      },
+                      {
+                        "type": "string",
+                        "const": "--color-background-warning"
+                      },
+                      {
+                        "type": "string",
+                        "const": "--color-background-disabled"
                       },
                       {
                         "type": "string",
@@ -1565,23 +2057,27 @@
                       },
                       {
                         "type": "string",
-                        "const": "--color-text-inverted"
+                        "const": "--color-text-inverse"
                       },
                       {
                         "type": "string",
-                        "const": "--color-icon-primary"
+                        "const": "--color-text-info"
                       },
                       {
                         "type": "string",
-                        "const": "--color-icon-secondary"
+                        "const": "--color-text-danger"
                       },
                       {
                         "type": "string",
-                        "const": "--color-icon-tertiary"
+                        "const": "--color-text-success"
                       },
                       {
                         "type": "string",
-                        "const": "--color-icon-inverted"
+                        "const": "--color-text-warning"
+                      },
+                      {
+                        "type": "string",
+                        "const": "--color-text-disabled"
                       },
                       {
                         "type": "string",
@@ -1593,83 +2089,195 @@
                       },
                       {
                         "type": "string",
-                        "const": "--color-accent-info"
+                        "const": "--color-border-tertiary"
                       },
                       {
                         "type": "string",
-                        "const": "--color-accent-danger"
+                        "const": "--color-border-inverse"
                       },
                       {
                         "type": "string",
-                        "const": "--color-accent-success"
+                        "const": "--color-border-ghost"
                       },
                       {
                         "type": "string",
-                        "const": "--color-accent-warning"
+                        "const": "--color-border-info"
                       },
                       {
                         "type": "string",
-                        "const": "--font-family-sans"
+                        "const": "--color-border-danger"
                       },
                       {
                         "type": "string",
-                        "const": "--font-size-heading"
+                        "const": "--color-border-success"
                       },
                       {
                         "type": "string",
-                        "const": "--font-size-body"
+                        "const": "--color-border-warning"
                       },
                       {
                         "type": "string",
-                        "const": "--font-size-caption"
+                        "const": "--color-border-disabled"
                       },
                       {
                         "type": "string",
-                        "const": "--font-weight-regular"
+                        "const": "--color-ring-primary"
                       },
                       {
                         "type": "string",
-                        "const": "--font-weight-emphasized"
+                        "const": "--color-ring-secondary"
                       },
                       {
                         "type": "string",
-                        "const": "--font-leading-regular"
+                        "const": "--color-ring-inverse"
                       },
                       {
                         "type": "string",
-                        "const": "--font-leading-tight"
+                        "const": "--color-ring-info"
                       },
                       {
                         "type": "string",
-                        "const": "--font-style-heading"
+                        "const": "--color-ring-danger"
                       },
                       {
                         "type": "string",
-                        "const": "--font-style-body"
+                        "const": "--color-ring-success"
                       },
                       {
                         "type": "string",
-                        "const": "--font-style-body-emphasized"
+                        "const": "--color-ring-warning"
                       },
                       {
                         "type": "string",
-                        "const": "--font-style-caption"
+                        "const": "--font-sans"
                       },
                       {
                         "type": "string",
-                        "const": "--font-style-caption-emphasized"
+                        "const": "--font-mono"
                       },
                       {
                         "type": "string",
-                        "const": "--border-radius-small"
+                        "const": "--font-weight-normal"
                       },
                       {
                         "type": "string",
-                        "const": "--border-radius-medium"
+                        "const": "--font-weight-medium"
                       },
                       {
                         "type": "string",
-                        "const": "--border-radius-large"
+                        "const": "--font-weight-semibold"
+                      },
+                      {
+                        "type": "string",
+                        "const": "--font-weight-bold"
+                      },
+                      {
+                        "type": "string",
+                        "const": "--font-text-xs-size"
+                      },
+                      {
+                        "type": "string",
+                        "const": "--font-text-sm-size"
+                      },
+                      {
+                        "type": "string",
+                        "const": "--font-text-md-size"
+                      },
+                      {
+                        "type": "string",
+                        "const": "--font-text-lg-size"
+                      },
+                      {
+                        "type": "string",
+                        "const": "--font-heading-xs-size"
+                      },
+                      {
+                        "type": "string",
+                        "const": "--font-heading-sm-size"
+                      },
+                      {
+                        "type": "string",
+                        "const": "--font-heading-md-size"
+                      },
+                      {
+                        "type": "string",
+                        "const": "--font-heading-lg-size"
+                      },
+                      {
+                        "type": "string",
+                        "const": "--font-heading-xl-size"
+                      },
+                      {
+                        "type": "string",
+                        "const": "--font-heading-2xl-size"
+                      },
+                      {
+                        "type": "string",
+                        "const": "--font-heading-3xl-size"
+                      },
+                      {
+                        "type": "string",
+                        "const": "--font-text-xs-line-height"
+                      },
+                      {
+                        "type": "string",
+                        "const": "--font-text-sm-line-height"
+                      },
+                      {
+                        "type": "string",
+                        "const": "--font-text-md-line-height"
+                      },
+                      {
+                        "type": "string",
+                        "const": "--font-text-lg-line-height"
+                      },
+                      {
+                        "type": "string",
+                        "const": "--font-heading-xs-line-height"
+                      },
+                      {
+                        "type": "string",
+                        "const": "--font-heading-sm-line-height"
+                      },
+                      {
+                        "type": "string",
+                        "const": "--font-heading-md-line-height"
+                      },
+                      {
+                        "type": "string",
+                        "const": "--font-heading-lg-line-height"
+                      },
+                      {
+                        "type": "string",
+                        "const": "--font-heading-xl-line-height"
+                      },
+                      {
+                        "type": "string",
+                        "const": "--font-heading-2xl-line-height"
+                      },
+                      {
+                        "type": "string",
+                        "const": "--font-heading-3xl-line-height"
+                      },
+                      {
+                        "type": "string",
+                        "const": "--border-radius-xs"
+                      },
+                      {
+                        "type": "string",
+                        "const": "--border-radius-sm"
+                      },
+                      {
+                        "type": "string",
+                        "const": "--border-radius-md"
+                      },
+                      {
+                        "type": "string",
+                        "const": "--border-radius-lg"
+                      },
+                      {
+                        "type": "string",
+                        "const": "--border-radius-xl"
                       },
                       {
                         "type": "string",
@@ -1678,6 +2286,22 @@
                       {
                         "type": "string",
                         "const": "--border-width-regular"
+                      },
+                      {
+                        "type": "string",
+                        "const": "--shadow-hairline"
+                      },
+                      {
+                        "type": "string",
+                        "const": "--shadow-sm"
+                      },
+                      {
+                        "type": "string",
+                        "const": "--shadow-md"
+                      },
+                      {
+                        "type": "string",
+                        "const": "--shadow-lg"
                       }
                     ]
                   },
@@ -2412,7 +3036,31 @@
         },
         {
           "type": "string",
-          "const": "--color-background-inverted"
+          "const": "--color-background-inverse"
+        },
+        {
+          "type": "string",
+          "const": "--color-background-ghost"
+        },
+        {
+          "type": "string",
+          "const": "--color-background-info"
+        },
+        {
+          "type": "string",
+          "const": "--color-background-danger"
+        },
+        {
+          "type": "string",
+          "const": "--color-background-success"
+        },
+        {
+          "type": "string",
+          "const": "--color-background-warning"
+        },
+        {
+          "type": "string",
+          "const": "--color-background-disabled"
         },
         {
           "type": "string",
@@ -2428,23 +3076,27 @@
         },
         {
           "type": "string",
-          "const": "--color-text-inverted"
+          "const": "--color-text-inverse"
         },
         {
           "type": "string",
-          "const": "--color-icon-primary"
+          "const": "--color-text-info"
         },
         {
           "type": "string",
-          "const": "--color-icon-secondary"
+          "const": "--color-text-danger"
         },
         {
           "type": "string",
-          "const": "--color-icon-tertiary"
+          "const": "--color-text-success"
         },
         {
           "type": "string",
-          "const": "--color-icon-inverted"
+          "const": "--color-text-warning"
+        },
+        {
+          "type": "string",
+          "const": "--color-text-disabled"
         },
         {
           "type": "string",
@@ -2456,83 +3108,195 @@
         },
         {
           "type": "string",
-          "const": "--color-accent-info"
+          "const": "--color-border-tertiary"
         },
         {
           "type": "string",
-          "const": "--color-accent-danger"
+          "const": "--color-border-inverse"
         },
         {
           "type": "string",
-          "const": "--color-accent-success"
+          "const": "--color-border-ghost"
         },
         {
           "type": "string",
-          "const": "--color-accent-warning"
+          "const": "--color-border-info"
         },
         {
           "type": "string",
-          "const": "--font-family-sans"
+          "const": "--color-border-danger"
         },
         {
           "type": "string",
-          "const": "--font-size-heading"
+          "const": "--color-border-success"
         },
         {
           "type": "string",
-          "const": "--font-size-body"
+          "const": "--color-border-warning"
         },
         {
           "type": "string",
-          "const": "--font-size-caption"
+          "const": "--color-border-disabled"
         },
         {
           "type": "string",
-          "const": "--font-weight-regular"
+          "const": "--color-ring-primary"
         },
         {
           "type": "string",
-          "const": "--font-weight-emphasized"
+          "const": "--color-ring-secondary"
         },
         {
           "type": "string",
-          "const": "--font-leading-regular"
+          "const": "--color-ring-inverse"
         },
         {
           "type": "string",
-          "const": "--font-leading-tight"
+          "const": "--color-ring-info"
         },
         {
           "type": "string",
-          "const": "--font-style-heading"
+          "const": "--color-ring-danger"
         },
         {
           "type": "string",
-          "const": "--font-style-body"
+          "const": "--color-ring-success"
         },
         {
           "type": "string",
-          "const": "--font-style-body-emphasized"
+          "const": "--color-ring-warning"
         },
         {
           "type": "string",
-          "const": "--font-style-caption"
+          "const": "--font-sans"
         },
         {
           "type": "string",
-          "const": "--font-style-caption-emphasized"
+          "const": "--font-mono"
         },
         {
           "type": "string",
-          "const": "--border-radius-small"
+          "const": "--font-weight-normal"
         },
         {
           "type": "string",
-          "const": "--border-radius-medium"
+          "const": "--font-weight-medium"
         },
         {
           "type": "string",
-          "const": "--border-radius-large"
+          "const": "--font-weight-semibold"
+        },
+        {
+          "type": "string",
+          "const": "--font-weight-bold"
+        },
+        {
+          "type": "string",
+          "const": "--font-text-xs-size"
+        },
+        {
+          "type": "string",
+          "const": "--font-text-sm-size"
+        },
+        {
+          "type": "string",
+          "const": "--font-text-md-size"
+        },
+        {
+          "type": "string",
+          "const": "--font-text-lg-size"
+        },
+        {
+          "type": "string",
+          "const": "--font-heading-xs-size"
+        },
+        {
+          "type": "string",
+          "const": "--font-heading-sm-size"
+        },
+        {
+          "type": "string",
+          "const": "--font-heading-md-size"
+        },
+        {
+          "type": "string",
+          "const": "--font-heading-lg-size"
+        },
+        {
+          "type": "string",
+          "const": "--font-heading-xl-size"
+        },
+        {
+          "type": "string",
+          "const": "--font-heading-2xl-size"
+        },
+        {
+          "type": "string",
+          "const": "--font-heading-3xl-size"
+        },
+        {
+          "type": "string",
+          "const": "--font-text-xs-line-height"
+        },
+        {
+          "type": "string",
+          "const": "--font-text-sm-line-height"
+        },
+        {
+          "type": "string",
+          "const": "--font-text-md-line-height"
+        },
+        {
+          "type": "string",
+          "const": "--font-text-lg-line-height"
+        },
+        {
+          "type": "string",
+          "const": "--font-heading-xs-line-height"
+        },
+        {
+          "type": "string",
+          "const": "--font-heading-sm-line-height"
+        },
+        {
+          "type": "string",
+          "const": "--font-heading-md-line-height"
+        },
+        {
+          "type": "string",
+          "const": "--font-heading-lg-line-height"
+        },
+        {
+          "type": "string",
+          "const": "--font-heading-xl-line-height"
+        },
+        {
+          "type": "string",
+          "const": "--font-heading-2xl-line-height"
+        },
+        {
+          "type": "string",
+          "const": "--font-heading-3xl-line-height"
+        },
+        {
+          "type": "string",
+          "const": "--border-radius-xs"
+        },
+        {
+          "type": "string",
+          "const": "--border-radius-sm"
+        },
+        {
+          "type": "string",
+          "const": "--border-radius-md"
+        },
+        {
+          "type": "string",
+          "const": "--border-radius-lg"
+        },
+        {
+          "type": "string",
+          "const": "--border-radius-xl"
         },
         {
           "type": "string",
@@ -2541,6 +3305,22 @@
         {
           "type": "string",
           "const": "--border-width-regular"
+        },
+        {
+          "type": "string",
+          "const": "--shadow-hairline"
+        },
+        {
+          "type": "string",
+          "const": "--shadow-sm"
+        },
+        {
+          "type": "string",
+          "const": "--shadow-md"
+        },
+        {
+          "type": "string",
+          "const": "--shadow-lg"
         }
       ]
     },
@@ -2565,7 +3345,31 @@
           },
           {
             "type": "string",
-            "const": "--color-background-inverted"
+            "const": "--color-background-inverse"
+          },
+          {
+            "type": "string",
+            "const": "--color-background-ghost"
+          },
+          {
+            "type": "string",
+            "const": "--color-background-info"
+          },
+          {
+            "type": "string",
+            "const": "--color-background-danger"
+          },
+          {
+            "type": "string",
+            "const": "--color-background-success"
+          },
+          {
+            "type": "string",
+            "const": "--color-background-warning"
+          },
+          {
+            "type": "string",
+            "const": "--color-background-disabled"
           },
           {
             "type": "string",
@@ -2581,23 +3385,27 @@
           },
           {
             "type": "string",
-            "const": "--color-text-inverted"
+            "const": "--color-text-inverse"
           },
           {
             "type": "string",
-            "const": "--color-icon-primary"
+            "const": "--color-text-info"
           },
           {
             "type": "string",
-            "const": "--color-icon-secondary"
+            "const": "--color-text-danger"
           },
           {
             "type": "string",
-            "const": "--color-icon-tertiary"
+            "const": "--color-text-success"
           },
           {
             "type": "string",
-            "const": "--color-icon-inverted"
+            "const": "--color-text-warning"
+          },
+          {
+            "type": "string",
+            "const": "--color-text-disabled"
           },
           {
             "type": "string",
@@ -2609,83 +3417,195 @@
           },
           {
             "type": "string",
-            "const": "--color-accent-info"
+            "const": "--color-border-tertiary"
           },
           {
             "type": "string",
-            "const": "--color-accent-danger"
+            "const": "--color-border-inverse"
           },
           {
             "type": "string",
-            "const": "--color-accent-success"
+            "const": "--color-border-ghost"
           },
           {
             "type": "string",
-            "const": "--color-accent-warning"
+            "const": "--color-border-info"
           },
           {
             "type": "string",
-            "const": "--font-family-sans"
+            "const": "--color-border-danger"
           },
           {
             "type": "string",
-            "const": "--font-size-heading"
+            "const": "--color-border-success"
           },
           {
             "type": "string",
-            "const": "--font-size-body"
+            "const": "--color-border-warning"
           },
           {
             "type": "string",
-            "const": "--font-size-caption"
+            "const": "--color-border-disabled"
           },
           {
             "type": "string",
-            "const": "--font-weight-regular"
+            "const": "--color-ring-primary"
           },
           {
             "type": "string",
-            "const": "--font-weight-emphasized"
+            "const": "--color-ring-secondary"
           },
           {
             "type": "string",
-            "const": "--font-leading-regular"
+            "const": "--color-ring-inverse"
           },
           {
             "type": "string",
-            "const": "--font-leading-tight"
+            "const": "--color-ring-info"
           },
           {
             "type": "string",
-            "const": "--font-style-heading"
+            "const": "--color-ring-danger"
           },
           {
             "type": "string",
-            "const": "--font-style-body"
+            "const": "--color-ring-success"
           },
           {
             "type": "string",
-            "const": "--font-style-body-emphasized"
+            "const": "--color-ring-warning"
           },
           {
             "type": "string",
-            "const": "--font-style-caption"
+            "const": "--font-sans"
           },
           {
             "type": "string",
-            "const": "--font-style-caption-emphasized"
+            "const": "--font-mono"
           },
           {
             "type": "string",
-            "const": "--border-radius-small"
+            "const": "--font-weight-normal"
           },
           {
             "type": "string",
-            "const": "--border-radius-medium"
+            "const": "--font-weight-medium"
           },
           {
             "type": "string",
-            "const": "--border-radius-large"
+            "const": "--font-weight-semibold"
+          },
+          {
+            "type": "string",
+            "const": "--font-weight-bold"
+          },
+          {
+            "type": "string",
+            "const": "--font-text-xs-size"
+          },
+          {
+            "type": "string",
+            "const": "--font-text-sm-size"
+          },
+          {
+            "type": "string",
+            "const": "--font-text-md-size"
+          },
+          {
+            "type": "string",
+            "const": "--font-text-lg-size"
+          },
+          {
+            "type": "string",
+            "const": "--font-heading-xs-size"
+          },
+          {
+            "type": "string",
+            "const": "--font-heading-sm-size"
+          },
+          {
+            "type": "string",
+            "const": "--font-heading-md-size"
+          },
+          {
+            "type": "string",
+            "const": "--font-heading-lg-size"
+          },
+          {
+            "type": "string",
+            "const": "--font-heading-xl-size"
+          },
+          {
+            "type": "string",
+            "const": "--font-heading-2xl-size"
+          },
+          {
+            "type": "string",
+            "const": "--font-heading-3xl-size"
+          },
+          {
+            "type": "string",
+            "const": "--font-text-xs-line-height"
+          },
+          {
+            "type": "string",
+            "const": "--font-text-sm-line-height"
+          },
+          {
+            "type": "string",
+            "const": "--font-text-md-line-height"
+          },
+          {
+            "type": "string",
+            "const": "--font-text-lg-line-height"
+          },
+          {
+            "type": "string",
+            "const": "--font-heading-xs-line-height"
+          },
+          {
+            "type": "string",
+            "const": "--font-heading-sm-line-height"
+          },
+          {
+            "type": "string",
+            "const": "--font-heading-md-line-height"
+          },
+          {
+            "type": "string",
+            "const": "--font-heading-lg-line-height"
+          },
+          {
+            "type": "string",
+            "const": "--font-heading-xl-line-height"
+          },
+          {
+            "type": "string",
+            "const": "--font-heading-2xl-line-height"
+          },
+          {
+            "type": "string",
+            "const": "--font-heading-3xl-line-height"
+          },
+          {
+            "type": "string",
+            "const": "--border-radius-xs"
+          },
+          {
+            "type": "string",
+            "const": "--border-radius-sm"
+          },
+          {
+            "type": "string",
+            "const": "--border-radius-md"
+          },
+          {
+            "type": "string",
+            "const": "--border-radius-lg"
+          },
+          {
+            "type": "string",
+            "const": "--border-radius-xl"
           },
           {
             "type": "string",
@@ -2694,6 +3614,22 @@
           {
             "type": "string",
             "const": "--border-width-regular"
+          },
+          {
+            "type": "string",
+            "const": "--shadow-hairline"
+          },
+          {
+            "type": "string",
+            "const": "--shadow-sm"
+          },
+          {
+            "type": "string",
+            "const": "--shadow-md"
+          },
+          {
+            "type": "string",
+            "const": "--shadow-lg"
           }
         ]
       },
