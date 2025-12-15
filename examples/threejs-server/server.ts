@@ -10,7 +10,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { z } from "zod";
 import { RESOURCE_MIME_TYPE, RESOURCE_URI_META_KEY } from "../../dist/src/app";
-import { makeToolResult, startServer } from "../shared/server-utils.js";
+import { startServer } from "../shared/server-utils.js";
 
 const DIST_DIR = path.join(import.meta.dirname, "dist");
 
@@ -129,14 +129,17 @@ animate();
 - For animations, use \`requestAnimationFrame\`
 `;
 
-const server = new McpServer({
-  name: "Three.js Server",
-  version: "1.0.0",
-});
+const resourceUri = "ui://threejs/mcp-app.html";
 
-// Register tool and resource
-{
-  const resourceUri = "ui://threejs/mcp-app.html";
+/**
+ * Creates a new MCP server instance with tools and resources registered.
+ * Each HTTP session needs its own server instance because McpServer only supports one transport.
+ */
+function createServer(): McpServer {
+  const server = new McpServer({
+    name: "Three.js Server",
+    version: "1.0.0",
+  });
 
   // Tool 1: show_threejs_scene
   server.registerTool(
@@ -160,7 +163,14 @@ const server = new McpServer({
       _meta: { [RESOURCE_URI_META_KEY]: resourceUri },
     },
     async ({ code, height }) => {
-      return makeToolResult({ code, height });
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify({ code, height }),
+          },
+        ],
+      };
     },
   );
 
@@ -184,7 +194,7 @@ const server = new McpServer({
   server.registerResource(
     resourceUri,
     resourceUri,
-    { description: "Three.js Widget UI" },
+    { mimeType: RESOURCE_MIME_TYPE, description: "Three.js Widget UI" },
     async (): Promise<ReadResourceResult> => {
       const html = await fs.readFile(
         path.join(DIST_DIR, "mcp-app.html"),
@@ -202,14 +212,16 @@ const server = new McpServer({
       };
     },
   );
+
+  return server;
 }
 
 async function main() {
   if (process.argv.includes("--stdio")) {
-    await server.connect(new StdioServerTransport());
+    await createServer().connect(new StdioServerTransport());
   } else {
     const port = parseInt(process.env.PORT ?? "3108", 10);
-    await startServer(server, { port, name: "Three.js Server" });
+    await startServer(createServer, { port, name: "Three.js Server" });
   }
 }
 

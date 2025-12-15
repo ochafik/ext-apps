@@ -10,7 +10,7 @@ import path from "node:path";
 import si from "systeminformation";
 import { z } from "zod";
 import { RESOURCE_MIME_TYPE, RESOURCE_URI_META_KEY } from "../../dist/src/app";
-import { makeToolResult, startServer } from "../shared/server-utils.js";
+import { startServer } from "../shared/server-utils.js";
 
 // Schemas - types are derived from these using z.infer
 const CpuCoreSchema = z.object({
@@ -102,13 +102,13 @@ async function getMemoryStats(): Promise<MemoryStats> {
   };
 }
 
-const server = new McpServer({
-  name: "System Monitor Server",
-  version: "1.0.0",
-});
+function createServer(): McpServer {
+  const server = new McpServer({
+    name: "System Monitor Server",
+    version: "1.0.0",
+  });
 
-// Register the get-system-stats tool and its associated UI resource
-{
+  // Register the get-system-stats tool and its associated UI resource
   const resourceUri = "ui://system-monitor/mcp-app.html";
 
   server.registerTool(
@@ -143,14 +143,16 @@ const server = new McpServer({
         timestamp: new Date().toISOString(),
       };
 
-      return makeToolResult(stats);
+      return {
+        content: [{ type: "text", text: JSON.stringify(stats) }],
+      };
     },
   );
 
   server.registerResource(
     resourceUri,
     resourceUri,
-    { description: "System Monitor UI" },
+    { mimeType: RESOURCE_MIME_TYPE, description: "System Monitor UI" },
     async (): Promise<ReadResourceResult> => {
       const html = await fs.readFile(
         path.join(DIST_DIR, "mcp-app.html"),
@@ -168,14 +170,16 @@ const server = new McpServer({
       };
     },
   );
+
+  return server;
 }
 
 async function main() {
   if (process.argv.includes("--stdio")) {
-    await server.connect(new StdioServerTransport());
+    await createServer().connect(new StdioServerTransport());
   } else {
     const port = parseInt(process.env.PORT ?? "3107", 10);
-    await startServer(server, { port, name: "System Monitor Server" });
+    await startServer(createServer, { port, name: "System Monitor Server" });
   }
 }
 

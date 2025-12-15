@@ -9,7 +9,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { z } from "zod";
 import { RESOURCE_MIME_TYPE, RESOURCE_URI_META_KEY } from "../../dist/src/app";
-import { makeToolResult, startServer } from "../shared/server-utils.js";
+import { startServer } from "../shared/server-utils.js";
 
 const DIST_DIR = path.join(import.meta.dirname, "dist");
 
@@ -67,13 +67,13 @@ function extractWikiLinks(pageUrl: URL, html: string): PageInfo[] {
   }));
 }
 
-const server = new McpServer({
-  name: "Wiki Explorer",
-  version: "1.0.0",
-});
+function createServer(): McpServer {
+  const server = new McpServer({
+    name: "Wiki Explorer",
+    version: "1.0.0",
+  });
 
-// Register the get-first-degree-links tool and its associated UI resource
-{
+  // Register the get-first-degree-links tool and its associated UI resource
   const resourceUri = "ui://wiki-explorer/mcp-app.html";
 
   server.registerTool(
@@ -115,11 +115,11 @@ const server = new McpServer({
         const links = extractWikiLinks(new URL(url), html);
 
         const result = { page: { url, title }, links, error: null };
-        return makeToolResult(result);
+        return { content: [{ type: "text", text: JSON.stringify(result) }] };
       } catch (err) {
         const error = err instanceof Error ? err.message : String(err);
         const result = { page: { url, title }, links: [], error };
-        return makeToolResult(result);
+        return { content: [{ type: "text", text: JSON.stringify(result) }] };
       }
     },
   );
@@ -127,7 +127,7 @@ const server = new McpServer({
   server.registerResource(
     resourceUri,
     resourceUri,
-    {},
+    { mimeType: RESOURCE_MIME_TYPE },
     async (): Promise<ReadResourceResult> => {
       const html = await fs.readFile(
         path.join(DIST_DIR, "mcp-app.html"),
@@ -141,14 +141,16 @@ const server = new McpServer({
       };
     },
   );
+
+  return server;
 }
 
 async function main() {
   if (process.argv.includes("--stdio")) {
-    await server.connect(new StdioServerTransport());
+    await createServer().connect(new StdioServerTransport());
   } else {
     const port = parseInt(process.env.PORT ?? "3109", 10);
-    await startServer(server, { port, name: "Wiki Explorer" });
+    await startServer(createServer, { port, name: "Wiki Explorer" });
   }
 }
 
