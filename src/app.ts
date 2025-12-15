@@ -48,7 +48,8 @@ import { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
 export { PostMessageTransport } from "./message-transport";
 export * from "./types";
 export {
-  applyHostStyles,
+  applyHostStyleVariables,
+  applyHostFonts,
   getDocumentTheme,
   applyDocumentTheme,
 } from "./styles";

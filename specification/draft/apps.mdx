@@ -409,6 +409,11 @@ interface HostContext {
   styles?: {
     /** CSS variables for theming */
     variables?: Record<McpUiStyleVariableKey, string | undefined>;
+    /** CSS blocks that apps can inject */
+    css?: {
+      /** CSS for font loading (@font-face rules or @import statements) */
+      fonts?: string;
+    };
   };
   /** How the UI is currently displayed */
   displayMode?: "inline" | "fullscreen" | "pip";
@@ -461,8 +466,11 @@ Example:
         "variables": {
           "--color-background-primary": "light-dark(#ffffff, #171717)",
           "--color-text-primary": "light-dark(#171717, #fafafa)",
-          "--font-family-sans": "system-ui, sans-serif",
+          "--font-sans": "Anthropic Sans, sans-serif",
           ...
+        },
+        "css": {
+          "fonts": "@font-face { font-family: \"Custom Font Name\"; src: url(\"https://...\"); }"
         }
       },
       "displayMode": "inline",
@@ -587,8 +595,8 @@ type McpUiStyleVariableKey =
   ...
 }
 ```
-- Apps can use the `applyHostStyles` utility (or `useHostStyles` if they prefer a React hook) to easily populate the host-provided CSS variables into their style sheet
-- Apps can use the `applyDocumentTheme` utility (or `useDocumentTheme` if they prefer a React hook) to easily respond to Host Context `theme` changes in a way that is compatible with the host's light/dark color variables 
+- Apps can use the `applyHostStyleVariables` utility (or `useHostStyleVariables` if they prefer a React hook) to easily populate the host-provided CSS variables into their style sheet
+- Apps can use the `applyDocumentTheme` utility (or `useDocumentTheme` if they prefer a React hook) to easily respond to Host Context `theme` changes in a way that is compatible with the host's light/dark color variables
 
 Example usage of standardized CSS variables:
 
@@ -596,7 +604,37 @@ Example usage of standardized CSS variables:
 .container {
   background: var(--color-background-primary);
   color: var(--color-text-primary);
-  font: var(--font-style-body);
+  font-family: var(--font-sans);
+}
+```
+
+#### Custom Fonts
+
+Hosts can provide custom fonts via `styles.css.fonts`, which can contain `@font-face` rules for self-hosted fonts, `@import` statements for font services like Google Fonts, or both:
+
+```typescript
+// Self-hosted fonts
+hostContext.styles.css.fonts = `
+  @font-face {
+    font-family: "Custom Font Name"; // Name should match the font name used in a font variable (`--font-sans`, `--font-mono`)
+    src: url("https://url-where-font-is-hosted.com/.../Regular.otf") format("opentype");
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+  }
+`;
+
+// Google Fonts
+hostContext.styles.css.fonts = `
+  @import url('https://fonts.googleapis.com/css2?family=Roboto&display=swap');
+`;
+```
+
+Apps can use the `applyHostFonts` utility to inject the font CSS into the document:
+
+```typescript
+if (hostContext.styles?.css?.fonts) {
+  applyHostFonts(hostContext.styles.css.fonts);
 }
 ```
 

@@ -1,10 +1,14 @@
 import { useEffect, useRef } from "react";
 import { App } from "../app";
-import { applyDocumentTheme, applyHostStyles } from "../styles";
+import {
+  applyDocumentTheme,
+  applyHostFonts,
+  applyHostStyleVariables,
+} from "../styles";
 import { McpUiHostContext } from "../types";
 
 /**
- * React hook that applies host styles and theme as CSS custom properties.
+ * React hook that applies host style variables and theme as CSS custom properties.
  *
  * This hook listens to host context changes and automatically applies:
  * - `styles.variables` CSS variables to `document.documentElement` (e.g., `--color-background-primary`)
@@ -24,7 +28,7 @@ import { McpUiHostContext } from "../types";
  * @example Basic usage with useApp
  * ```tsx
  * import { useApp } from '@modelcontextprotocol/ext-apps/react';
- * import { useHostStyles } from '@modelcontextprotocol/ext-apps/react';
+ * import { useHostStyleVariables } from '@modelcontextprotocol/ext-apps/react';
  *
  * function MyApp() {
  *   const { app, isConnected } = useApp({
@@ -32,8 +36,8 @@ import { McpUiHostContext } from "../types";
  *     capabilities: {},
  *   });
  *
- *   // Automatically apply host styles and theme
- *   useHostStyles(app);
+ *   // Automatically apply host style variables and theme
+ *   useHostStyleVariables(app);
  *
  *   return (
  *     <div style={{ background: 'var(--color-background-primary)' }}>
@@ -49,14 +53,15 @@ import { McpUiHostContext } from "../types";
  *
  * // ... get initial context from app.connect() result
  *
- * useHostStyles(app, hostContext);
+ * useHostStyleVariables(app, hostContext);
  * ```
  *
- * @see {@link applyHostStyles} for the underlying styles function
+ * @see {@link applyHostStyleVariables} for the underlying styles function
  * @see {@link applyDocumentTheme} for the underlying theme function
+ * @see {@link useHostFonts} for applying host fonts
  * @see {@link McpUiStyles} for available CSS variables
  */
-export function useHostStyles(
+export function useHostStyleVariables(
   app: App | null,
   initialContext?: McpUiHostContext | null,
 ): void {
@@ -71,7 +76,7 @@ export function useHostStyles(
       applyDocumentTheme(initialContext.theme);
     }
     if (initialContext?.styles?.variables) {
-      applyHostStyles(initialContext.styles.variables);
+      applyHostStyleVariables(initialContext.styles.variables);
     }
     if (initialContext?.theme || initialContext?.styles?.variables) {
       initialApplied.current = true;
@@ -89,8 +94,109 @@ export function useHostStyles(
         applyDocumentTheme(params.theme);
       }
       if (params.styles?.variables) {
-        applyHostStyles(params.styles.variables);
+        applyHostStyleVariables(params.styles.variables);
       }
     };
   }, [app]);
+}
+
+/**
+ * React hook that applies host fonts from CSS.
+ *
+ * This hook listens to host context changes and automatically applies:
+ * - `styles.css.fonts` as a `<style>` tag for custom fonts
+ *
+ * The CSS can contain `@font-face` rules for self-hosted fonts,
+ * `@import` statements for Google Fonts or other font services, or both.
+ *
+ * The hook also applies fonts from the initial host context when
+ * the app first connects.
+ *
+ * @param app - The connected App instance, or null during initialization
+ * @param initialContext - Initial host context from the connection (optional).
+ *   If provided, fonts will be applied immediately on mount.
+ *
+ * @example Basic usage with useApp
+ * ```tsx
+ * import { useApp } from '@modelcontextprotocol/ext-apps/react';
+ * import { useHostFonts } from '@modelcontextprotocol/ext-apps/react';
+ *
+ * function MyApp() {
+ *   const { app, isConnected } = useApp({
+ *     appInfo: { name: "MyApp", version: "1.0.0" },
+ *     capabilities: {},
+ *   });
+ *
+ *   // Automatically apply host fonts
+ *   useHostFonts(app);
+ *
+ *   return (
+ *     <div style={{ fontFamily: 'var(--font-sans)' }}>
+ *       Hello!
+ *     </div>
+ *   );
+ * }
+ * ```
+ *
+ * @example With initial context
+ * ```tsx
+ * const [hostContext, setHostContext] = useState<McpUiHostContext | null>(null);
+ *
+ * // ... get initial context from app.connect() result
+ *
+ * useHostFonts(app, hostContext);
+ * ```
+ *
+ * @see {@link applyHostFonts} for the underlying fonts function
+ * @see {@link useHostStyleVariables} for applying style variables and theme
+ */
+export function useHostFonts(
+  app: App | null,
+  initialContext?: McpUiHostContext | null,
+): void {
+  const initialApplied = useRef(false);
+
+  // Apply initial fonts once on mount
+  useEffect(() => {
+    if (initialApplied.current) {
+      return;
+    }
+    if (initialContext?.styles?.css?.fonts) {
+      applyHostFonts(initialContext.styles.css.fonts);
+      initialApplied.current = true;
+    }
+  }, [initialContext]);
+
+  // Listen for host context changes and apply updated fonts
+  useEffect(() => {
+    if (!app) {
+      return;
+    }
+
+    app.onhostcontextchanged = (params) => {
+      if (params.styles?.css?.fonts) {
+        applyHostFonts(params.styles.css.fonts);
+      }
+    };
+  }, [app]);
+}
+
+/**
+ * React hook that applies host styles, fonts, and theme.
+ *
+ * This is a convenience hook that combines {@link useHostStyleVariables} and
+ * {@link useHostFonts}. Use the individual hooks if you need more control.
+ *
+ * @param app - The connected App instance, or null during initialization
+ * @param initialContext - Initial host context from the connection (optional).
+ *
+ * @see {@link useHostStyleVariables} for style variables and theme only
+ * @see {@link useHostFonts} for fonts only
+ */
+export function useHostStyles(
+  app: App | null,
+  initialContext?: McpUiHostContext | null,
+): void {
+  useHostStyleVariables(app, initialContext);
+  useHostFonts(app, initialContext);
 }

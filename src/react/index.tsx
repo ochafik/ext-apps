@@ -9,7 +9,9 @@
  * ## Main Exports
  *
  * - {@link useApp} - React hook to create and connect an MCP App
- * - {@link useHostStyles} - React hook to apply host styles as CSS variables
+ * - {@link useHostStyleVariables} - React hook to apply host style variables and theme
+ * - {@link useHostFonts} - React hook to apply host fonts
+ * - {@link useHostStyles} - Convenience hook combining useHostStyleVariables and useHostFonts
  * - {@link useDocumentTheme} - React hook for reactive document theme
  * - {@link useAutoResize} - React hook for manual auto-resize control (rarely needed)
  *
