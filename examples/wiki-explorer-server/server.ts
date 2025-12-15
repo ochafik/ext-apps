@@ -1,19 +1,16 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import type {
   CallToolResult,
   ReadResourceResult,
 } from "@modelcontextprotocol/sdk/types.js";
 import * as cheerio from "cheerio";
-import cors from "cors";
-import express, { type Request, type Response } from "express";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { z } from "zod";
 import { RESOURCE_MIME_TYPE, RESOURCE_URI_META_KEY } from "../../dist/src/app";
+import { startServer } from "../shared/server-utils.js";
 
-const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3001;
 const DIST_DIR = path.join(import.meta.dirname, "dist");
 
 type PageInfo = { url: string; title: string };
@@ -70,13 +67,13 @@ function extractWikiLinks(pageUrl: URL, html: string): PageInfo[] {
   }));
 }
 
-const server = new McpServer({
-  name: "Wiki Explorer",
-  version: "1.0.0",
-});
+function createServer(): McpServer {
+  const server = new McpServer({
+    name: "Wiki Explorer",
+    version: "1.0.0",
+  });
 
-// Register the get-first-degree-links tool and its associated UI resource
-{
+  // Register the get-first-degree-links tool and its associated UI resource
   const resourceUri = "ui://wiki-explorer/mcp-app.html";
 
   server.registerTool(
@@ -86,7 +83,11 @@ const server = new McpServer({
       description:
         "Returns all Wikipedia pages that the given page links to directly.",
       inputSchema: z.object({
-        url: z.string().url().describe("Wikipedia page URL"),
+        url: z
+          .string()
+          .url()
+          .default("https://en.wikipedia.org/wiki/Model_Context_Protocol")
+          .describe("Wikipedia page URL"),
       }),
       _meta: { [RESOURCE_URI_META_KEY]: resourceUri },
     },
@@ -126,7 +127,7 @@ const server = new McpServer({
   server.registerResource(
     resourceUri,
     resourceUri,
-    {},
+    { mimeType: RESOURCE_MIME_TYPE },
     async (): Promise<ReadResourceResult> => {
       const html = await fs.readFile(
         path.join(DIST_DIR, "mcp-app.html"),
@@ -140,60 +141,20 @@ const server = new McpServer({
       };
     },
   );
+
+  return server;
 }
 
 async function main() {
   if (process.argv.includes("--stdio")) {
-    const transport = new StdioServerTransport();
-    await server.connect(transport);
-    console.error("Wiki Explorer server running in stdio mode");
+    await createServer().connect(new StdioServerTransport());
   } else {
-    const app = express();
-    app.use(cors());
-    app.use(express.json());
-
-    app.post("/mcp", async (req: Request, res: Response) => {
-      try {
-        const transport = new StreamableHTTPServerTransport({
-          sessionIdGenerator: undefined,
-          enableJsonResponse: true,
-        });
-        res.on("close", () => {
-          transport.close();
-        });
-
-        await server.connect(transport);
-
-        await transport.handleRequest(req, res, req.body);
-      } catch (error) {
-        console.error("Error handling MCP request:", error);
-        if (!res.headersSent) {
-          res.status(500).json({
-            jsonrpc: "2.0",
-            error: { code: -32603, message: "Internal server error" },
-            id: null,
-          });
-        }
-      }
-    });
-
-    const httpServer = app.listen(PORT, () => {
-      console.log(
-        `Wiki Explorer server listening on http://localhost:${PORT}/mcp`,
-      );
-    });
-
-    function shutdown() {
-      console.log("\nShutting down...");
-      httpServer.close(() => {
-        console.log("Server closed");
-        process.exit(0);
-      });
-    }
-
-    process.on("SIGINT", shutdown);
-    process.on("SIGTERM", shutdown);
+    const port = parseInt(process.env.PORT ?? "3109", 10);
+    await startServer(createServer, { port, name: "Wiki Explorer" });
   }
 }
 
-main().catch(console.error);
+main().catch((e) => {
+  console.error(e);
+  process.exit(1);
+});
