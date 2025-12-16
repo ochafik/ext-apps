@@ -173,9 +173,8 @@ function createServer(): McpServer {
     },
   );
 
-  // Tool 2: learn_threejs
-  registerAppTool(
-    server,
+  // Tool 2: learn_threejs (not a UI tool, just returns documentation)
+  server.registerTool(
     "learn_threejs",
     {
       title: "Learn Three.js",
