@@ -102,6 +102,21 @@ export function registerAppTool(
   config: McpUiAppToolConfig,
   handler: ToolCallback<ZodRawShape>,
 ): void {
+  // Normalize metadata for backward compatibility:
+  // - If _meta.ui.resourceUri is set, also set the legacy flat key
+  // - If the legacy flat key is set, also set _meta.ui.resourceUri
+  const meta = config._meta;
+  const uiMeta = meta.ui as McpUiToolMeta | undefined;
+  const legacyUri = meta[RESOURCE_URI_META_KEY] as string | undefined;
+
+  if (uiMeta?.resourceUri && !legacyUri) {
+    // New format -> also set legacy key
+    meta[RESOURCE_URI_META_KEY] = uiMeta.resourceUri;
+  } else if (legacyUri && !uiMeta?.resourceUri) {
+    // Legacy format -> also set new format
+    meta.ui = { ...uiMeta, resourceUri: legacyUri };
+  }
+
   server.registerTool(name, config, handler);
 }
 
