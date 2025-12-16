@@ -14,6 +14,9 @@ export {
   LATEST_PROTOCOL_VERSION,
   type McpUiTheme,
   type McpUiDisplayMode,
+  type McpUiStyleVariableKey,
+  type McpUiStyles,
+  type McpUiHostStyles,
   type McpUiOpenLinkRequest,
   type McpUiOpenLinkResult,
   type McpUiMessageRequest,
@@ -36,6 +39,8 @@ export {
   type McpUiInitializedNotification,
   type McpUiResourceCsp,
   type McpUiResourceMeta,
+  type McpUiRequestDisplayModeRequest,
+  type McpUiRequestDisplayModeResult,
 } from "./spec.types.js";
 
 // Import types needed for protocol type unions (not re-exported, just used internally)
@@ -44,6 +49,7 @@ import type {
   McpUiOpenLinkRequest,
   McpUiMessageRequest,
   McpUiResourceTeardownRequest,
+  McpUiRequestDisplayModeRequest,
   McpUiHostContextChangedNotification,
   McpUiToolInputNotification,
   McpUiToolInputPartialNotification,
@@ -57,12 +63,14 @@ import type {
   McpUiOpenLinkResult,
   McpUiMessageResult,
   McpUiResourceTeardownResult,
+  McpUiRequestDisplayModeResult,
 } from "./spec.types.js";
 
 // Re-export all schemas from generated/schema.ts (already PascalCase)
 export {
   McpUiThemeSchema,
   McpUiDisplayModeSchema,
+  McpUiHostStylesSchema,
   McpUiOpenLinkRequestSchema,
   McpUiOpenLinkResultSchema,
   McpUiMessageRequestSchema,
@@ -85,6 +93,8 @@ export {
   McpUiInitializedNotificationSchema,
   McpUiResourceCspSchema,
   McpUiResourceMetaSchema,
+  McpUiRequestDisplayModeRequestSchema,
+  McpUiRequestDisplayModeResultSchema,
 } from "./generated/schema.js";
 
 // Re-export SDK types used in protocol type unions
@@ -113,7 +123,7 @@ import {
  * All request types in the MCP Apps protocol.
  *
  * Includes:
- * - MCP UI requests (initialize, open-link, message, resource-teardown)
+ * - MCP UI requests (initialize, open-link, message, resource-teardown, request-display-mode)
  * - MCP server requests forwarded from the app (tools/call, resources/*, prompts/list)
  * - Protocol requests (ping)
  */
@@ -122,6 +132,7 @@ export type AppRequest =
   | McpUiOpenLinkRequest
   | McpUiMessageRequest
   | McpUiResourceTeardownRequest
+  | McpUiRequestDisplayModeRequest
   | CallToolRequest
   | ListToolsRequest
   | ListResourcesRequest
@@ -168,6 +179,7 @@ export type AppResult =
   | McpUiOpenLinkResult
   | McpUiMessageResult
   | McpUiResourceTeardownResult
+  | McpUiRequestDisplayModeResult
   | CallToolResult
   | ListToolsResult
   | ListResourcesResult

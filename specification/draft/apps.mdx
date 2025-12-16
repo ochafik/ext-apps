@@ -154,11 +154,12 @@ interface UIResourceMeta {
   /**
    * Visual boundary preference
    *
-   * Boolean indicating the UI prefers a visible border. Useful for widgets
-   * that might blend with host background.
+   * Boolean controlling whether a visible border and background is provided by the host. Specifying an
+   * explicit value for this is recommended because hosts' defaults may vary.
    *
-   * - `true`: Request visible border (host decides styling)
-   * - `false` or omitted: No preference
+   * - `true`: Request visible border + background
+   * - `false`: Request no visible border + background
+   * - omitted: host decides border
    */
   prefersBorder?: boolean,
 }
@@ -391,7 +392,7 @@ UI iframes can use the following subset of standard MCP protocol messages:
 
 ### Host Context in `McpUiInitializeResult`
 
-When the Guest UI sends an `ui/initialize` request to the Host, the Host SHOULD include UI-specific context in the `McpUiInitializeResult`’s `hostContext` field:
+When the Guest UI sends an `ui/initialize` request to the Host, the Host SHOULD include UI-specific context in the `McpUiInitializeResult`'s `hostContext` field:
 
 ```typescript
 interface HostContext {
@@ -404,6 +405,11 @@ interface HostContext {
   };
   /** Current color theme preference */
   theme?: "light" | "dark";
+  /** Style configuration for theming. See Theming section for standardized variable names. */
+  styles?: {
+    /** CSS variables for theming */
+    variables?: Record<McpUiStyleVariableKey, string | undefined>;
+  };
   /** How the UI is currently displayed */
   displayMode?: "inline" | "fullscreen" | "pip";
   /** Display modes the host supports */
@@ -438,8 +444,6 @@ interface HostContext {
 }
 ```
 
-All fields are optional. Hosts SHOULD provide relevant context. Guest UIs SHOULD handle missing fields gracefully.
-
 Example:
 
 ```json
@@ -453,10 +457,146 @@ Example:
     "hostInfo": { "name": "claude-desktop", "version": "1.0.0" },
     "hostContext": {
       "theme": "dark",
+      "styles": {
+        "variables": {
+          "--color-background-primary": "light-dark(#ffffff, #171717)",
+          "--color-text-primary": "light-dark(#171717, #fafafa)",
+          "--font-family-sans": "system-ui, sans-serif",
+          ...
+        }
+      },
       "displayMode": "inline",
       "viewport": { "width": 400, "height": 300 }
     }
   }
+}
+```
+
+### Theming
+
+Hosts can optionally pass CSS custom properties via `HostContext.styles.variables` for visual cohesion with the host environment.
+
+#### Current Standardized Variables
+
+```typescript
+/** CSS variable keys available to MCP apps for theming. */
+type McpUiStyleVariableKey =
+  // Background colors
+  | "--color-background-primary"
+  | "--color-background-secondary"
+  | "--color-background-tertiary"
+  | "--color-background-inverse"
+  | "--color-background-ghost"
+  | "--color-background-info"
+  | "--color-background-danger"
+  | "--color-background-success"
+  | "--color-background-warning"
+  | "--color-background-disabled"
+  // Text colors
+  | "--color-text-primary"
+  | "--color-text-secondary"
+  | "--color-text-tertiary"
+  | "--color-text-inverse"
+  | "--color-text-info"
+  | "--color-text-danger"
+  | "--color-text-success"
+  | "--color-text-warning"
+  | "--color-text-disabled"
+  // Border colors
+  | "--color-border-primary"
+  | "--color-border-secondary"
+  | "--color-border-tertiary"
+  | "--color-border-inverse"
+  | "--color-border-ghost"
+  | "--color-border-info"
+  | "--color-border-danger"
+  | "--color-border-success"
+  | "--color-border-warning"
+  | "--color-border-disabled"
+  // Ring colors
+  | "--color-ring-primary"
+  | "--color-ring-secondary"
+  | "--color-ring-inverse"
+  | "--color-ring-info"
+  | "--color-ring-danger"
+  | "--color-ring-success"
+  | "--color-ring-warning"
+  // Typography - Family
+  | "--font-sans"
+  | "--font-mono"
+  // Typography - Weight
+  | "--font-weight-normal"
+  | "--font-weight-medium"
+  | "--font-weight-semibold"
+  | "--font-weight-bold"
+  // Typography - Text Size
+  | "--font-text-xs-size"
+  | "--font-text-sm-size"
+  | "--font-text-md-size"
+  | "--font-text-lg-size"
+  // Typography - Heading Size
+  | "--font-heading-xs-size"
+  | "--font-heading-sm-size"
+  | "--font-heading-md-size"
+  | "--font-heading-lg-size"
+  | "--font-heading-xl-size"
+  | "--font-heading-2xl-size"
+  | "--font-heading-3xl-size"
+  // Typography - Text Line Height
+  | "--font-text-xs-line-height"
+  | "--font-text-sm-line-height"
+  | "--font-text-md-line-height"
+  | "--font-text-lg-line-height"
+  // Typography - Heading Line Height
+  | "--font-heading-xs-line-height"
+  | "--font-heading-sm-line-height"
+  | "--font-heading-md-line-height"
+  | "--font-heading-lg-line-height"
+  | "--font-heading-xl-line-height"
+  | "--font-heading-2xl-line-height"
+  | "--font-heading-3xl-line-height"
+  // Border radius
+  | "--border-radius-xs"
+  | "--border-radius-sm"
+  | "--border-radius-md"
+  | "--border-radius-lg"
+  | "--border-radius-xl"
+  | "--border-radius-full"
+  // Border width
+  | "--border-width-regular"
+  // Shadows
+  | "--shadow-hairline"
+  | "--shadow-sm"
+  | "--shadow-md"
+  | "--shadow-lg";
+```
+
+#### Host Behavior
+
+- Hosts can provide any subset of standardized variables, or not pass `styles` at all
+  - However, unexpected clashes may occur if hosts pass some color variables but not others for example, since apps are instructed to fallback on their own default values for unspecified style variables
+- Hosts should use the CSS `light-dark()` function for theme-aware values (i.e. light mode and dark mode colors)
+
+#### App Behavior
+
+- Apps should set default fallback values for the set of these variables that they use, to account for hosts who don't pass some or all style variables. This ensures graceful degradation when hosts omit `styles` or specific variables:
+```
+:root {
+  --color-text-primary: light-dark(#171717, #000000);
+  --border-radius-small: 8px;
+  ...
+}
+```
+- Apps can use the `applyHostStyleVariables` utility (or `useHostStyleVariables` if they prefer a React hook) to easily populate the host-provided CSS variables into their style sheet
+- Apps can use the `applyDocumentTheme` utility (or `useDocumentTheme` if they prefer a React hook) to easily respond to Host Context `theme` changes in a way that is compatible with the host's light/dark color variables 
+
+Example usage of standardized CSS variables:
+
+```css
+.container {
+  background: var(--color-background-primary);
+  color: var(--color-text-primary);
+  font: var(--font-style-body);
 }
 ```
 
@@ -536,6 +676,39 @@ Host SHOULD open the URL in the user's default browser or a new tab.
 Host behavior:
 * Host SHOULD add the message to the conversation context, preserving the specified role.
 * Host MAY request user consent.
+
+`ui/request-display-mode` - Request host to change display mode
+
+```typescript
+// Request
+{
+  jsonrpc: "2.0",
+  id: 3,
+  method: "ui/request-display-mode",
+  params: {
+    mode: "inline" | "fullscreen" | "pip"  // Requested display mode
+  }
+}
+
+// Success Response
+{
+  jsonrpc: "2.0",
+  id: 3,
+  result: {
+    mode: "inline" | "fullscreen" | "pip"  // Actual display mode set
+  }
+}
+```
+
+Host behavior:
+* App MUST check if the requested mode is in `availableDisplayModes` from host context.
+* It is up to the host whether it switches to the requested mode, but the host MUST return the resulting mode (whether updated or not) in the response.
+* If the requested mode is not available, Host SHOULD return the current display mode in the response.
+* Host MAY coerce modes on certain platforms (e.g., "pip" to "fullscreen" on mobile).
+
+Guest UI behavior:
+* Guest UI SHOULD check `availableDisplayModes` in host context before requesting a mode change.
+* Guest UI MUST handle the response mode differing from the requested mode.
 
 #### Notifications (Host → UI)
 
@@ -1049,6 +1222,24 @@ This proposal synthesizes feedback from the UI CWG and MCP-UI community, host im
 
 - **Include external URLs in MVP:** This is one of the easiest content types for servers to adopt, as it's possible to embed regular apps. However, it was deferred due to concerns around model visibility, inability to screenshot content, and review process.
 - **Support multiple content types:** Deferred to maintain a lean MVP.
+
+#### 4. Host Theming via CSS Variables
+
+**Decision:** Provide a standardized set of CSS custom properties for visual cohesion.
+
+**Rationale:**
+
+- CSS variables are universal, framework-agnostic, and require no runtime
+- Apps apply styles via `var(--name)` with fallbacks for graceful degradation
+- Limited variable set (colors, typography, borders) ensures hosts can realistically provide all values
+- Spacing intentionally excluded—layouts break when spacing varies from original design
+- No UI component library—no single library works across all host environments
+
+**Alternatives considered:**
+
+- **Full design system:** Rejected as too prescriptive; hosts have different aesthetics
+- **Inline styles in tool results:** Rejected; separating theming from data enables caching and updates
+- **CSS-in-JS injection:** Rejected; framework-specific and security concerns with injected code
 
 ### Backward Compatibility
 
