@@ -322,17 +322,22 @@ app.ontoolresult = (result) => {
 };
 
 function handleToolResultData(result: CallToolResult): void {
-  if (
-    result.isError ||
-    !result.content?.[0] ||
-    result.content[0].type !== "text"
-  ) {
+  if (result.isError) {
     console.error("Tool result error:", result);
     return;
   }
 
   try {
-    const response: ToolResponse = JSON.parse(result.content[0].text);
+    // Prefer structuredContent (STRUCTURED_CONTENT_ONLY mode), fall back to parsing text
+    let response: ToolResponse;
+    if (result.structuredContent) {
+      response = result.structuredContent as ToolResponse;
+    } else if (result.content?.[0]?.type === "text") {
+      response = JSON.parse(result.content[0].text);
+    } else {
+      console.error("No valid content in result:", result);
+      return;
+    }
     const { page, links, error } = response;
 
     // Ensure the source node exists

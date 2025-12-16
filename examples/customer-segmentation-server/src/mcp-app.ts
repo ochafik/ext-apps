@@ -375,16 +375,19 @@ async function fetchData(): Promise<void> {
       arguments: {},
     });
 
-    const text = result
-      .content!.filter(
-        (c): c is { type: "text"; text: string } => c.type === "text",
-      )
-      .map((c) => c.text)
-      .join("");
-    const data = JSON.parse(text) as {
-      customers: Customer[];
-      segments: SegmentSummary[];
-    };
+    // Prefer structuredContent (STRUCTURED_CONTENT_ONLY mode), fall back to parsing text
+    let data: { customers: Customer[]; segments: SegmentSummary[] };
+    if (result.structuredContent) {
+      data = result.structuredContent as typeof data;
+    } else {
+      const text = result
+        .content!.filter(
+          (c): c is { type: "text"; text: string } => c.type === "text",
+        )
+        .map((c) => c.text)
+        .join("");
+      data = JSON.parse(text);
+    }
 
     state.customers = data.customers;
     state.segments = data.segments;

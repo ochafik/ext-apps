@@ -606,13 +606,23 @@ const app = new App({ name: "Budget Allocator", version: "1.0.0" });
 
 app.ontoolresult = (result) => {
   log.info("Received tool result:", result);
-  const text = result
-    .content!.filter(
-      (c): c is { type: "text"; text: string } => c.type === "text",
-    )
-    .map((c) => c.text)
-    .join("");
-  const data = JSON.parse(text) as BudgetDataResponse;
+
+  // Prefer structuredContent (STRUCTURED_CONTENT_ONLY mode), fall back to parsing text
+  let data: BudgetDataResponse | undefined;
+  if (result.structuredContent) {
+    data = result.structuredContent as BudgetDataResponse;
+  } else {
+    const text = result
+      .content!.filter(
+        (c): c is { type: "text"; text: string } => c.type === "text",
+      )
+      .map((c) => c.text)
+      .join("");
+    if (text) {
+      data = JSON.parse(text) as BudgetDataResponse;
+    }
+  }
+
   if (data?.config && data?.analytics) {
     initializeUI(data.config, data.analytics);
   }

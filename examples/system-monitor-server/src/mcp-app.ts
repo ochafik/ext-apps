@@ -264,13 +264,19 @@ async function fetchStats(): Promise<void> {
       arguments: {},
     });
 
-    const text = result
-      .content!.filter(
-        (c): c is { type: "text"; text: string } => c.type === "text",
-      )
-      .map((c) => c.text)
-      .join("");
-    const stats = JSON.parse(text) as SystemStats;
+    // Prefer structuredContent (STRUCTURED_CONTENT_ONLY mode), fall back to parsing text
+    let stats: SystemStats;
+    if (result.structuredContent) {
+      stats = result.structuredContent as SystemStats;
+    } else {
+      const text = result
+        .content!.filter(
+          (c): c is { type: "text"; text: string } => c.type === "text",
+        )
+        .map((c) => c.text)
+        .join("");
+      stats = JSON.parse(text);
+    }
 
     // Initialize chart on first data if needed
     if (!state.chart && stats.cpu.count > 0) {
