@@ -7,6 +7,7 @@
  */
 
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { createMcpExpressApp } from "@modelcontextprotocol/sdk/server/express.js";
 import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
@@ -14,6 +15,30 @@ import { isInitializeRequest } from "@modelcontextprotocol/sdk/types.js";
 import cors from "cors";
 import { randomUUID } from "node:crypto";
 import type { Request, Response } from "express";
+
+/**
+ * When true, tool results use structuredContent field instead of JSON-stringified text.
+ * Set via STRUCTURED_CONTENT_ONLY=true environment variable.
+ */
+export const STRUCTURED_CONTENT_ONLY =
+  process.env.STRUCTURED_CONTENT_ONLY === "true";
+
+/**
+ * Helper to create a tool result that optionally uses structuredContent.
+ * When STRUCTURED_CONTENT_ONLY is true, returns data in structuredContent field.
+ * Otherwise returns JSON-stringified data in content[0].text (legacy format).
+ */
+export function makeToolResult(data: Record<string, unknown>): CallToolResult {
+  if (STRUCTURED_CONTENT_ONLY) {
+    return {
+      content: [],
+      structuredContent: data,
+    };
+  }
+  return {
+    content: [{ type: "text", text: JSON.stringify(data) }],
+  };
+}
 
 export interface ServerOptions {
   /** Port to listen on (required). */

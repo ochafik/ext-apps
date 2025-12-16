@@ -10,7 +10,7 @@ import path from "node:path";
 import si from "systeminformation";
 import { z } from "zod";
 import { RESOURCE_MIME_TYPE, RESOURCE_URI_META_KEY } from "../../dist/src/app";
-import { startServer } from "../shared/server-utils.js";
+import { makeToolResult, startServer } from "../shared/server-utils.js";
 
 // Schemas - types are derived from these using z.infer
 const CpuCoreSchema = z.object({
@@ -143,9 +143,7 @@ function createServer(): McpServer {
         timestamp: new Date().toISOString(),
       };
 
-      return {
-        content: [{ type: "text", text: JSON.stringify(stats) }],
-      };
+      return makeToolResult(stats);
     },
   );
 
