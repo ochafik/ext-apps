@@ -1356,7 +1356,7 @@ const allowList: string[] = [];
 if (permissions?.camera) allowList.push('camera');
 if (permissions?.microphone) allowList.push('microphone');
 if (permissions?.geolocation) allowList.push('geolocation');
-const allowAttribute = allowList.join('; ');
+const allowAttribute = allowList.join(' ');
 ```
 
 **Security Requirements:**
