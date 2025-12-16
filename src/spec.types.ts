@@ -526,7 +526,7 @@ export interface McpUiToolMeta {
   /**
    * URI of the UI resource to display for this tool.
    * This is converted to `_meta["ui/resourceUri"]`.
-   * 
+   *
    * @example "ui://weather/widget.html"
    */
   resourceUri: string;

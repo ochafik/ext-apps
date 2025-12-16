@@ -59,7 +59,11 @@ describe("registerAppTool", () => {
 
       const mockServer = {
         registerTool: mock(
-          (_name: string, config: Record<string, unknown>, _handler: unknown) => {
+          (
+            _name: string,
+            config: Record<string, unknown>,
+            _handler: unknown,
+          ) => {
             capturedConfig = config;
           },
         ),
@@ -90,7 +94,11 @@ describe("registerAppTool", () => {
 
       const mockServer = {
         registerTool: mock(
-          (_name: string, config: Record<string, unknown>, _handler: unknown) => {
+          (
+            _name: string,
+            config: Record<string, unknown>,
+            _handler: unknown,
+          ) => {
             capturedConfig = config;
           },
         ),
@@ -121,7 +129,11 @@ describe("registerAppTool", () => {
 
       const mockServer = {
         registerTool: mock(
-          (_name: string, config: Record<string, unknown>, _handler: unknown) => {
+          (
+            _name: string,
+            config: Record<string, unknown>,
+            _handler: unknown,
+          ) => {
             capturedConfig = config;
           },
         ),
@@ -151,7 +163,11 @@ describe("registerAppTool", () => {
 
       const mockServer = {
         registerTool: mock(
-          (_name: string, config: Record<string, unknown>, _handler: unknown) => {
+          (
+            _name: string,
+            config: Record<string, unknown>,
+            _handler: unknown,
+          ) => {
             capturedConfig = config;
           },
         ),
