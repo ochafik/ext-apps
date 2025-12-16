@@ -19,6 +19,14 @@ export type McpUiDisplayModeSchemaInferredType = z.infer<
   typeof generated.McpUiDisplayModeSchema
 >;
 
+export type McpUiStyleVariableKeySchemaInferredType = z.infer<
+  typeof generated.McpUiStyleVariableKeySchema
+>;
+
+export type McpUiStylesSchemaInferredType = z.infer<
+  typeof generated.McpUiStylesSchema
+>;
+
 export type McpUiOpenLinkRequestSchemaInferredType = z.infer<
   typeof generated.McpUiOpenLinkRequestSchema
 >;
@@ -55,6 +63,10 @@ export type McpUiToolCancelledNotificationSchemaInferredType = z.infer<
   typeof generated.McpUiToolCancelledNotificationSchema
 >;
 
+export type McpUiHostStylesSchemaInferredType = z.infer<
+  typeof generated.McpUiHostStylesSchema
+>;
+
 export type McpUiResourceTeardownRequestSchemaInferredType = z.infer<
   typeof generated.McpUiResourceTeardownRequestSchema
 >;
@@ -81,6 +93,14 @@ export type McpUiResourceCspSchemaInferredType = z.infer<
 
 export type McpUiResourceMetaSchemaInferredType = z.infer<
   typeof generated.McpUiResourceMetaSchema
+>;
+
+export type McpUiRequestDisplayModeRequestSchemaInferredType = z.infer<
+  typeof generated.McpUiRequestDisplayModeRequestSchema
+>;
+
+export type McpUiRequestDisplayModeResultSchemaInferredType = z.infer<
+  typeof generated.McpUiRequestDisplayModeResultSchema
 >;
 
 export type McpUiMessageRequestSchemaInferredType = z.infer<
@@ -111,6 +131,14 @@ expectType<spec.McpUiTheme>({} as McpUiThemeSchemaInferredType);
 expectType<McpUiThemeSchemaInferredType>({} as spec.McpUiTheme);
 expectType<spec.McpUiDisplayMode>({} as McpUiDisplayModeSchemaInferredType);
 expectType<McpUiDisplayModeSchemaInferredType>({} as spec.McpUiDisplayMode);
+expectType<spec.McpUiStyleVariableKey>(
+  {} as McpUiStyleVariableKeySchemaInferredType,
+);
+expectType<McpUiStyleVariableKeySchemaInferredType>(
+  {} as spec.McpUiStyleVariableKey,
+);
+expectType<spec.McpUiStyles>({} as McpUiStylesSchemaInferredType);
+expectType<McpUiStylesSchemaInferredType>({} as spec.McpUiStyles);
 expectType<spec.McpUiOpenLinkRequest>(
   {} as McpUiOpenLinkRequestSchemaInferredType,
 );
@@ -161,6 +189,8 @@ expectType<spec.McpUiToolCancelledNotification>(
 expectType<McpUiToolCancelledNotificationSchemaInferredType>(
   {} as spec.McpUiToolCancelledNotification,
 );
+expectType<spec.McpUiHostStyles>({} as McpUiHostStylesSchemaInferredType);
+expectType<McpUiHostStylesSchemaInferredType>({} as spec.McpUiHostStyles);
 expectType<spec.McpUiResourceTeardownRequest>(
   {} as McpUiResourceTeardownRequestSchemaInferredType,
 );
@@ -195,6 +225,18 @@ expectType<spec.McpUiResourceCsp>({} as McpUiResourceCspSchemaInferredType);
 expectType<McpUiResourceCspSchemaInferredType>({} as spec.McpUiResourceCsp);
 expectType<spec.McpUiResourceMeta>({} as McpUiResourceMetaSchemaInferredType);
 expectType<McpUiResourceMetaSchemaInferredType>({} as spec.McpUiResourceMeta);
+expectType<spec.McpUiRequestDisplayModeRequest>(
+  {} as McpUiRequestDisplayModeRequestSchemaInferredType,
+);
+expectType<McpUiRequestDisplayModeRequestSchemaInferredType>(
+  {} as spec.McpUiRequestDisplayModeRequest,
+);
+expectType<spec.McpUiRequestDisplayModeResult>(
+  {} as McpUiRequestDisplayModeResultSchemaInferredType,
+);
+expectType<McpUiRequestDisplayModeResultSchemaInferredType>(
+  {} as spec.McpUiRequestDisplayModeResult,
+);
 expectType<spec.McpUiMessageRequest>(
   {} as McpUiMessageRequestSchemaInferredType,
 );

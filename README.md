@@ -56,7 +56,7 @@ The [`examples/`](https://github.com/modelcontextprotocol/ext-apps/tree/main/exa
 
 To run all examples together:
 
-```
+```bash
 npm install
 npm run examples:start
 ```

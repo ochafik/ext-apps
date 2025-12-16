@@ -71,6 +71,9 @@ import {
   McpUiSandboxProxyReadyNotification,
   McpUiSandboxProxyReadyNotificationSchema,
   McpUiSizeChangedNotificationSchema,
+  McpUiRequestDisplayModeRequest,
+  McpUiRequestDisplayModeRequestSchema,
+  McpUiRequestDisplayModeResult,
 } from "./types";
 export * from "./types";
 export { RESOURCE_URI_META_KEY, RESOURCE_MIME_TYPE } from "./app";
@@ -221,6 +224,13 @@ export class AppBridge extends Protocol<
     this.setRequestHandler(PingRequestSchema, (request, extra) => {
       this.onping?.(request.params, extra);
       return {};
+    });
+
+    // Default handler for requestDisplayMode - returns current mode from host context.
+    // Hosts can override this by setting bridge.onrequestdisplaymode = ...
+    this.setRequestHandler(McpUiRequestDisplayModeRequestSchema, (request) => {
+      const currentMode = this._hostContext.displayMode ?? "inline";
+      return { mode: currentMode };
     });
   }
 
@@ -488,6 +498,52 @@ export class AppBridge extends Protocol<
   ) {
     this.setRequestHandler(
       McpUiOpenLinkRequestSchema,
+      async (request, extra) => {
+        return callback(request.params, extra);
+      },
+    );
+  }
+
+  /**
+   * Register a handler for display mode change requests from the Guest UI.
+   *
+   * The Guest UI sends `ui/request-display-mode` requests when it wants to change
+   * its display mode (e.g., from "inline" to "fullscreen"). The handler should
+   * check if the requested mode is in `availableDisplayModes` from the host context,
+   * update the display mode if supported, and return the actual mode that was set.
+   *
+   * If the requested mode is not available, the handler should return the current
+   * display mode instead.
+   *
+   * @param callback - Handler that receives the requested mode and returns the actual mode set
+   *   - params.mode - The display mode being requested ("inline" | "fullscreen" | "pip")
+   *   - extra - Request metadata (abort signal, session info)
+   *   - Returns: Promise<McpUiRequestDisplayModeResult> with the actual mode set
+   *
+   * @example
+   * ```typescript
+   * bridge.onrequestdisplaymode = async ({ mode }, extra) => {
+   *   const availableModes = hostContext.availableDisplayModes ?? ["inline"];
+   *   if (availableModes.includes(mode)) {
+   *     setDisplayMode(mode);
+   *     return { mode };
+   *   }
+   *   // Return current mode if requested mode not available
+   *   return { mode: currentDisplayMode };
+   * };
+   * ```
+   *
+   * @see {@link McpUiRequestDisplayModeRequest} for the request type
+   * @see {@link McpUiRequestDisplayModeResult} for the result type
+   */
+  set onrequestdisplaymode(
+    callback: (
+      params: McpUiRequestDisplayModeRequest["params"],
+      extra: RequestHandlerExtra,
+    ) => Promise<McpUiRequestDisplayModeResult>,
+  ) {
+    this.setRequestHandler(
+      McpUiRequestDisplayModeRequestSchema,
       async (request, extra) => {
         return callback(request.params, extra);
       },

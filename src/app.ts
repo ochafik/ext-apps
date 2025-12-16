@@ -42,11 +42,18 @@ import {
   McpUiToolInputPartialNotificationSchema,
   McpUiToolResultNotification,
   McpUiToolResultNotificationSchema,
+  McpUiRequestDisplayModeRequest,
+  McpUiRequestDisplayModeResultSchema,
 } from "./types";
 import { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
 
 export { PostMessageTransport } from "./message-transport";
 export * from "./types";
+export {
+  applyHostStyleVariables,
+  getDocumentTheme,
+  applyDocumentTheme,
+} from "./styles";
 
 /**
  * Metadata key for associating a resource URI with a tool call.
@@ -835,6 +842,44 @@ export class App extends Protocol<AppRequest, AppNotification, AppResult> {
         params,
       },
       McpUiOpenLinkResultSchema,
+      options,
+    );
+  }
+
+  /**
+   * Request a change to the display mode.
+   *
+   * Requests the host to change the UI container to the specified display mode
+   * (e.g., "inline", "fullscreen", "pip"). The host will respond with the actual
+   * display mode that was set, which may differ from the requested mode if
+   * the requested mode is not available (check `availableDisplayModes` in host context).
+   *
+   * @param params - The display mode being requested
+   * @param options - Request options (timeout, etc.)
+   * @returns Result containing the actual display mode that was set
+   *
+   * @example Request fullscreen mode
+   * ```typescript
+   * const context = app.getHostContext();
+   * if (context?.availableDisplayModes?.includes("fullscreen")) {
+   *   const result = await app.requestDisplayMode({ mode: "fullscreen" });
+   *   console.log("Display mode set to:", result.mode);
+   * }
+   * ```
+   *
+   * @see {@link McpUiRequestDisplayModeRequest} for request structure
+   * @see {@link McpUiHostContext} for checking availableDisplayModes
+   */
+  requestDisplayMode(
+    params: McpUiRequestDisplayModeRequest["params"],
+    options?: RequestOptions,
+  ) {
+    return this.request(
+      <McpUiRequestDisplayModeRequest>{
+        method: "ui/request-display-mode",
+        params,
+      },
+      McpUiRequestDisplayModeResultSchema,
       options,
     );
   }
