@@ -61,6 +61,7 @@ export type McpUiStyleVariableKey =
   | "--color-text-success"
   | "--color-text-warning"
   | "--color-text-disabled"
+  | "--color-text-ghost"
   // Border colors
   | "--color-border-primary"
   | "--color-border-secondary"
@@ -285,11 +286,21 @@ export interface McpUiToolCancelledNotification {
 }
 
 /**
+ * @description CSS blocks that can be injected by apps.
+ */
+export interface McpUiHostCss {
+  /** @description CSS for font loading (@font-face rules or @import statements). Apps must apply using applyHostFonts(). */
+  fonts?: string;
+}
+
+/**
  * @description Style configuration for theming MCP apps.
  */
 export interface McpUiHostStyles {
   /** @description CSS variables for theming the app. */
   variables?: McpUiStyles;
+  /** @description CSS blocks that apps can inject. */
+  css?: McpUiHostCss;
 }
 
 /**
