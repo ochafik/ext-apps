@@ -55,6 +55,7 @@ export * from "./openai/types";
 export * from "./types";
 export {
   applyHostStyleVariables,
+  applyHostFonts,
   getDocumentTheme,
   applyDocumentTheme,
 } from "./styles";
