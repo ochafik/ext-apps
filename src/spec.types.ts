@@ -237,7 +237,6 @@ export interface McpUiHostContextChangedNotification {
  * @description Request to update the agent's context without requiring a follow-up action (Guest UI -> Host).
  *
  * Unlike `notifications/message` which is for debugging/logging, this request is intended
- * 
  * to update the Host's model context. Each request overwrites the previous context sent by the Guest UI.
  * Unlike messages, context updates do not trigger follow-ups.
  * @see {@link app.App.sendUpdateModelContext} for the method that sends this request
