@@ -127,10 +127,16 @@ function rewriteMeta(prefix: string, meta: Tool["_meta"]): Tool["_meta"] {
     result.ui = { ...ui, resourceUri: prefixUri(prefix, ui.resourceUri) };
   // Rewrite legacy flat key
   if (result["ui/resourceUri"])
-    result["ui/resourceUri"] = prefixUri(prefix, result["ui/resourceUri"] as string);
+    result["ui/resourceUri"] = prefixUri(
+      prefix,
+      result["ui/resourceUri"] as string,
+    );
   // Rewrite OpenAI outputTemplate key
   if (result["openai/outputTemplate"])
-    result["openai/outputTemplate"] = prefixUri(prefix, result["openai/outputTemplate"] as string);
+    result["openai/outputTemplate"] = prefixUri(
+      prefix,
+      result["openai/outputTemplate"] as string,
+    );
   return result;
 }
 
@@ -214,27 +220,23 @@ async function startHttpServer(port: number): Promise<void> {
         session &&
         !(session.transport instanceof StreamableHTTPServerTransport)
       ) {
-        return res
-          .status(400)
-          .json({
-            jsonrpc: "2.0",
-            error: {
-              code: -32000,
-              message: "Session uses different transport",
-            },
-            id: null,
-          });
+        return res.status(400).json({
+          jsonrpc: "2.0",
+          error: {
+            code: -32000,
+            message: "Session uses different transport",
+          },
+          id: null,
+        });
       }
 
       if (!session) {
         if (req.method !== "POST" || !isInitializeRequest(req.body)) {
-          return res
-            .status(400)
-            .json({
-              jsonrpc: "2.0",
-              error: { code: -32000, message: "Bad request: not initialized" },
-              id: null,
-            });
+          return res.status(400).json({
+            jsonrpc: "2.0",
+            error: { code: -32000, message: "Bad request: not initialized" },
+            id: null,
+          });
         }
 
         const serverInstance = await createServerAsync();
@@ -258,13 +260,11 @@ async function startHttpServer(port: number): Promise<void> {
     } catch (error) {
       console.error("MCP error:", error);
       if (!res.headersSent) {
-        res
-          .status(500)
-          .json({
-            jsonrpc: "2.0",
-            error: { code: -32603, message: "Internal server error" },
-            id: null,
-          });
+        res.status(500).json({
+          jsonrpc: "2.0",
+          error: { code: -32603, message: "Internal server error" },
+          id: null,
+        });
       }
     }
   });
@@ -286,25 +286,21 @@ async function startHttpServer(port: number): Promise<void> {
     try {
       const session = sessions.get(req.query.sessionId as string);
       if (!session || !(session.transport instanceof SSEServerTransport)) {
-        return res
-          .status(404)
-          .json({
-            jsonrpc: "2.0",
-            error: { code: -32001, message: "Session not found" },
-            id: null,
-          });
+        return res.status(404).json({
+          jsonrpc: "2.0",
+          error: { code: -32001, message: "Session not found" },
+          id: null,
+        });
       }
       await session.transport.handlePostMessage(req, res, req.body);
     } catch (error) {
       console.error("Message error:", error);
       if (!res.headersSent) {
-        res
-          .status(500)
-          .json({
-            jsonrpc: "2.0",
-            error: { code: -32603, message: "Internal server error" },
-            id: null,
-          });
+        res.status(500).json({
+          jsonrpc: "2.0",
+          error: { code: -32603, message: "Internal server error" },
+          id: null,
+        });
       }
     }
   });

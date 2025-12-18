@@ -70,7 +70,10 @@ const commands: Parameters<typeof concurrently>[0] = [
         {
           command: `npm run --workspace examples/${AGGREGATOR} ${command}`,
           name: AGGREGATOR,
-          env: { PORT: String(aggregator.port), BACKEND_SERVERS: backendServersEnv },
+          env: {
+            PORT: String(aggregator.port),
+            BACKEND_SERVERS: backendServersEnv,
+          },
         },
       ]
     : []),
