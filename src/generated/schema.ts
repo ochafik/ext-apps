@@ -566,9 +566,15 @@ export const McpUiHostContextSchema = z.looseObject({
   viewport: z
     .object({
       /** @description Current viewport width in pixels. */
-      width: z.number().describe("Current viewport width in pixels."),
+      width: z
+        .number()
+        .optional()
+        .describe("Current viewport width in pixels."),
       /** @description Current viewport height in pixels. */
-      height: z.number().describe("Current viewport height in pixels."),
+      height: z
+        .number()
+        .optional()
+        .describe("Current viewport height in pixels."),
       /** @description Maximum available height in pixels (if constrained). */
       maxHeight: z
         .number()

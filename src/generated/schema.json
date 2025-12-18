@@ -649,7 +649,6 @@
                   "type": "number"
                 }
               },
-              "required": ["width", "height"],
               "additionalProperties": false
             },
             "locale": {
@@ -1275,7 +1274,6 @@
               "type": "number"
             }
           },
-          "required": ["width", "height"],
           "additionalProperties": false
         },
         "locale": {
@@ -2434,7 +2432,6 @@
                   "type": "number"
                 }
               },
-              "required": ["width", "height"],
               "additionalProperties": false
             },
             "locale": {

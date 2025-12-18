@@ -464,9 +464,9 @@ interface HostContext {
   /** Current and maximum dimensions available to the UI. */
   viewport?: {
     /** Current viewport width in pixels. */
-    width: number;
+    width?: number;
     /** Current viewport height in pixels. */
-    height: number;
+    height?: number;
     /** Maximum available height in pixels (if constrained). */
     maxHeight?: number;
     /** Maximum available width in pixels (if constrained). */
@@ -552,20 +552,20 @@ if (viewport) {
   // Handle height
   if ("height" in viewport) {
     // Fixed height: fill the container
-    document.body.style.height = "100%";
+    document.documentElement.style.height = "100vh";
   } else if (viewport.maxHeight) {
     // Flexible with max: let content determine size, up to max
-    document.body.style.maxHeight = `${viewport.maxHeight}px`;
+    document.documentElement.style.maxHeight = `${viewport.maxHeight}px`;
   }
   // If neither, height is unbounded
 
   // Handle width
   if ("width" in viewport) {
     // Fixed width: fill the container
-    document.body.style.width = "100%";
+    document.documentElement.style.width = "100vw";
   } else if (viewport.maxWidth) {
     // Flexible with max: let content determine size, up to max
-    document.body.style.maxWidth = `${viewport.maxWidth}px`;
+    document.documentElement.style.maxWidth = `${viewport.maxWidth}px`;
   }
   // If neither, width is unbounded
 }

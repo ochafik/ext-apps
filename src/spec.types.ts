@@ -327,9 +327,9 @@ export interface McpUiHostContext {
   /** @description Current and maximum dimensions available to the UI. */
   viewport?: {
     /** @description Current viewport width in pixels. */
-    width: number;
+    width?: number;
     /** @description Current viewport height in pixels. */
-    height: number;
+    height?: number;
     /** @description Maximum available height in pixels (if constrained). */
     maxHeight?: number;
     /** @description Maximum available width in pixels (if constrained). */
