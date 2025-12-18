@@ -213,15 +213,15 @@ describe("App <-> AppBridge integration", () => {
       });
     });
 
-    it("app.sendUpdateContext triggers bridge.onupdatecontext and returns result", async () => {
+    it("app.sendUpdateModelContext triggers bridge.onupdatemodelcontext and returns result", async () => {
       const receivedContexts: unknown[] = [];
-      bridge.onupdatecontext = async (params) => {
+      bridge.onupdatemodelcontext = async (params) => {
         receivedContexts.push(params);
         return {};
       };
 
       await app.connect(appTransport);
-      const result = await app.sendUpdateContext({
+      const result = await app.sendUpdateModelContext({
         role: "user",
         content: [{ type: "text", text: "User selected 3 items" }],
       });
@@ -234,15 +234,15 @@ describe("App <-> AppBridge integration", () => {
       expect(result).toEqual({});
     });
 
-    it("app.sendUpdateContext works with multiple content blocks", async () => {
+    it("app.sendUpdateModelContext works with multiple content blocks", async () => {
       const receivedContexts: unknown[] = [];
-      bridge.onupdatecontext = async (params) => {
+      bridge.onupdatemodelcontext = async (params) => {
         receivedContexts.push(params);
         return {};
       };
 
       await app.connect(appTransport);
-      const result = await app.sendUpdateContext({
+      const result = await app.sendUpdateModelContext({
         role: "user",
         content: [
           { type: "text", text: "Filter applied" },
@@ -261,13 +261,13 @@ describe("App <-> AppBridge integration", () => {
       expect(result).toEqual({});
     });
 
-    it("app.sendUpdateContext returns error result when handler indicates error", async () => {
-      bridge.onupdatecontext = async () => {
+    it("app.sendUpdateModelContext returns error result when handler indicates error", async () => {
+      bridge.onupdatemodelcontext = async () => {
         return { isError: true };
       };
 
       await app.connect(appTransport);
-      const result = await app.sendUpdateContext({
+      const result = await app.sendUpdateModelContext({
         role: "user",
         content: [{ type: "text", text: "Test" }],
       });

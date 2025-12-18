@@ -533,14 +533,14 @@ Host SHOULD open the URL in the user's default browser or a new tab.
 
 Host SHOULD add the message to the conversation thread, preserving the specified role.
 
-`ui/update-context` - Update the agent's conversation context
+`ui/update-model-context` - Update the model context
 
 ```typescript
 // Request
 {
   jsonrpc: "2.0",
   id: 3,
-  method: "ui/update-context",
+  method: "ui/update-model-context",
   params: {
     role: "user",
     content: ContentBlock[]
@@ -565,12 +565,13 @@ Host SHOULD add the message to the conversation thread, preserving the specified
 }
 ```
 
-Guest UI MAY send this request to inform the agent about app state changes that should be stored in the conversation context for future reasoning. This event serves a different use case from `notifications/message` (logging) and `ui/message` (which also trigger follow-ups).
+Guest UI MAY send this request to update the Host's model context. This context will be used in future turns. Each request overwrites the previous context sent by the Guest UI.
+This event serves a different use case from `notifications/message` (logging) and `ui/message` (which also trigger follow-ups).
 
 Host behavior:
-- SHOULD store the context update in the conversation context
+- SHOULD store the context snapshot in the conversation context
+- SHOULD overwrite the previous model context with the new update
 - MAY display context updates to the user
-- MAY filter or aggregate context updates
 
 #### Notifications (Host → UI)
 
@@ -806,9 +807,9 @@ sequenceDiagram
       H -->> UI: ui/message response
       H -->> H: Process message and follow up
     else Context update
-      UI ->> H: ui/update-context
-      H ->> H: Store in conversation context
-      H -->> UI: ui/update-context response
+      UI ->> H: ui/update-model-context
+      H ->> H: Store model context (overwrite existing)
+      H -->> UI: ui/update-model-context response
     else Log
       UI ->> H: notifications/message
       H ->> H: Record log for debugging/telemetry

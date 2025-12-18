@@ -237,13 +237,13 @@ export interface McpUiHostContextChangedNotification {
  * @description Request to update the agent's context without requiring a follow-up action (Guest UI -> Host).
  *
  * Unlike `notifications/message` which is for debugging/logging, this request is intended
- * to inform the agent about app-driven updates that should be stored in the conversation context
- * for future reasoning.
- *
- * @see {@link app.App.sendUpdateContext} for the method that sends this request
+ * 
+ * to update the Host's model context. Each request overwrites the previous context sent by the Guest UI.
+ * Unlike messages, context updates do not trigger follow-ups.
+ * @see {@link app.App.sendUpdateModelContext} for the method that sends this request
  */
-export interface McpUiUpdateContextRequest {
-  method: "ui/update-context";
+export interface McpUiUpdateModelContextRequest {
+  method: "ui/update-model-context";
   params: {
     /** @description Message role, currently only "user" is supported. */
     role: "user";
@@ -253,10 +253,10 @@ export interface McpUiUpdateContextRequest {
 }
 
 /**
- * @description Result from updating the agent's context.
- * @see {@link McpUiUpdateContextRequest}
+ * @description Result from setting the agent's model context.
+ * @see {@link McpUiUpdateModelContextRequest}
  */
-export interface McpUiUpdateContextResult {
+export interface McpUiUpdateModelContextResult {
   /** @description True if the host rejected or failed to store the context update. */
   isError?: boolean;
   /**
@@ -307,8 +307,8 @@ export interface McpUiHostCapabilities {
   };
   /** @description Host accepts log messages. */
   logging?: {};
-  /** @description Host accepts context updates to be stored in the agent's conversation context. */
-  updateContext?: {};
+  /** @description Host accepts context updates to be included in the model's context for future turns. */
+  updateModelContext?: {};
 }
 
 /**

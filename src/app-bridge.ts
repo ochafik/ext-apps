@@ -39,9 +39,9 @@ import {
   type McpUiToolResultNotification,
   LATEST_PROTOCOL_VERSION,
   McpUiAppCapabilities,
-  McpUiUpdateContextRequest,
-  McpUiUpdateContextRequestSchema,
-  McpUiUpdateContextResult,
+  McpUiUpdateModelContextRequest,
+  McpUiUpdateModelContextRequestSchema,
+  McpUiUpdateModelContextResult,
   McpUiHostCapabilities,
   McpUiHostContext,
   McpUiHostContextChangedNotification,
@@ -506,30 +506,24 @@ export class AppBridge extends Protocol<Request, Notification, Result> {
   }
 
   /**
-   * Register a handler for context updates from the Guest UI.
+   * Register a handler for model context updates from the Guest UI.
    *
-   * The Guest UI sends `ui/update-context` requests to inform the agent
-   * about app state changes that should be stored in the conversation context for
-   * future reasoning. Unlike logging messages, context updates are intended to be
-   * available to the agent for decision making.
-   *
-   * @param callback - Handler that receives context update params and returns a result
-   *   - params.role - Message role (currently only "user")
-   *   - params.content - Content blocks (text, image, etc.)
-   *   - extra - Request metadata (abort signal, session info)
-   *   - Returns: Promise<McpUiUpdateContextResult> with optional isError flag
+   * The Guest UI sends `ui/update-model-context` requests to update the Host's
+   * model context. Each request overwrites the previous context stored by the Guest UI.
+   * Unlike logging messages, context updates are intended to be available to
+   * the model in future turns. Unlike messages, context updates do not trigger follow-ups
    *
    * @example
    * ```typescript
-   * bridge.onupdatecontext = async ({ role, content }, extra) => {
+   * bridge.onupdatemodelcontext = async ({ role, content }, extra) => {
    *   try {
-   *     // Store context update for agent reasoning
-   *     conversationContext.push({
+   *     // Update the model context with the new snapshot
+   *     modelContext = {
    *       type: "app_context",
    *       role,
    *       content,
    *       timestamp: Date.now()
-   *     });
+   *     };
    *     return {};
    *   } catch (err) {
    *     // Handle error and signal failure to the app
@@ -538,17 +532,17 @@ export class AppBridge extends Protocol<Request, Notification, Result> {
    * };
    * ```
    *
-   * @see {@link McpUiUpdateContextRequest} for the request type
-   * @see {@link McpUiUpdateContextResult} for the result type
+   * @see {@link McpUiUpdateModelContextRequest} for the request type
+   * @see {@link McpUiUpdateModelContextResult} for the result type
    */
-  set onupdatecontext(
+  set onupdatemodelcontext(
     callback: (
-      params: McpUiUpdateContextRequest["params"],
+      params: McpUiUpdateModelContextRequest["params"],
       extra: RequestHandlerExtra,
-    ) => Promise<McpUiUpdateContextResult>,
+    ) => Promise<McpUiUpdateModelContextResult>,
   ) {
     this.setRequestHandler(
-      McpUiUpdateContextRequestSchema,
+      McpUiUpdateModelContextRequestSchema,
       async (request, extra) => {
         return callback(request.params, extra);
       },

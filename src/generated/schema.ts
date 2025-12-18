@@ -161,10 +161,10 @@ export const McpUiToolInputPartialNotificationSchema = z.object({
 });
 
 /**
- * @description Result from updating the agent's context.
- * @see {@link McpUiUpdateContextRequest}
+ * @description Result from setting the agent's model context.
+ * @see {@link McpUiUpdateModelContextRequest}
  */
-export const McpUiUpdateContextResultSchema = z.looseObject({
+export const McpUiUpdateModelContextResultSchema = z.looseObject({
   /** @description True if the host rejected or failed to store the context update. */
   isError: z
     .boolean()
@@ -231,12 +231,12 @@ export const McpUiHostCapabilitiesSchema = z.object({
     .describe("Host can proxy resource reads to the MCP server."),
   /** @description Host accepts log messages. */
   logging: z.object({}).optional().describe("Host accepts log messages."),
-  /** @description Host accepts context updates to be stored in the agent's conversation context. */
-  updateContext: z
+  /** @description Host accepts context updates to be included in the model's context for future turns. */
+  updateModelContext: z
     .object({})
     .optional()
     .describe(
-      "Host accepts context updates to be stored in the agent's conversation context.",
+      "Host accepts context updates to be included in the model's context for future turns.",
     ),
 });
 
@@ -448,13 +448,13 @@ export const McpUiHostContextChangedNotificationSchema = z.object({
  * @description Request to update the agent's context without requiring a follow-up action (Guest UI -> Host).
  *
  * Unlike `notifications/message` which is for debugging/logging, this request is intended
- * to inform the agent about app-driven updates that should be stored in the conversation context
- * for future reasoning.
  *
- * @see {@link app.App.sendUpdateContext} for the method that sends this request
+ * to update the Host's model context. Each request overwrites the previous context sent by the Guest UI.
+ * Unlike messages, context updates do not trigger follow-ups.
+ * @see {@link app.App.sendUpdateModelContext} for the method that sends this request
  */
-export const McpUiUpdateContextRequestSchema = z.object({
-  method: z.literal("ui/update-context"),
+export const McpUiUpdateModelContextRequestSchema = z.object({
+  method: z.literal("ui/update-model-context"),
   params: z.object({
     /** @description Message role, currently only "user" is supported. */
     role: z

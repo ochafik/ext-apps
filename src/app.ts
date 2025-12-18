@@ -21,8 +21,8 @@ import {
 import {
   LATEST_PROTOCOL_VERSION,
   McpUiAppCapabilities,
-  McpUiUpdateContextRequest,
-  McpUiUpdateContextResultSchema,
+  McpUiUpdateModelContextRequest,
+  McpUiUpdateModelContextResultSchema,
   McpUiHostCapabilities,
   McpUiHostContextChangedNotification,
   McpUiHostContextChangedNotificationSchema,
@@ -676,18 +676,18 @@ export class App extends Protocol<Request, Notification, Result> {
   }
 
   /**
-   * Send context updates to the host for storage in the agent's conversation context.
+   * Send context updates to the host to be included in the agent's context.
    *
-   * Unlike `sendLog` which is for debugging/telemetry, context updates are intended
-   * to inform the agent about app state changes that should be available for future
-   * reasoning without requiring a follow-up action (like `sendMessage`).
+   * Unlike `sendLog`, which is for debugging/telemetry, context updates
+   * are inteded to be available to the model in future reasoning,
+   * without requiring a follow-up action (like `sendMessage`).
    *
    * @param params - Context role and content (same structure as ui/message)
    * @param options - Request options (timeout, etc.)
    *
-   * @example Notify agent of significant state change
+   * @example Update model context with current app state
    * ```typescript
-   * await app.sendUpdateContext({
+   * await app.sendUpdateModelContext({
    *   role: "user",
    *   content: [{ type: "text", text: "User selected 3 items totaling $150.00" }]
    * });
@@ -695,16 +695,16 @@ export class App extends Protocol<Request, Notification, Result> {
    *
    * @returns Promise that resolves when the context update is acknowledged
    */
-  sendUpdateContext(
-    params: McpUiUpdateContextRequest["params"],
+  sendUpdateModelContext(
+    params: McpUiUpdateModelContextRequest["params"],
     options?: RequestOptions,
   ) {
     return this.request(
-      <McpUiUpdateContextRequest>{
-        method: "ui/update-context",
+      <McpUiUpdateModelContextRequest>{
+        method: "ui/update-model-context",
         params,
       },
-      McpUiUpdateContextResultSchema,
+      McpUiUpdateModelContextResultSchema,
       options,
     );
   }
