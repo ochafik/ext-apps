@@ -8,9 +8,7 @@ import { StrictMode, useCallback, useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import styles from "./mcp-app.module.css";
 
-
 const IMPLEMENTATION = { name: "Get Time App", version: "1.0.0" };
-
 
 const log = {
   info: console.log.bind(console, "[APP]"),
@@ -18,12 +16,16 @@ const log = {
   error: console.error.bind(console, "[APP]"),
 };
 
-
 function extractTime(callToolResult: CallToolResult): string {
-  const { text } = callToolResult.content?.find((c) => c.type === "text")!;
-  return text;
+  const text = callToolResult
+    .content!.filter(
+      (c): c is { type: "text"; text: string } => c.type === "text",
+    )
+    .map((c) => c.text)
+    .join("");
+  const { time } = JSON.parse(text) as { time: string };
+  return time;
 }
-
 
 function GetTimeApp() {
   const [toolResult, setToolResult] = useState<CallToolResult | null>(null);
@@ -33,6 +35,8 @@ function GetTimeApp() {
     onAppCreated: (app) => {
       app.onteardown = async () => {
         log.info("App is being torn down");
+        await new Promise((resolve) => setTimeout(resolve, 500)); // Simulate cleanup work
+        log.info("App teardown complete");
         return {};
       };
       app.ontoolinput = async (input) => {
@@ -48,12 +52,16 @@ function GetTimeApp() {
     },
   });
 
-  if (error) return <div><strong>ERROR:</strong> {error.message}</div>;
+  if (error)
+    return (
+      <div>
+        <strong>ERROR:</strong> {error.message}
+      </div>
+    );
   if (!app) return <div>Connecting...</div>;
 
   return <GetTimeAppInner app={app} toolResult={toolResult} />;
 }
-
 
 interface GetTimeAppInnerProps {
   app: App;
@@ -74,7 +82,10 @@ function GetTimeAppInner({ app, toolResult }: GetTimeAppInnerProps) {
   const handleGetTime = useCallback(async () => {
     try {
       log.info("Calling get-time tool...");
-      const result = await app.callServerTool({ name: "get-time", arguments: {} });
+      const result = await app.callServerTool({
+        name: "get-time",
+        arguments: {},
+      });
       log.info("get-time result:", result);
       setServerTime(extractTime(result));
     } catch (e) {
@@ -114,29 +125,40 @@ function GetTimeAppInner({ app, toolResult }: GetTimeAppInnerProps) {
 
       <div className={styles.action}>
         <p>
-          <strong>Server Time:</strong> <code id="server-time">{serverTime}</code>
+          <strong>Server Time:</strong>{" "}
+          <code id="server-time">{serverTime}</code>
         </p>
         <button onClick={handleGetTime}>Get Server Time</button>
       </div>
 
       <div className={styles.action}>
-        <textarea value={messageText} onChange={(e) => setMessageText(e.target.value)} />
+        <textarea
+          value={messageText}
+          onChange={(e) => setMessageText(e.target.value)}
+        />
         <button onClick={handleSendMessage}>Send Message</button>
       </div>
 
       <div className={styles.action}>
-        <input type="text" value={logText} onChange={(e) => setLogText(e.target.value)} />
+        <input
+          type="text"
+          value={logText}
+          onChange={(e) => setLogText(e.target.value)}
+        />
         <button onClick={handleSendLog}>Send Log</button>
       </div>
 
       <div className={styles.action}>
-        <input type="url" value={linkUrl} onChange={(e) => setLinkUrl(e.target.value)} />
+        <input
+          type="url"
+          value={linkUrl}
+          onChange={(e) => setLinkUrl(e.target.value)}
+        />
         <button onClick={handleOpenLink}>Open Link</button>
       </div>
     </main>
   );
 }
-
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
