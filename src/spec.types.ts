@@ -550,7 +550,7 @@ export interface McpUiToolMeta {
 }
 
 /**
- * Method string constants for MCP UI protocol messages.
+ * Method string constants for MCP Apps protocol messages.
  *
  * These constants provide a type-safe way to check message methods without
  * accessing internal Zod schema properties. External libraries should use
@@ -558,28 +558,28 @@ export interface McpUiToolMeta {
  *
  * @example
  * ```typescript
- * import { MCP_UI_SANDBOX_PROXY_READY_METHOD } from '@modelcontextprotocol/ext-apps';
+ * import { SANDBOX_PROXY_READY_METHOD } from '@modelcontextprotocol/ext-apps';
  *
- * if (event.data.method === MCP_UI_SANDBOX_PROXY_READY_METHOD) {
+ * if (event.data.method === SANDBOX_PROXY_READY_METHOD) {
  *   // Handle sandbox proxy ready notification
  * }
  * ```
  */
-export const MCP_UI_OPEN_LINK_METHOD = "ui/open-link";
-export const MCP_UI_MESSAGE_METHOD = "ui/message";
-export const MCP_UI_SANDBOX_PROXY_READY_METHOD =
+export const OPEN_LINK_METHOD = "ui/open-link";
+export const MESSAGE_METHOD = "ui/message";
+export const SANDBOX_PROXY_READY_METHOD =
   "ui/notifications/sandbox-proxy-ready";
-export const MCP_UI_SANDBOX_RESOURCE_READY_METHOD =
+export const SANDBOX_RESOURCE_READY_METHOD =
   "ui/notifications/sandbox-resource-ready";
-export const MCP_UI_SIZE_CHANGED_METHOD = "ui/notifications/size-changed";
-export const MCP_UI_TOOL_INPUT_METHOD = "ui/notifications/tool-input";
-export const MCP_UI_TOOL_INPUT_PARTIAL_METHOD =
+export const SIZE_CHANGED_METHOD = "ui/notifications/size-changed";
+export const TOOL_INPUT_METHOD = "ui/notifications/tool-input";
+export const TOOL_INPUT_PARTIAL_METHOD =
   "ui/notifications/tool-input-partial";
-export const MCP_UI_TOOL_RESULT_METHOD = "ui/notifications/tool-result";
-export const MCP_UI_TOOL_CANCELLED_METHOD = "ui/notifications/tool-cancelled";
-export const MCP_UI_HOST_CONTEXT_CHANGED_METHOD =
+export const TOOL_RESULT_METHOD = "ui/notifications/tool-result";
+export const TOOL_CANCELLED_METHOD = "ui/notifications/tool-cancelled";
+export const HOST_CONTEXT_CHANGED_METHOD =
   "ui/notifications/host-context-changed";
-export const MCP_UI_RESOURCE_TEARDOWN_METHOD = "ui/resource-teardown";
-export const MCP_UI_INITIALIZE_METHOD = "ui/initialize";
-export const MCP_UI_INITIALIZED_METHOD = "ui/notifications/initialized";
-export const MCP_UI_REQUEST_DISPLAY_MODE_METHOD = "ui/request-display-mode";
+export const RESOURCE_TEARDOWN_METHOD = "ui/resource-teardown";
+export const INITIALIZE_METHOD = "ui/initialize";
+export const INITIALIZED_METHOD = "ui/notifications/initialized";
+export const REQUEST_DISPLAY_MODE_METHOD = "ui/request-display-mode";
