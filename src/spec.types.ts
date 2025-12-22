@@ -26,7 +26,6 @@ import type {
  */
 export const LATEST_PROTOCOL_VERSION = "2025-11-21";
 
-
 /**
  * @description Color theme preference for the host environment.
  */
