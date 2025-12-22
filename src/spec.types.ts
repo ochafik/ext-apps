@@ -26,6 +26,7 @@ import type {
  */
 export const LATEST_PROTOCOL_VERSION = "2025-11-21";
 
+
 /**
  * @description Color theme preference for the host environment.
  */
@@ -565,21 +566,29 @@ export interface McpUiToolMeta {
  * }
  * ```
  */
-export const OPEN_LINK_METHOD = "ui/open-link";
-export const MESSAGE_METHOD = "ui/message";
-export const SANDBOX_PROXY_READY_METHOD =
+export const OPEN_LINK_METHOD: McpUiOpenLinkRequest["method"] = "ui/open-link";
+export const MESSAGE_METHOD: McpUiMessageRequest["method"] = "ui/message";
+export const SANDBOX_PROXY_READY_METHOD: McpUiSandboxProxyReadyNotification["method"] =
   "ui/notifications/sandbox-proxy-ready";
-export const SANDBOX_RESOURCE_READY_METHOD =
+export const SANDBOX_RESOURCE_READY_METHOD: McpUiSandboxResourceReadyNotification["method"] =
   "ui/notifications/sandbox-resource-ready";
-export const SIZE_CHANGED_METHOD = "ui/notifications/size-changed";
-export const TOOL_INPUT_METHOD = "ui/notifications/tool-input";
-export const TOOL_INPUT_PARTIAL_METHOD =
+export const SIZE_CHANGED_METHOD: McpUiSizeChangedNotification["method"] =
+  "ui/notifications/size-changed";
+export const TOOL_INPUT_METHOD: McpUiToolInputNotification["method"] =
+  "ui/notifications/tool-input";
+export const TOOL_INPUT_PARTIAL_METHOD: McpUiToolInputPartialNotification["method"] =
   "ui/notifications/tool-input-partial";
-export const TOOL_RESULT_METHOD = "ui/notifications/tool-result";
-export const TOOL_CANCELLED_METHOD = "ui/notifications/tool-cancelled";
-export const HOST_CONTEXT_CHANGED_METHOD =
+export const TOOL_RESULT_METHOD: McpUiToolResultNotification["method"] =
+  "ui/notifications/tool-result";
+export const TOOL_CANCELLED_METHOD: McpUiToolCancelledNotification["method"] =
+  "ui/notifications/tool-cancelled";
+export const HOST_CONTEXT_CHANGED_METHOD: McpUiHostContextChangedNotification["method"] =
   "ui/notifications/host-context-changed";
-export const RESOURCE_TEARDOWN_METHOD = "ui/resource-teardown";
-export const INITIALIZE_METHOD = "ui/initialize";
-export const INITIALIZED_METHOD = "ui/notifications/initialized";
-export const REQUEST_DISPLAY_MODE_METHOD = "ui/request-display-mode";
+export const RESOURCE_TEARDOWN_METHOD: McpUiResourceTeardownRequest["method"] =
+  "ui/resource-teardown";
+export const INITIALIZE_METHOD: McpUiInitializeRequest["method"] =
+  "ui/initialize";
+export const INITIALIZED_METHOD: McpUiInitializedNotification["method"] =
+  "ui/notifications/initialized";
+export const REQUEST_DISPLAY_MODE_METHOD: McpUiRequestDisplayModeRequest["method"] =
+  "ui/request-display-mode";
