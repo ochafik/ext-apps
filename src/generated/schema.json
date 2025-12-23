@@ -57,11 +57,6 @@
         "params": {
           "type": "object",
           "properties": {
-            "role": {
-              "description": "Message role, currently only \"user\" is supported.",
-              "type": "string",
-              "const": "user"
-            },
             "content": {
               "description": "Message content blocks (text, image, etc.).",
               "type": "array",
@@ -376,7 +371,7 @@
               }
             }
           },
-          "required": ["role", "content"],
+          "required": ["content"],
           "additionalProperties": false
         }
       },

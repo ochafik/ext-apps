@@ -207,8 +207,6 @@ export interface McpUiMessageResult {
 export interface McpUiFollowUpMessageRequest {
   method: "ui/follow-up-message";
   params: {
-    /** @description Message role, currently only "user" is supported. */
-    role: "user";
     /** @description Message content blocks (text, image, etc.). */
     content: ContentBlock[];
   };

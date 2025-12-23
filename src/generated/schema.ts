@@ -553,10 +553,6 @@ export const McpUiMessageRequestSchema = z.object({
 export const McpUiFollowUpMessageRequestSchema = z.object({
   method: z.literal("ui/follow-up-message"),
   params: z.object({
-    /** @description Message role, currently only "user" is supported. */
-    role: z
-      .literal("user")
-      .describe('Message role, currently only "user" is supported.'),
     /** @description Message content blocks (text, image, etc.). */
     content: z
       .array(ContentBlockSchema)
