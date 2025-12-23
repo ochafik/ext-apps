@@ -835,6 +835,8 @@ Guest UI behavior:
 
 This request allows apps to persist state that the model can see in subsequent messages. The state is stored per-conversation and sent with each completion request, enabling the model to be aware of the current widget configuration and user selections.
 
+**Important:** Widget state is ephemeral and not persisted across browser sessions or page reloads. Apps SHOULD send their initial state after receiving the `ui/notifications/tool-input` notification to ensure the model has context from the start of each session.
+
 Host behavior:
 * Host MUST store the widget state associated with the current conversation.
 * Host MUST include all stored widget states in subsequent completion requests to the model.
