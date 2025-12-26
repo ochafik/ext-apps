@@ -533,139 +533,141 @@ export const McpUiToolResultNotificationSchema = z.object({
 /**
  * @description Rich context about the host environment provided to Guest UIs.
  */
-export const McpUiHostContextSchema = z.looseObject({
-  /** @description Metadata of the tool call that instantiated this App. */
-  toolInfo: z
-    .object({
-      /** @description JSON-RPC id of the tools/call request. */
-      id: RequestIdSchema.describe("JSON-RPC id of the tools/call request."),
-      /** @description Tool definition including name, inputSchema, etc. */
-      tool: ToolSchema.describe(
-        "Tool definition including name, inputSchema, etc.",
-      ),
-    })
-    .optional()
-    .describe("Metadata of the tool call that instantiated this App."),
-  /** @description Current color theme preference. */
-  theme: McpUiThemeSchema.optional().describe(
-    "Current color theme preference.",
-  ),
-  /** @description Style configuration for theming the app. */
-  styles: McpUiHostStylesSchema.optional().describe(
-    "Style configuration for theming the app.",
-  ),
-  /** @description How the UI is currently displayed. */
-  displayMode: McpUiDisplayModeSchema.optional().describe(
-    "How the UI is currently displayed.",
-  ),
-  /** @description Display modes the host supports. */
-  availableDisplayModes: z
-    .array(z.string())
-    .optional()
-    .describe("Display modes the host supports."),
-  /**
-   * @description Container dimensions. Represents the dimensions of the iframe or other
-   * container holding the app. Specify either width or maxWidth, and either height or maxHeight.
-   */
-  containerDimensions: z
-    .union([
-      z.object({
-        /** @description Fixed container height in pixels. */
-        height: z.number().describe("Fixed container height in pixels."),
-      }),
-      z.object({
-        /** @description Maximum container height in pixels. */
-        maxHeight: z
-          .union([z.number(), z.undefined()])
-          .optional()
-          .describe("Maximum container height in pixels."),
-      }),
-    ])
-    .and(
-      z.union([
+export const McpUiHostContextSchema = z
+  .object({
+    /** @description Metadata of the tool call that instantiated this App. */
+    toolInfo: z
+      .object({
+        /** @description JSON-RPC id of the tools/call request. */
+        id: RequestIdSchema.describe("JSON-RPC id of the tools/call request."),
+        /** @description Tool definition including name, inputSchema, etc. */
+        tool: ToolSchema.describe(
+          "Tool definition including name, inputSchema, etc.",
+        ),
+      })
+      .optional()
+      .describe("Metadata of the tool call that instantiated this App."),
+    /** @description Current color theme preference. */
+    theme: McpUiThemeSchema.optional().describe(
+      "Current color theme preference.",
+    ),
+    /** @description Style configuration for theming the app. */
+    styles: McpUiHostStylesSchema.optional().describe(
+      "Style configuration for theming the app.",
+    ),
+    /** @description How the UI is currently displayed. */
+    displayMode: McpUiDisplayModeSchema.optional().describe(
+      "How the UI is currently displayed.",
+    ),
+    /** @description Display modes the host supports. */
+    availableDisplayModes: z
+      .array(z.string())
+      .optional()
+      .describe("Display modes the host supports."),
+    /**
+     * @description Container dimensions. Represents the dimensions of the iframe or other
+     * container holding the app. Specify either width or maxWidth, and either height or maxHeight.
+     */
+    containerDimensions: z
+      .union([
         z.object({
-          /** @description Fixed container width in pixels. */
-          width: z.number().describe("Fixed container width in pixels."),
+          /** @description Fixed container height in pixels. */
+          height: z.number().describe("Fixed container height in pixels."),
         }),
         z.object({
-          /** @description Maximum container width in pixels. */
-          maxWidth: z
+          /** @description Maximum container height in pixels. */
+          maxHeight: z
             .union([z.number(), z.undefined()])
             .optional()
-            .describe("Maximum container width in pixels."),
+            .describe("Maximum container height in pixels."),
         }),
-      ]),
-    )
-    .optional()
-    .describe(
-      "Container dimensions. Represents the dimensions of the iframe or other\ncontainer holding the app. Specify either width or maxWidth, and either height or maxHeight.",
-    ),
-  /**
-   * @description Window viewport dimensions. Represents the host window's viewport size,
-   * which provides additional information apps can use to make responsive layout decisions.
-   */
-  viewport: z
-    .object({
-      /** @description Window viewport width in pixels. */
-      width: z
-        .union([z.number(), z.undefined()])
-        .optional()
-        .describe("Window viewport width in pixels."),
-      /** @description Window viewport height in pixels. */
-      height: z
-        .union([z.number(), z.undefined()])
-        .optional()
-        .describe("Window viewport height in pixels."),
-    })
-    .optional()
-    .describe(
-      "Window viewport dimensions. Represents the host window's viewport size,\nwhich provides additional information apps can use to make responsive layout decisions.",
-    ),
-  /** @description User's language and region preference in BCP 47 format. */
-  locale: z
-    .string()
-    .optional()
-    .describe("User's language and region preference in BCP 47 format."),
-  /** @description User's timezone in IANA format. */
-  timeZone: z.string().optional().describe("User's timezone in IANA format."),
-  /** @description Host application identifier. */
-  userAgent: z.string().optional().describe("Host application identifier."),
-  /** @description Platform type for responsive design decisions. */
-  platform: z
-    .union([z.literal("web"), z.literal("desktop"), z.literal("mobile")])
-    .optional()
-    .describe("Platform type for responsive design decisions."),
-  /** @description Device input capabilities. */
-  deviceCapabilities: z
-    .object({
-      /** @description Whether the device supports touch input. */
-      touch: z
-        .boolean()
-        .optional()
-        .describe("Whether the device supports touch input."),
-      /** @description Whether the device supports hover interactions. */
-      hover: z
-        .boolean()
-        .optional()
-        .describe("Whether the device supports hover interactions."),
-    })
-    .optional()
-    .describe("Device input capabilities."),
-  /** @description Mobile safe area boundaries in pixels. */
-  safeAreaInsets: z
-    .object({
-      /** @description Top safe area inset in pixels. */
-      top: z.number().describe("Top safe area inset in pixels."),
-      /** @description Right safe area inset in pixels. */
-      right: z.number().describe("Right safe area inset in pixels."),
-      /** @description Bottom safe area inset in pixels. */
-      bottom: z.number().describe("Bottom safe area inset in pixels."),
-      /** @description Left safe area inset in pixels. */
-      left: z.number().describe("Left safe area inset in pixels."),
-    })
-    .optional()
-    .describe("Mobile safe area boundaries in pixels."),
-});
+      ])
+      .and(
+        z.union([
+          z.object({
+            /** @description Fixed container width in pixels. */
+            width: z.number().describe("Fixed container width in pixels."),
+          }),
+          z.object({
+            /** @description Maximum container width in pixels. */
+            maxWidth: z
+              .union([z.number(), z.undefined()])
+              .optional()
+              .describe("Maximum container width in pixels."),
+          }),
+        ]),
+      )
+      .optional()
+      .describe(
+        "Container dimensions. Represents the dimensions of the iframe or other\ncontainer holding the app. Specify either width or maxWidth, and either height or maxHeight.",
+      ),
+    /**
+     * @description Window viewport dimensions. Represents the host window's viewport size,
+     * which provides additional information apps can use to make responsive layout decisions.
+     */
+    viewport: z
+      .object({
+        /** @description Window viewport width in pixels. */
+        width: z
+          .union([z.number(), z.undefined()])
+          .optional()
+          .describe("Window viewport width in pixels."),
+        /** @description Window viewport height in pixels. */
+        height: z
+          .union([z.number(), z.undefined()])
+          .optional()
+          .describe("Window viewport height in pixels."),
+      })
+      .optional()
+      .describe(
+        "Window viewport dimensions. Represents the host window's viewport size,\nwhich provides additional information apps can use to make responsive layout decisions.",
+      ),
+    /** @description User's language and region preference in BCP 47 format. */
+    locale: z
+      .string()
+      .optional()
+      .describe("User's language and region preference in BCP 47 format."),
+    /** @description User's timezone in IANA format. */
+    timeZone: z.string().optional().describe("User's timezone in IANA format."),
+    /** @description Host application identifier. */
+    userAgent: z.string().optional().describe("Host application identifier."),
+    /** @description Platform type for responsive design decisions. */
+    platform: z
+      .union([z.literal("web"), z.literal("desktop"), z.literal("mobile")])
+      .optional()
+      .describe("Platform type for responsive design decisions."),
+    /** @description Device input capabilities. */
+    deviceCapabilities: z
+      .object({
+        /** @description Whether the device supports touch input. */
+        touch: z
+          .boolean()
+          .optional()
+          .describe("Whether the device supports touch input."),
+        /** @description Whether the device supports hover interactions. */
+        hover: z
+          .boolean()
+          .optional()
+          .describe("Whether the device supports hover interactions."),
+      })
+      .optional()
+      .describe("Device input capabilities."),
+    /** @description Mobile safe area boundaries in pixels. */
+    safeAreaInsets: z
+      .object({
+        /** @description Top safe area inset in pixels. */
+        top: z.number().describe("Top safe area inset in pixels."),
+        /** @description Right safe area inset in pixels. */
+        right: z.number().describe("Right safe area inset in pixels."),
+        /** @description Bottom safe area inset in pixels. */
+        bottom: z.number().describe("Bottom safe area inset in pixels."),
+        /** @description Left safe area inset in pixels. */
+        left: z.number().describe("Left safe area inset in pixels."),
+      })
+      .optional()
+      .describe("Mobile safe area boundaries in pixels."),
+  })
+  .passthrough();
 
 /**
  * @description Notification that host context has changed (Host -> Guest UI).
