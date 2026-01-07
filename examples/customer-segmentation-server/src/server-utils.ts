@@ -1,18 +1,30 @@
 /**
  * Shared utilities for running MCP servers with various transports.
+ *
+ * Supports:
+ * - Stdio transport (--stdio flag)
+ * - Streamable HTTP transport (/mcp) - stateless mode
+ * - Legacy SSE transport (/sse, /messages) - for older clients (e.g., Kotlin SDK)
  */
 
 import { createMcpExpressApp } from "@modelcontextprotocol/sdk/server/express.js";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import cors from "cors";
 import type { Request, Response } from "express";
 
+/** Active SSE sessions: sessionId -> { server, transport } */
+const sseSessions = new Map<
+  string,
+  { server: McpServer; transport: SSEServerTransport }
+>();
+
 /**
  * Starts an MCP server using the appropriate transport based on command-line arguments.
  *
- * If `--stdio` is passed, uses stdio transport. Otherwise, uses Streamable HTTP transport.
+ * If `--stdio` is passed, uses stdio transport. Otherwise, uses HTTP transports.
  *
  * @param createServer - Factory function that creates a new McpServer instance.
  */
@@ -23,7 +35,7 @@ export async function startServer(
     if (process.argv.includes("--stdio")) {
       await startStdioServer(createServer);
     } else {
-      await startStreamableHttpServer(createServer);
+      await startHttpServer(createServer);
     }
   } catch (e) {
     console.error(e);
@@ -43,17 +55,15 @@ export async function startStdioServer(
 }
 
 /**
- * Starts an MCP server with Streamable HTTP transport in stateless mode.
+ * Starts an MCP server with HTTP transports (Streamable HTTP + legacy SSE).
  *
- * Each request creates a fresh server and transport instance, which are
- * closed when the response ends (no session tracking).
+ * Provides:
+ * - /mcp (GET/POST/DELETE): Streamable HTTP transport (stateless mode)
+ * - /sse (GET) + /messages (POST): Legacy SSE transport for older clients
  *
- * The server listens on the port specified by the PORT environment variable,
- * defaulting to 3001 if not set.
- *
- * @param createServer - Factory function that creates a new McpServer instance per request.
+ * @param createServer - Factory function that creates a new McpServer instance.
  */
-export async function startStreamableHttpServer(
+export async function startHttpServer(
   createServer: () => McpServer,
 ): Promise<void> {
   const port = parseInt(process.env.PORT ?? "3001", 10);
@@ -62,6 +72,7 @@ export async function startStreamableHttpServer(
   const expressApp = createMcpExpressApp({ host: "0.0.0.0" });
   expressApp.use(cors());
 
+  // Streamable HTTP transport (stateless mode)
   expressApp.all("/mcp", async (req: Request, res: Response) => {
     // Create fresh server and transport for each request (stateless mode)
     const server = createServer();
@@ -90,16 +101,70 @@ export async function startStreamableHttpServer(
     }
   });
 
+  // Legacy SSE transport - stream endpoint
+  expressApp.get("/sse", async (_req: Request, res: Response) => {
+    try {
+      const server = createServer();
+      const transport = new SSEServerTransport("/messages", res);
+      sseSessions.set(transport.sessionId, { server, transport });
+
+      res.on("close", () => {
+        sseSessions.delete(transport.sessionId);
+        transport.close().catch(() => {});
+        server.close().catch(() => {});
+      });
+
+      await server.connect(transport);
+    } catch (error) {
+      console.error("SSE error:", error);
+      if (!res.headersSent) res.status(500).end();
+    }
+  });
+
+  // Legacy SSE transport - message endpoint
+  expressApp.post("/messages", async (req: Request, res: Response) => {
+    try {
+      const sessionId = req.query.sessionId as string;
+      const session = sseSessions.get(sessionId);
+
+      if (!session) {
+        return res.status(404).json({
+          jsonrpc: "2.0",
+          error: { code: -32001, message: "Session not found" },
+          id: null,
+        });
+      }
+
+      await session.transport.handlePostMessage(req, res, req.body);
+    } catch (error) {
+      console.error("Message error:", error);
+      if (!res.headersSent) {
+        res.status(500).json({
+          jsonrpc: "2.0",
+          error: { code: -32603, message: "Internal server error" },
+          id: null,
+        });
+      }
+    }
+  });
+
   const { promise, resolve, reject } = Promise.withResolvers<void>();
 
   const httpServer = expressApp.listen(port, (err?: Error) => {
     if (err) return reject(err);
     console.log(`Server listening on http://localhost:${port}/mcp`);
+    console.log(`  SSE endpoint: http://localhost:${port}/sse`);
     resolve();
   });
 
   const shutdown = () => {
     console.log("\nShutting down...");
+    // Clean up all SSE sessions
+    sseSessions.forEach(({ server, transport }) => {
+      transport.close().catch(() => {});
+      server.close().catch(() => {});
+    });
+    sseSessions.clear();
     httpServer.close(() => process.exit(0));
   };
 
@@ -108,3 +173,8 @@ export async function startStreamableHttpServer(
 
   return promise;
 }
+
+/**
+ * @deprecated Use startHttpServer instead
+ */
+export const startStreamableHttpServer = startHttpServer;
