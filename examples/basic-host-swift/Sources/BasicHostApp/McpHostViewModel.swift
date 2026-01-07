@@ -35,17 +35,16 @@ class McpHostViewModel: ObservableObject {
         }
     }
 
-    /// Known MCP servers (matches examples/servers.json)
-    static let knownServers = [
-        ("basic-server-react", "http://localhost:3101/mcp"),
-        ("basic-server-vanillajs", "http://localhost:3102/mcp"),
-        ("budget-allocator-server", "http://localhost:3103/mcp"),
-        ("cohort-heatmap-server", "http://localhost:3104/mcp"),
-        ("customer-segmentation-server", "http://localhost:3105/mcp"),
-        ("scenario-modeler-server", "http://localhost:3106/mcp"),
-        ("system-monitor-server", "http://localhost:3107/mcp"),
-        ("threejs-server", "http://localhost:3108/mcp"),
-    ]
+    /// Discovered MCP servers (name, url pairs)
+    @Published var discoveredServers: [(name: String, url: String)] = []
+
+    /// Whether server discovery is in progress
+    @Published var isDiscovering = false
+
+    /// Discovery configuration
+    static let basePort = 3101
+    static let discoveryTimeout: TimeInterval = 1.0  // 1 second
+    static let baseHost = "localhost"
 
     /// Selected server index (-1 for custom URL)
     @Published var selectedServerIndex: Int = 0
@@ -55,8 +54,8 @@ class McpHostViewModel: ObservableObject {
 
     /// Computed server URL based on selection
     var serverUrlString: String {
-        if selectedServerIndex >= 0 && selectedServerIndex < Self.knownServers.count {
-            return Self.knownServers[selectedServerIndex].1
+        if selectedServerIndex >= 0 && selectedServerIndex < discoveredServers.count {
+            return discoveredServers[selectedServerIndex].url
         }
         return customServerUrl
     }
@@ -75,6 +74,67 @@ class McpHostViewModel: ObservableObject {
     )
 
     init() {}
+
+    // MARK: - Server Discovery
+
+    /// Discover available MCP servers starting from basePort
+    func discoverServers() async {
+        isDiscovering = true
+        discoveredServers = []
+        var port = Self.basePort
+
+        while true {
+            let url = "http://\(Self.baseHost):\(port)/mcp"
+
+            if let serverName = await tryConnect(url: url, timeout: Self.discoveryTimeout) {
+                discoveredServers.append((name: serverName, url: url))
+                port += 1
+            } else {
+                // Connection failed or timed out - stop discovery
+                break
+            }
+        }
+
+        isDiscovering = false
+
+        // Auto-connect to first discovered server
+        if !discoveredServers.isEmpty {
+            selectedServerIndex = 0
+            await connect()
+        }
+    }
+
+    /// Try to connect to a server URL with timeout, returns server name on success
+    private func tryConnect(url: String, timeout: TimeInterval) async -> String? {
+        guard let serverUrl = URL(string: url) else { return nil }
+
+        do {
+            let result = try await withThrowingTaskGroup(of: String.self) { group in
+                group.addTask {
+                    let client = Client(name: self.hostInfo.name, version: self.hostInfo.version)
+                    let transport = HTTPClientTransport(endpoint: serverUrl)
+                    let initResult = try await client.connect(transport: transport)
+                    let name = initResult.serverInfo.name
+                    await client.disconnect()
+                    return name
+                }
+
+                group.addTask {
+                    try await Task.sleep(nanoseconds: UInt64(timeout * 1_000_000_000))
+                    throw CancellationError()
+                }
+
+                guard let result = try await group.next() else {
+                    throw CancellationError()
+                }
+                group.cancelAll()
+                return result
+            }
+            return result
+        } catch {
+            return nil
+        }
+    }
 
     // MARK: - Connection Management
 
@@ -146,8 +206,8 @@ class McpHostViewModel: ObservableObject {
                 throw ToolCallError.invalidJson
             }
 
-            let serverName = selectedServerIndex >= 0 && selectedServerIndex < Self.knownServers.count
-                ? Self.knownServers[selectedServerIndex].0
+            let serverName = selectedServerIndex >= 0 && selectedServerIndex < discoveredServers.count
+                ? discoveredServers[selectedServerIndex].name
                 : "Custom Server"
 
             let toolCallInfo = ToolCallInfo(

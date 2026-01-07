@@ -9,8 +9,8 @@ struct ContentView: View {
     var body: some View {
         content
             .task {
-                // Auto-connect to first server on launch
-                await viewModel.connect()
+                // Discover available servers on launch
+                await viewModel.discoverServers()
             }
     }
 
@@ -128,16 +128,22 @@ struct ContentView: View {
 
     private var serverPicker: some View {
         Menu {
-            ForEach(Array(McpHostViewModel.knownServers.enumerated()), id: \.offset) { index, server in
-                Button(action: {
-                    Task {
-                        await viewModel.switchServer(to: index)
-                    }
-                }) {
-                    HStack {
-                        Text(server.0)
-                        if viewModel.selectedServerIndex == index && viewModel.connectionState == .connected {
-                            Image(systemName: "checkmark")
+            if viewModel.isDiscovering {
+                Text("Discovering servers...")
+            } else if viewModel.discoveredServers.isEmpty {
+                Text("No servers found")
+            } else {
+                ForEach(Array(viewModel.discoveredServers.enumerated()), id: \.offset) { index, server in
+                    Button(action: {
+                        Task {
+                            await viewModel.switchServer(to: index)
+                        }
+                    }) {
+                        HStack {
+                            Text(server.name)
+                            if viewModel.selectedServerIndex == index && viewModel.connectionState == .connected {
+                                Image(systemName: "checkmark")
+                            }
                         }
                     }
                 }
@@ -147,12 +153,20 @@ struct ContentView: View {
                 viewModel.selectedServerIndex = -1
                 viewModel.connectionState = .disconnected
             }
+            Divider()
+            Button("Re-scan") {
+                Task { await viewModel.discoverServers() }
+            }
         } label: {
             HStack {
                 Text(serverLabel)
                     .lineLimit(1)
                 Image(systemName: "chevron.down")
                     .font(.caption2)
+                if viewModel.isDiscovering {
+                    ProgressView()
+                        .scaleEffect(0.6)
+                }
             }
             .font(.caption)
         }
@@ -178,8 +192,11 @@ struct ContentView: View {
     }
 
     private var serverLabel: String {
-        if viewModel.selectedServerIndex >= 0 && viewModel.selectedServerIndex < McpHostViewModel.knownServers.count {
-            return McpHostViewModel.knownServers[viewModel.selectedServerIndex].0
+        if viewModel.isDiscovering {
+            return "Scanning..."
+        }
+        if viewModel.selectedServerIndex >= 0 && viewModel.selectedServerIndex < viewModel.discoveredServers.count {
+            return viewModel.discoveredServers[viewModel.selectedServerIndex].name
         }
         return "Custom"
     }
