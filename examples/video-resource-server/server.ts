@@ -31,10 +31,6 @@ const RESOURCE_URI = "ui://video-player/mcp-app.html";
  * Video library with different sizes for testing.
  */
 const VIDEO_LIBRARY: Record<string, { url: string; description: string }> = {
-  "nasa-earth": {
-    url: "https://archive.org/download/NASA-Ultra-High-Definition/4K-Crew-Earth-Observations_DEC-2015.mp4",
-    description: "NASA Earth observations from ISS (6.4MB, public domain)",
-  },
   "bunny-1mb": {
     url: "https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/360/Big_Buck_Bunny_360_10s_1MB.mp4",
     description: "1MB",
@@ -128,7 +124,7 @@ ${Object.entries(VIDEO_LIBRARY)
       inputSchema: {
         videoId: z
           .enum(Object.keys(VIDEO_LIBRARY) as [string, ...string[]])
-          .default("nasa-earth")
+          .default("bunny-1mb")
           .describe(
             `Video ID to play. Available: ${Object.keys(VIDEO_LIBRARY).join(", ")}`,
           ),
