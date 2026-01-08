@@ -58,7 +58,8 @@ final class AppBridgeTests: XCTestCase {
     }
 
     func testToolInputParams() throws {
-        let params = McpUiToolInputNotificationParams(
+        // Test using the typealias (consistent with TypeScript API)
+        let params = McpUiToolInputParams(
             arguments: [
                 "query": AnyCodable("weather in NYC"),
                 "count": AnyCodable(5)
@@ -69,10 +70,53 @@ final class AppBridgeTests: XCTestCase {
         let decoder = JSONDecoder()
 
         let encoded = try encoder.encode(params)
-        let decoded = try decoder.decode(McpUiToolInputNotificationParams.self, from: encoded)
+        let decoded = try decoder.decode(McpUiToolInputParams.self, from: encoded)
 
         XCTAssertEqual(decoded.arguments?["query"]?.value as? String, "weather in NYC")
         XCTAssertEqual(decoded.arguments?["count"]?.value as? Int, 5)
+    }
+
+    func testSizeChangedParams() throws {
+        let params = McpUiSizeChangedParams(width: 800, height: 600)
+
+        let encoder = JSONEncoder()
+        let decoder = JSONDecoder()
+
+        let encoded = try encoder.encode(params)
+        let decoded = try decoder.decode(McpUiSizeChangedParams.self, from: encoded)
+
+        XCTAssertEqual(decoded.width, 800)
+        XCTAssertEqual(decoded.height, 600)
+    }
+
+    func testToolCancelledParams() throws {
+        let params = McpUiToolCancelledParams(reason: "User cancelled")
+
+        let encoder = JSONEncoder()
+        let decoder = JSONDecoder()
+
+        let encoded = try encoder.encode(params)
+        let decoded = try decoder.decode(McpUiToolCancelledParams.self, from: encoded)
+
+        XCTAssertEqual(decoded.reason, "User cancelled")
+    }
+
+    func testLoggingMessageParams() throws {
+        let params = LoggingMessageParams(
+            level: .warning,
+            data: AnyCodable("Test warning message"),
+            logger: "TestLogger"
+        )
+
+        let encoder = JSONEncoder()
+        let decoder = JSONDecoder()
+
+        let encoded = try encoder.encode(params)
+        let decoded = try decoder.decode(LoggingMessageParams.self, from: encoded)
+
+        XCTAssertEqual(decoded.level, .warning)
+        XCTAssertEqual(decoded.data.value as? String, "Test warning message")
+        XCTAssertEqual(decoded.logger, "TestLogger")
     }
 
     func testJSONRPCRequest() throws {
@@ -357,6 +401,134 @@ final class AppBridgeTests: XCTestCase {
 
         await bridge.close()
         await guestTransport.close()
+    }
+
+    // MARK: - Discriminated Union Enum Tests
+
+    func testGuestNotificationDecoding() throws {
+        let encoder = JSONEncoder()
+        let decoder = JSONDecoder()
+
+        // Test initialized notification
+        let initializedJson = """
+        {"method": "ui/notifications/initialized", "params": {}}
+        """.data(using: .utf8)!
+        let initialized = try decoder.decode(McpUiGuestNotification.self, from: initializedJson)
+        if case .initialized = initialized {
+            // Success
+        } else {
+            XCTFail("Expected .initialized")
+        }
+
+        // Test size-changed notification
+        let sizeChangedJson = """
+        {"method": "ui/notifications/size-changed", "params": {"width": 800, "height": 600}}
+        """.data(using: .utf8)!
+        let sizeChanged = try decoder.decode(McpUiGuestNotification.self, from: sizeChangedJson)
+        if case .sizeChanged(let params) = sizeChanged {
+            XCTAssertEqual(params.width, 800)
+            XCTAssertEqual(params.height, 600)
+        } else {
+            XCTFail("Expected .sizeChanged")
+        }
+
+        // Test logging message notification
+        let loggingJson = """
+        {"method": "notifications/message", "params": {"level": "info", "data": "Test log"}}
+        """.data(using: .utf8)!
+        let logging = try decoder.decode(McpUiGuestNotification.self, from: loggingJson)
+        if case .loggingMessage(let params) = logging {
+            XCTAssertEqual(params.level, .info)
+        } else {
+            XCTFail("Expected .loggingMessage")
+        }
+    }
+
+    func testGuestRequestDecoding() throws {
+        let decoder = JSONDecoder()
+
+        // Test initialize request
+        let initJson = """
+        {
+            "method": "ui/initialize",
+            "params": {
+                "appInfo": {"name": "TestApp", "version": "1.0"},
+                "appCapabilities": {},
+                "protocolVersion": "2025-11-21"
+            }
+        }
+        """.data(using: .utf8)!
+        let initRequest = try decoder.decode(McpUiGuestRequest.self, from: initJson)
+        if case .initialize(let params) = initRequest {
+            XCTAssertEqual(params.appInfo.name, "TestApp")
+            XCTAssertEqual(params.protocolVersion, "2025-11-21")
+        } else {
+            XCTFail("Expected .initialize")
+        }
+
+        // Test tool call request
+        let toolCallJson = """
+        {
+            "method": "tools/call",
+            "params": {
+                "name": "weather",
+                "arguments": {"city": "NYC"}
+            }
+        }
+        """.data(using: .utf8)!
+        let toolCall = try decoder.decode(McpUiGuestRequest.self, from: toolCallJson)
+        if case .toolCall(let name, let args) = toolCall {
+            XCTAssertEqual(name, "weather")
+            XCTAssertEqual(args?["city"]?.value as? String, "NYC")
+        } else {
+            XCTFail("Expected .toolCall")
+        }
+
+        // Test resource read request
+        let resourceJson = """
+        {"method": "resources/read", "params": {"uri": "ui://widget"}}
+        """.data(using: .utf8)!
+        let resource = try decoder.decode(McpUiGuestRequest.self, from: resourceJson)
+        if case .resourceRead(let uri) = resource {
+            XCTAssertEqual(uri, "ui://widget")
+        } else {
+            XCTFail("Expected .resourceRead")
+        }
+    }
+
+    func testHostNotificationEncoding() throws {
+        let encoder = JSONEncoder()
+        let decoder = JSONDecoder()
+
+        // Test tool input notification
+        let toolInput = McpUiHostNotification.toolInput(McpUiToolInputNotificationParams(
+            arguments: ["query": AnyCodable("test")]
+        ))
+        let encoded = try encoder.encode(toolInput)
+        let dict = try JSONSerialization.jsonObject(with: encoded) as? [String: Any]
+        XCTAssertEqual(dict?["method"] as? String, "ui/notifications/tool-input")
+
+        // Test tool cancelled notification
+        let cancelled = McpUiHostNotification.toolCancelled(McpUiToolCancelledParams(reason: "timeout"))
+        let cancelledEncoded = try encoder.encode(cancelled)
+        let cancelledDict = try JSONSerialization.jsonObject(with: cancelledEncoded) as? [String: Any]
+        XCTAssertEqual(cancelledDict?["method"] as? String, "ui/notifications/tool-cancelled")
+    }
+
+    func testGuestNotificationRoundTrip() throws {
+        let encoder = JSONEncoder()
+        let decoder = JSONDecoder()
+
+        let original = McpUiGuestNotification.sizeChanged(McpUiSizeChangedNotificationParams(width: 1024, height: 768))
+        let encoded = try encoder.encode(original)
+        let decoded = try decoder.decode(McpUiGuestNotification.self, from: encoded)
+
+        if case .sizeChanged(let params) = decoded {
+            XCTAssertEqual(params.width, 1024)
+            XCTAssertEqual(params.height, 768)
+        } else {
+            XCTFail("Round trip failed")
+        }
     }
 }
 
