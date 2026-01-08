@@ -43,6 +43,7 @@ export const McpUiStyleVariableKeySchema = z
     z.literal("--color-text-secondary"),
     z.literal("--color-text-tertiary"),
     z.literal("--color-text-inverse"),
+    z.literal("--color-text-ghost"),
     z.literal("--color-text-info"),
     z.literal("--color-text-danger"),
     z.literal("--color-text-success"),
@@ -538,7 +539,9 @@ export const McpUiHostContextSchema = z
     toolInfo: z
       .object({
         /** @description JSON-RPC id of the tools/call request. */
-        id: RequestIdSchema.describe("JSON-RPC id of the tools/call request."),
+        id: RequestIdSchema.optional().describe(
+          "JSON-RPC id of the tools/call request.",
+        ),
         /** @description Tool definition including name, inputSchema, etc. */
         tool: ToolSchema.describe(
           "Tool definition including name, inputSchema, etc.",
@@ -563,26 +566,43 @@ export const McpUiHostContextSchema = z
       .array(z.string())
       .optional()
       .describe("Display modes the host supports."),
-    /** @description Current and maximum dimensions available to the UI. */
-    viewport: z
-      .object({
-        /** @description Current viewport width in pixels. */
-        width: z.number().describe("Current viewport width in pixels."),
-        /** @description Current viewport height in pixels. */
-        height: z.number().describe("Current viewport height in pixels."),
-        /** @description Maximum available height in pixels (if constrained). */
-        maxHeight: z
-          .number()
-          .optional()
-          .describe("Maximum available height in pixels (if constrained)."),
-        /** @description Maximum available width in pixels (if constrained). */
-        maxWidth: z
-          .number()
-          .optional()
-          .describe("Maximum available width in pixels (if constrained)."),
-      })
+    /**
+     * @description Container dimensions. Represents the dimensions of the iframe or other
+     * container holding the app. Specify either width or maxWidth, and either height or maxHeight.
+     */
+    containerDimensions: z
+      .union([
+        z.object({
+          /** @description Fixed container height in pixels. */
+          height: z.number().describe("Fixed container height in pixels."),
+        }),
+        z.object({
+          /** @description Maximum container height in pixels. */
+          maxHeight: z
+            .union([z.number(), z.undefined()])
+            .optional()
+            .describe("Maximum container height in pixels."),
+        }),
+      ])
+      .and(
+        z.union([
+          z.object({
+            /** @description Fixed container width in pixels. */
+            width: z.number().describe("Fixed container width in pixels."),
+          }),
+          z.object({
+            /** @description Maximum container width in pixels. */
+            maxWidth: z
+              .union([z.number(), z.undefined()])
+              .optional()
+              .describe("Maximum container width in pixels."),
+          }),
+        ]),
+      )
       .optional()
-      .describe("Current and maximum dimensions available to the UI."),
+      .describe(
+        "Container dimensions. Represents the dimensions of the iframe or other\ncontainer holding the app. Specify either width or maxWidth, and either height or maxHeight.",
+      ),
     /** @description User's language and region preference in BCP 47 format. */
     locale: z
       .string()

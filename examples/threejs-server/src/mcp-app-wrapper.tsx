@@ -25,7 +25,7 @@ export interface WidgetProps<TToolInput = Record<string, unknown>> {
   toolInputsPartial: TToolInput | null;
   /** Tool execution result from the server */
   toolResult: CallToolResult | null;
-  /** Host context (theme, viewport, locale, etc.) */
+  /** Host context (theme, dimensions, locale, etc.) */
   hostContext: McpUiHostContext | null;
   /** Call a tool on the MCP server */
   callServerTool: App["callServerTool"];
@@ -65,7 +65,7 @@ function McpAppWrapper() {
       app.ontoolresult = (params) => {
         setToolResult(params as CallToolResult);
       };
-      // Host context changes (theme, viewport, etc.)
+      // Host context changes (theme, dimensions, etc.)
       app.onhostcontextchanged = (params) => {
         setHostContext(params);
       };
