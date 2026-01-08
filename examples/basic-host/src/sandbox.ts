@@ -62,6 +62,11 @@ const PROXY_READY_NOTIFICATION: McpUiSandboxProxyReadyNotification["method"] =
 // Special case: The "ui/notifications/sandbox-proxy-ready" message is
 // intercepted here (not relayed) because the Sandbox uses it to configure and
 // load the inner iframe with the Guest UI HTML content.
+// Style tag to inject for transparent backgrounds.
+// This allows the parent page background to show through all iframe layers.
+// Also inherits color-scheme to ensure consistent transparency in dark mode.
+const TRANSPARENT_STYLE_TAG = `<style>html, body { background-color: transparent; color-scheme: inherit; }</style>`;
+
 // Build CSP meta tag from domains
 function buildCspMetaTag(csp?: { connectDomains?: string[]; resourceDomains?: string[] }): string {
   const resourceDomains = csp?.resourceDomains?.join(" ") ?? "";
@@ -119,6 +124,14 @@ window.addEventListener("message", async (event) => {
           }
         } else {
           console.log("[Sandbox] No CSP provided, using default");
+        }
+        // Inject transparent background style to allow parent background to show through
+        if (modifiedHtml.includes("</head>")) {
+          modifiedHtml = modifiedHtml.replace("</head>", `${TRANSPARENT_STYLE_TAG}\n</head>`);
+        } else if (modifiedHtml.includes("</body>")) {
+          modifiedHtml = modifiedHtml.replace("</body>", `${TRANSPARENT_STYLE_TAG}\n</body>`);
+        } else {
+          modifiedHtml += TRANSPARENT_STYLE_TAG;
         }
         inner.srcdoc = modifiedHtml;
       }
