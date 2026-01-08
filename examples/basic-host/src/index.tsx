@@ -2,6 +2,7 @@ import type { Tool } from "@modelcontextprotocol/sdk/types.js";
 import { Component, type ErrorInfo, type ReactNode, StrictMode, Suspense, use, useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { callTool, connectToServer, hasAppHtml, initializeApp, loadSandboxProxy, log, newAppBridge, type ServerInfo, type ToolCallInfo } from "./implementation";
+import { getTheme, toggleTheme, onThemeChange, type Theme } from "./theme";
 import styles from "./index.module.css";
 
 
@@ -33,6 +34,29 @@ interface HostProps {
 type ToolCallEntry = ToolCallInfo & { id: number };
 let nextToolCallId = 0;
 
+
+/**
+ * Theme toggle button with light/dark icons.
+ */
+function ThemeToggle() {
+  const [theme, setTheme] = useState<Theme>(getTheme);
+
+  useEffect(() => {
+    return onThemeChange(setTheme);
+  }, []);
+
+  return (
+    <button
+      className={styles.themeToggle}
+      onClick={() => toggleTheme()}
+      title={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
+    >
+      {theme === "dark" ? "☀️" : "🌙"}
+    </button>
+  );
+}
+
+
 function Host({ serversPromise }: HostProps) {
   const [toolCalls, setToolCalls] = useState<ToolCallEntry[]>([]);
   const [destroyingIds, setDestroyingIds] = useState<Set<number>>(new Set());
@@ -52,6 +76,7 @@ function Host({ serversPromise }: HostProps) {
 
   return (
     <>
+      <ThemeToggle />
       {toolCalls.map((info) => (
         <ToolCallInfoPanel
           key={info.id}

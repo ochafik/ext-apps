@@ -2,6 +2,8 @@ import { RESOURCE_MIME_TYPE, getToolUiResourceUri, type McpUiSandboxProxyReadyNo
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import type { CallToolResult, Tool } from "@modelcontextprotocol/sdk/types.js";
+import { getTheme, onThemeChange } from "./theme";
+import { HOST_STYLE_VARIABLES } from "./host-styles";
 
 
 const SANDBOX_PROXY_URL = new URL("http://localhost:8081/sandbox.html");
@@ -213,6 +215,21 @@ export function newAppBridge(serverInfo: ServerInfo, iframe: HTMLIFrameElement):
     openLinks: {},
     serverTools: serverCapabilities?.tools,
     serverResources: serverCapabilities?.resources,
+  }, {
+    // Pass initial host context with theme and style variables
+    hostContext: {
+      theme: getTheme(),
+      platform: "web",
+      styles: {
+        variables: HOST_STYLE_VARIABLES,
+      },
+    },
+  });
+
+  // Listen for theme changes (from toggle or system) and notify the app
+  onThemeChange((newTheme) => {
+    log.info("Theme changed:", newTheme);
+    appBridge.sendHostContextChange({ theme: newTheme });
   });
 
   // Register all handlers before calling connect(). The Guest UI can start
