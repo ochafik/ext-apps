@@ -60,6 +60,7 @@ interface GetTimeAppInnerProps {
   toolResult: CallToolResult | null;
 }
 function GetTimeAppInner({ app, toolResult }: GetTimeAppInnerProps) {
+  const [showControls, setShowControls] = useState(true);
   const [serverTime, setServerTime] = useState("Loading...");
   const [messageText, setMessageText] = useState("This is message text.");
   const [logText, setLogText] = useState("This is log text.");
@@ -110,29 +111,39 @@ function GetTimeAppInner({ app, toolResult }: GetTimeAppInnerProps) {
 
   return (
     <main className={styles.main}>
-      <p className={styles.notice}>Watch activity in the DevTools console!</p>
-
       <div className={styles.action}>
-        <p>
-          <strong>Server Time:</strong> <code id="server-time">{serverTime}</code>
-        </p>
-        <button onClick={handleGetTime}>Get Server Time</button>
+        <button onClick={() => setShowControls(!showControls)}>
+          {showControls ? "Hide Controls" : "Show Controls"}
+        </button>
       </div>
 
-      <div className={styles.action}>
-        <textarea value={messageText} onChange={(e) => setMessageText(e.target.value)} />
-        <button onClick={handleSendMessage}>Send Message</button>
-      </div>
+      {showControls && (
+        <>
+          <p className={styles.notice}>Watch activity in the DevTools console!</p>
 
-      <div className={styles.action}>
-        <input type="text" value={logText} onChange={(e) => setLogText(e.target.value)} />
-        <button onClick={handleSendLog}>Send Log</button>
-      </div>
+          <div className={styles.action}>
+            <p>
+              <strong>Server Time:</strong> <code id="server-time">{serverTime}</code>
+            </p>
+            <button onClick={handleGetTime}>Get Server Time</button>
+          </div>
 
-      <div className={styles.action}>
-        <input type="url" value={linkUrl} onChange={(e) => setLinkUrl(e.target.value)} />
-        <button onClick={handleOpenLink}>Open Link</button>
-      </div>
+          <div className={styles.action}>
+            <textarea value={messageText} onChange={(e) => setMessageText(e.target.value)} />
+            <button onClick={handleSendMessage}>Send Message</button>
+          </div>
+
+          <div className={styles.action}>
+            <input type="text" value={logText} onChange={(e) => setLogText(e.target.value)} />
+            <button onClick={handleSendLog}>Send Log</button>
+          </div>
+
+          <div className={styles.action}>
+            <input type="url" value={linkUrl} onChange={(e) => setLinkUrl(e.target.value)} />
+            <button onClick={handleOpenLink}>Open Link</button>
+          </div>
+        </>
+      )}
     </main>
   );
 }

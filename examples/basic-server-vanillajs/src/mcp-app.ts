@@ -21,6 +21,8 @@ function extractTime(result: CallToolResult): string {
 
 
 // Get element references
+const toggleControlsBtn = document.getElementById("toggle-controls-btn")!;
+const controlsEl = document.getElementById("controls")!;
 const serverTimeEl = document.getElementById("server-time")!;
 const getTimeBtn = document.getElementById("get-time-btn")!;
 const messageText = document.getElementById("message-text") as HTMLTextAreaElement;
@@ -29,6 +31,14 @@ const logText = document.getElementById("log-text") as HTMLInputElement;
 const sendLogBtn = document.getElementById("send-log-btn")!;
 const linkUrl = document.getElementById("link-url") as HTMLInputElement;
 const openLinkBtn = document.getElementById("open-link-btn")!;
+
+// Toggle controls visibility
+let controlsVisible = true;
+toggleControlsBtn.addEventListener("click", () => {
+  controlsVisible = !controlsVisible;
+  controlsEl.style.display = controlsVisible ? "block" : "none";
+  toggleControlsBtn.textContent = controlsVisible ? "Hide Controls" : "Show Controls";
+});
 
 
 // Create app instance
