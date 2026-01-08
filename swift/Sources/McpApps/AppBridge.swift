@@ -242,58 +242,55 @@ public actor AppBridge {
     /// Send complete tool arguments to the Guest UI.
     /// Must be called after initialization completes.
     public func sendToolInput(_ params: McpUiToolInputParams) async throws {
-        let data = try JSONEncoder().encode(params)
-        let dict = try JSONSerialization.jsonObject(with: data) as? [String: Any] ?? [:]
-        try await sendNotification(method: "ui/notifications/tool-input",
-            params: dict.mapValues { AnyCodable($0) })
+        try await sendHostNotification(.toolInput(params))
     }
 
     /// Send streaming partial tool arguments to the Guest UI.
     /// May be called zero or more times before sendToolInput.
     public func sendToolInputPartial(_ params: McpUiToolInputPartialParams) async throws {
-        let data = try JSONEncoder().encode(params)
-        let dict = try JSONSerialization.jsonObject(with: data) as? [String: Any] ?? [:]
-        try await sendNotification(method: "ui/notifications/tool-input-partial",
-            params: dict.mapValues { AnyCodable($0) })
+        try await sendHostNotification(.toolInputPartial(params))
     }
 
     /// Send tool execution result to the Guest UI.
     /// Must be called after sendToolInput.
     public func sendToolResult(_ params: McpUiToolResultParams) async throws {
-        let data = try JSONEncoder().encode(params)
-        let dict = try JSONSerialization.jsonObject(with: data) as? [String: Any] ?? [:]
-        try await sendNotification(method: "ui/notifications/tool-result",
-            params: dict.mapValues { AnyCodable($0) })
+        try await sendHostNotification(.toolResult(params))
     }
 
     /// Notify the Guest UI that tool execution was cancelled.
     public func sendToolCancelled(_ params: McpUiToolCancelledParams = McpUiToolCancelledParams()) async throws {
-        let data = try JSONEncoder().encode(params)
-        let dict = try JSONSerialization.jsonObject(with: data) as? [String: Any] ?? [:]
-        try await sendNotification(method: "ui/notifications/tool-cancelled",
-            params: dict.mapValues { AnyCodable($0) })
+        try await sendHostNotification(.toolCancelled(params))
     }
 
     public func setHostContext(_ newContext: McpUiHostContext) async throws {
         guard newContext != hostContext else { return }
         hostContext = newContext
-        let data = try JSONEncoder().encode(newContext)
-        let dict = try JSONSerialization.jsonObject(with: data) as? [String: Any] ?? [:]
-        try await sendNotification(method: "ui/notifications/host-context-changed",
-            params: dict.mapValues { AnyCodable($0) })
+        try await sendHostNotification(.hostContextChanged(newContext))
     }
 
     /// Request the App to perform cleanup before the resource is torn down.
     ///
     /// - Parameter timeout: Maximum time to wait for the App to respond (default 0.5s)
     public func sendResourceTeardown(timeout: TimeInterval = 0.5) async throws -> McpUiResourceTeardownResult {
-        _ = try await sendRequest(method: "ui/resource-teardown", params: [:], timeout: timeout)
+        let request = McpUiHostRequest.resourceTeardown
+        let data = try JSONEncoder().encode(request)
+        let dict = try JSONSerialization.jsonObject(with: data) as? [String: Any] ?? [:]
+        _ = try await sendRequest(
+            method: dict["method"] as? String ?? "ui/resource-teardown",
+            params: (dict["params"] as? [String: Any])?.mapValues { AnyCodable($0) } ?? [:],
+            timeout: timeout
+        )
         return McpUiResourceTeardownResult()
     }
 
     // MARK: - Helpers
 
-    private func sendNotification(method: String, params: [String: AnyCodable]?) async throws {
+    /// Send a host notification using the typed enum
+    private func sendHostNotification(_ notification: McpUiHostNotification) async throws {
+        let data = try JSONEncoder().encode(notification)
+        let dict = try JSONSerialization.jsonObject(with: data) as? [String: Any] ?? [:]
+        let method = dict["method"] as? String ?? ""
+        let params = (dict["params"] as? [String: Any])?.mapValues { AnyCodable($0) }
         try await transport?.send(.notification(JSONRPCNotification(method: method, params: params)))
     }
 
