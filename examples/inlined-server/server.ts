@@ -5,6 +5,7 @@ import {
 } from "@modelcontextprotocol/ext-apps/server";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { z } from "zod";
 import { startServer } from "./server-utils";
 
 export function createServer(): McpServer {
@@ -72,14 +73,16 @@ export function createServer(): McpServer {
     "show-inlined-example",
     {
       title: "Show Inlined Example",
-      description: "Displays an inline HTML UI loaded from CDN.",
-      inputSchema: {},
+      inputSchema: { message: z.string().default("Hello from client!") },
+      outputSchema: { message: z.string() },
       _meta: {
         ui: { resourceUri },
       },
     },
-    async () => ({
-      content: [{ type: "text", text: `Loaded at ${new Date().toISOString()}` }],
+    ({ message }: { message: string }) => ({
+      content: [],
+      structuredContent: { message: `Server received message: ${message}` },
+      _meta: { info: "example metadata" },
     }),
   );
 
