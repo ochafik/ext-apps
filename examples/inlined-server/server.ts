@@ -9,7 +9,7 @@ import { z } from "zod";
 import { startServer } from "./server-utils";
 
 export function createServer(): McpServer {
-  const server = new McpServer({ name: "Example Server", version: "1.0.0" });
+  const server = new McpServer({ name: "Inlined App Server", version: "1.0.0" });
   const uiHtml = `
     <html>
       <head>
@@ -67,7 +67,7 @@ export function createServer(): McpServer {
 
   registerAppTool(
     server,
-    "show-example",
+    "show-inlined-example",
     {
       inputSchema: { message: z.string() },
       outputSchema: { message: z.string() },
