@@ -1,3 +1,4 @@
+import { getToolUiResourceUri } from "@modelcontextprotocol/ext-apps/app-bridge";
 import type { Tool } from "@modelcontextprotocol/sdk/types.js";
 import { Component, type ErrorInfo, type ReactNode, StrictMode, Suspense, use, useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
@@ -80,7 +81,12 @@ function CallToolPanel({ serversPromise, addToolCall }: CallToolPanelProps) {
   const [selectedTool, setSelectedTool] = useState("");
   const [inputJson, setInputJson] = useState("{}");
 
-  const toolNames = selectedServer ? Array.from(selectedServer.tools.keys()) : [];
+  // Only show tools that have a UI resource
+  const toolNames = selectedServer
+    ? Array.from(selectedServer.tools.values())
+        .filter((tool) => !!getToolUiResourceUri(tool))
+        .map((tool) => tool.name)
+    : [];
 
   const isValidJson = useMemo(() => {
     try {
@@ -93,10 +99,12 @@ function CallToolPanel({ serversPromise, addToolCall }: CallToolPanelProps) {
 
   const handleServerSelect = (server: ServerInfo) => {
     setSelectedServer(server);
-    const [firstTool] = server.tools.keys();
-    setSelectedTool(firstTool ?? "");
+    // Only consider tools with UI resources
+    const uiTools = Array.from(server.tools.values()).filter((tool) => !!getToolUiResourceUri(tool));
+    const firstTool = uiTools[0]?.name ?? "";
+    setSelectedTool(firstTool);
     // Set input JSON to tool defaults (if any)
-    setInputJson(getToolDefaults(server.tools.get(firstTool ?? "")));
+    setInputJson(getToolDefaults(server.tools.get(firstTool)));
   };
 
   const handleToolSelect = (toolName: string) => {
