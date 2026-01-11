@@ -77,7 +77,7 @@ export class PostMessageTransport implements Transport {
   ) {
     this.messageListener = (event) => {
       if (eventSource && event.source !== this.eventSource) {
-        console.error("Ignoring message from unknown source", event);
+        console.debug("Ignoring message from unknown source", event);
         return;
       }
       const parsed = JSONRPCMessageSchema.safeParse(event.data);
