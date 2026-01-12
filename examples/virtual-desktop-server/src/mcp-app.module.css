@@ -1,11 +1,3 @@
-/* Make html/body transparent for rounded corners */
-:global(html),
-:global(body) {
-  background: transparent !important;
-  margin: 0;
-  padding: 0;
-}
-
 /* Default (dark theme) */
 :root {
   --vnc-bg: #1a1a1a;
