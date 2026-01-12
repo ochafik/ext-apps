@@ -66,6 +66,24 @@ const PROXY_READY_NOTIFICATION: McpUiSandboxProxyReadyNotification["method"] =
 // Security: CSP is enforced via HTTP headers on sandbox.html (set by serve.ts
 // based on ?csp= query param). This is tamper-proof unlike meta tags.
 
+// Build iframe allow attribute from permissions
+function buildAllowAttribute(permissions?: {
+  camera?: boolean;
+  microphone?: boolean;
+  geolocation?: boolean;
+  clipboardWrite?: boolean;
+}): string {
+  if (!permissions) return "";
+
+  const allowList: string[] = [];
+  if (permissions.camera) allowList.push("camera");
+  if (permissions.microphone) allowList.push("microphone");
+  if (permissions.geolocation) allowList.push("geolocation");
+  if (permissions.clipboardWrite) allowList.push("clipboard-write");
+
+  return allowList.join("; ");
+}
+
 window.addEventListener("message", async (event) => {
   if (event.source === window.parent) {
     // Validate that messages from parent come from the expected host origin.
@@ -81,9 +99,15 @@ window.addEventListener("message", async (event) => {
     }
 
     if (event.data && event.data.method === RESOURCE_READY_NOTIFICATION) {
-      const { html, sandbox } = event.data.params;
+      const { html, sandbox, permissions } = event.data.params;
       if (typeof sandbox === "string") {
         inner.setAttribute("sandbox", sandbox);
+      }
+      // Set Permission Policy allow attribute if permissions are requested
+      const allowAttribute = buildAllowAttribute(permissions);
+      if (allowAttribute) {
+        console.log("[Sandbox] Setting allow attribute:", allowAttribute);
+        inner.setAttribute("allow", allowAttribute);
       }
       if (typeof html === "string") {
         // Use document.write instead of srcdoc for WebGL compatibility.

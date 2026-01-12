@@ -1,4 +1,4 @@
-import { RESOURCE_MIME_TYPE, getToolUiResourceUri, type McpUiSandboxProxyReadyNotification, AppBridge, PostMessageTransport, type McpUiResourceCsp } from "@modelcontextprotocol/ext-apps/app-bridge";
+import { RESOURCE_MIME_TYPE, getToolUiResourceUri, type McpUiSandboxProxyReadyNotification, AppBridge, PostMessageTransport, type McpUiResourceCsp, type McpUiResourcePermissions } from "@modelcontextprotocol/ext-apps/app-bridge";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import type { CallToolResult, Tool } from "@modelcontextprotocol/sdk/types.js";
@@ -43,6 +43,7 @@ export async function connectToServer(serverUrl: URL): Promise<ServerInfo> {
 interface UiResourceData {
   html: string;
   csp?: McpUiResourceCsp;
+  permissions?: McpUiResourcePermissions;
 }
 
 export interface ToolCallInfo {
@@ -105,15 +106,16 @@ async function getUiResource(serverInfo: ServerInfo, uri: string): Promise<UiRes
 
   const html = "blob" in content ? atob(content.blob) : content.text;
 
-  // Extract CSP metadata from resource content._meta.ui.csp (or content.meta for Python SDK)
+  // Extract CSP and permissions metadata from resource content._meta.ui (or content.meta for Python SDK)
   log.info("Resource content keys:", Object.keys(content));
   log.info("Resource content._meta:", (content as any)._meta);
 
   // Try both _meta (spec) and meta (Python SDK quirk)
   const contentMeta = (content as any)._meta || (content as any).meta;
   const csp = contentMeta?.ui?.csp;
+  const permissions = contentMeta?.ui?.permissions;
 
-  return { html, csp };
+  return { html, csp, permissions };
 }
 
 
@@ -168,10 +170,10 @@ export async function initializeApp(
     new PostMessageTransport(iframe.contentWindow!, iframe.contentWindow!),
   );
 
-  // Load inner iframe HTML with CSP metadata
-  const { html, csp } = await appResourcePromise;
-  log.info("Sending UI resource HTML to MCP App", csp ? `(CSP: ${JSON.stringify(csp)})` : "");
-  await appBridge.sendSandboxResourceReady({ html, csp });
+  // Load inner iframe HTML with CSP and permissions metadata
+  const { html, csp, permissions } = await appResourcePromise;
+  log.info("Sending UI resource HTML to MCP App", csp ? `(CSP: ${JSON.stringify(csp)})` : "", permissions ? `(Permissions: ${JSON.stringify(permissions)})` : "");
+  await appBridge.sendSandboxResourceReady({ html, csp, permissions });
 
   // Wait for inner iframe to be ready
   log.info("Waiting for MCP App to initialize...");
