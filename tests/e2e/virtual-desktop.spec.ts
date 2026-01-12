@@ -102,10 +102,16 @@ test.describe("Virtual Desktop Server - Basic", () => {
     await page.goto("/");
 
     // Wait for servers to connect
-    await expect(page.locator("select").first()).toBeEnabled({ timeout: 30000 });
+    await expect(page.locator("select").first()).toBeEnabled({
+      timeout: 30000,
+    });
 
     // Get all options from the server dropdown
-    const options = await page.locator("select").first().locator("option").allTextContents();
+    const options = await page
+      .locator("select")
+      .first()
+      .locator("option")
+      .allTextContents();
 
     // Virtual Desktop Server should be in the list
     expect(options).toContain("Virtual Desktop Server");
@@ -115,25 +121,33 @@ test.describe("Virtual Desktop Server - Basic", () => {
     await page.goto("/");
 
     // Wait for servers to connect
-    await expect(page.locator("select").first()).toBeEnabled({ timeout: 30000 });
+    await expect(page.locator("select").first()).toBeEnabled({
+      timeout: 30000,
+    });
 
     // Select the Virtual Desktop Server
-    await page.locator("select").first().selectOption({ label: "Virtual Desktop Server" });
+    await page
+      .locator("select")
+      .first()
+      .selectOption({ label: "Virtual Desktop Server" });
 
     // Wait for tools to load
     await page.waitForTimeout(500);
 
     // Select list-desktops tool
-    await page.locator("select").nth(1).selectOption({ label: "list-desktops" });
+    await page
+      .locator("select")
+      .nth(1)
+      .selectOption({ label: "list-desktops" });
 
     // Call the tool
     await page.click('button:has-text("Call Tool")');
 
     // Should show a result (either no desktops or Docker not available)
     await expect(
-      page.locator('text="No virtual desktops found"').or(
-        page.locator('text="Docker is not available"'),
-      ),
+      page
+        .locator('text="No virtual desktops found"')
+        .or(page.locator('text="Docker is not available"')),
     ).toBeVisible({ timeout: 10000 });
   });
 });
@@ -142,7 +156,10 @@ test.describe("Virtual Desktop Server - Basic", () => {
 test.describe("Virtual Desktop Server - Docker", () => {
   // Skip unless explicitly enabled via environment variable
   const enableDockerTests = process.env.ENABLE_DOCKER_TESTS === "1";
-  test.skip(!enableDockerTests || !dockerAvailable, "Docker tests disabled or Docker unavailable");
+  test.skip(
+    !enableDockerTests || !dockerAvailable,
+    "Docker tests disabled or Docker unavailable",
+  );
 
   // Run tests serially to share the container
   test.describe.configure({ mode: "serial" });
@@ -170,10 +187,15 @@ test.describe("Virtual Desktop Server - Docker", () => {
     await page.goto("/");
 
     // Wait for servers to connect
-    await expect(page.locator("select").first()).toBeEnabled({ timeout: 30000 });
+    await expect(page.locator("select").first()).toBeEnabled({
+      timeout: 30000,
+    });
 
     // Select the Virtual Desktop Server
-    await page.locator("select").first().selectOption({ label: "Virtual Desktop Server" });
+    await page
+      .locator("select")
+      .first()
+      .selectOption({ label: "Virtual Desktop Server" });
 
     // The tool dropdown should now show view-desktop
     await page.waitForTimeout(500);
@@ -192,7 +214,9 @@ test.describe("Virtual Desktop Server - Docker", () => {
 
     // Verify the VNC viewer is displayed
     const appFrame = getAppFrame(page);
-    await expect(appFrame.locator('[class*="container"]')).toBeVisible({ timeout: 30000 });
+    await expect(appFrame.locator('[class*="container"]')).toBeVisible({
+      timeout: 30000,
+    });
   });
 
   test("screenshot matches golden", async ({ page }) => {
@@ -201,10 +225,15 @@ test.describe("Virtual Desktop Server - Docker", () => {
     await page.goto("/");
 
     // Wait for servers to connect
-    await expect(page.locator("select").first()).toBeEnabled({ timeout: 30000 });
+    await expect(page.locator("select").first()).toBeEnabled({
+      timeout: 30000,
+    });
 
     // Select the Virtual Desktop Server
-    await page.locator("select").first().selectOption({ label: "Virtual Desktop Server" });
+    await page
+      .locator("select")
+      .first()
+      .selectOption({ label: "Virtual Desktop Server" });
 
     // Select view-desktop tool
     await page.waitForTimeout(500);
@@ -225,7 +254,9 @@ test.describe("Virtual Desktop Server - Docker", () => {
     const appFrame = getAppFrame(page);
 
     // Wait for the VNC canvas to appear (indicates connection)
-    await expect(appFrame.locator('[class*="vncCanvas"]')).toBeVisible({ timeout: 30000 });
+    await expect(appFrame.locator('[class*="vncCanvas"]')).toBeVisible({
+      timeout: 30000,
+    });
 
     // Extra wait for VNC to fully render
     await page.waitForTimeout(3000);
@@ -243,15 +274,22 @@ test.describe("Virtual Desktop Server - Docker", () => {
     await page.goto("/");
 
     // Wait for servers to connect
-    await expect(page.locator("select").first()).toBeEnabled({ timeout: 30000 });
+    await expect(page.locator("select").first()).toBeEnabled({
+      timeout: 30000,
+    });
 
     // Select the Virtual Desktop Server and view-desktop tool
-    await page.locator("select").first().selectOption({ label: "Virtual Desktop Server" });
+    await page
+      .locator("select")
+      .first()
+      .selectOption({ label: "Virtual Desktop Server" });
     await page.waitForTimeout(500);
     await page.locator("select").nth(1).selectOption({ label: "view-desktop" });
 
     // Fill in the desktop name and call tool
-    await page.locator("textarea").fill(JSON.stringify({ name: TEST_CONTAINER_NAME }));
+    await page
+      .locator("textarea")
+      .fill(JSON.stringify({ name: TEST_CONTAINER_NAME }));
     await page.click('button:has-text("Call Tool")');
 
     // Wait for app to load
@@ -259,20 +297,26 @@ test.describe("Virtual Desktop Server - Docker", () => {
     const appFrame = getAppFrame(page);
 
     // Wait for VNC to connect
-    await expect(appFrame.locator('[class*="vncCanvas"]')).toBeVisible({ timeout: 30000 });
+    await expect(appFrame.locator('[class*="vncCanvas"]')).toBeVisible({
+      timeout: 30000,
+    });
 
     // Click disconnect button
     const disconnectButton = appFrame.locator('button[title="Disconnect"]');
     await disconnectButton.click();
 
     // Verify disconnected state shows
-    await expect(appFrame.locator('[class*="disconnected"]')).toBeVisible({ timeout: 10000 });
+    await expect(appFrame.locator('[class*="disconnected"]')).toBeVisible({
+      timeout: 10000,
+    });
 
     // Click reconnect button
     const reconnectButton = appFrame.locator('button:has-text("Reconnect")');
     await reconnectButton.click();
 
     // Verify VNC reconnects
-    await expect(appFrame.locator('[class*="vncCanvas"]')).toBeVisible({ timeout: 30000 });
+    await expect(appFrame.locator('[class*="vncCanvas"]')).toBeVisible({
+      timeout: 30000,
+    });
   });
 });
