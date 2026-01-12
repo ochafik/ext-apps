@@ -506,27 +506,53 @@ function ViewDesktopInner({
   useEffect(() => {
     if (!app || connectionState !== "connected") return;
 
+    // Check if host supports image updates
+    const hostCapabilities = app.getHostCapabilities();
+    if (!hostCapabilities?.updateModelContext?.image) {
+      log.info("Host does not support image updates to model context");
+      return;
+    }
+
     const container = containerRef.current;
     if (!container) return;
 
-    let lastScreenshotData: string | null = null;
+    let lastScreenshotHash: string | null = null;
+    let consecutiveFailures = 0;
+    const MAX_FAILURES = 3;
     const SCREENSHOT_INTERVAL = 2000; // 2 seconds
 
+    // Simple hash function for deduplication (faster than comparing full base64)
+    const hashString = (str: string): string => {
+      let hash = 0;
+      for (let i = 0; i < str.length; i++) {
+        const char = str.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash = hash & hash; // Convert to 32-bit integer
+      }
+      return hash.toString(16);
+    };
+
     const captureAndSendScreenshot = async () => {
+      // Stop after too many consecutive failures
+      if (consecutiveFailures >= MAX_FAILURES) {
+        return;
+      }
+
       const canvas = container.querySelector("canvas");
       if (!canvas) return;
 
       try {
-        // Capture the canvas as a data URL
-        const dataUrl = canvas.toDataURL("image/png");
-        const base64Data = dataUrl.replace(/^data:image\/png;base64,/, "");
+        // Use JPEG for smaller size (5-10x smaller than PNG)
+        const dataUrl = canvas.toDataURL("image/jpeg", 0.7);
+        const base64Data = dataUrl.replace(/^data:image\/jpeg;base64,/, "");
 
-        // Skip if screenshot is identical to the last one
-        if (base64Data === lastScreenshotData) {
+        // Use hash for efficient deduplication
+        const currentHash = hashString(base64Data);
+        if (currentHash === lastScreenshotHash) {
           return;
         }
 
-        lastScreenshotData = base64Data;
+        lastScreenshotHash = currentHash;
 
         // Send screenshot to model context
         await app.updateModelContext({
@@ -534,20 +560,26 @@ function ViewDesktopInner({
             {
               type: "image",
               data: base64Data,
-              mimeType: "image/png",
+              mimeType: "image/jpeg",
             },
           ],
         });
 
+        consecutiveFailures = 0; // Reset on success
         log.info("Sent screenshot to model context");
       } catch (e) {
-        // Silently ignore errors (e.g., if host doesn't support updateModelContext)
-        log.warn("Failed to send screenshot to model context:", e);
+        consecutiveFailures++;
+        if (consecutiveFailures >= MAX_FAILURES) {
+          log.warn("Disabling screenshot updates after repeated failures:", e);
+        }
       }
     };
 
     // Start periodic capture
-    const intervalId = setInterval(captureAndSendScreenshot, SCREENSHOT_INTERVAL);
+    const intervalId = setInterval(
+      captureAndSendScreenshot,
+      SCREENSHOT_INTERVAL,
+    );
 
     // Capture initial screenshot after a short delay
     const initialTimeout = setTimeout(captureAndSendScreenshot, 500);
