@@ -424,7 +424,7 @@ function ViewDesktopInner({
 
     let resizeTimeout: ReturnType<typeof setTimeout> | null = null;
     let lastSize = { width: 0, height: 0 };
-    const RESIZE_DEBOUNCE = 500; // ms
+    const RESIZE_DEBOUNCE = 200; // ms - fast response to minimize distortion
 
     const handleResize = (entries: ResizeObserverEntry[]) => {
       const entry = entries[0];
@@ -432,9 +432,9 @@ function ViewDesktopInner({
 
       const { width, height } = entry.contentRect;
 
-      // Round to multiples of 8 (common VNC/X11 requirement)
-      const newWidth = Math.max(640, Math.floor(width / 8) * 8);
-      const newHeight = Math.max(480, Math.floor(height / 8) * 8);
+      // Use exact dimensions - cvt/xrandr will round as needed
+      const newWidth = Math.max(640, Math.floor(width));
+      const newHeight = Math.max(480, Math.floor(height));
 
       // Skip if size hasn't changed significantly
       if (newWidth === lastSize.width && newHeight === lastSize.height) {

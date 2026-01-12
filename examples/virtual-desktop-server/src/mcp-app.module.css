@@ -177,12 +177,14 @@
 .vncCanvas {
   width: 100%;
   height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--vnc-bg);
 }
 
-.vncCanvas canvas {
-  width: 100% !important;
-  height: 100% !important;
-}
+/* Let noVNC handle canvas sizing with scaleViewport to avoid distortion.
+   The desktop will be resized to match the container, minimizing letterboxing. */
 
 /* Desktop Card (CSP blocked fallback) */
 .desktopCard {
