@@ -422,66 +422,46 @@ function ViewDesktopInner({
     const container = containerRef.current;
     if (!container) return;
 
-    // Available xrandr modes in the container (common resolutions)
-    const AVAILABLE_MODES = [
-      { width: 1920, height: 1200 },
-      { width: 1920, height: 1080 },
-      { width: 1680, height: 1050 },
-      { width: 1600, height: 1200 },
-      { width: 1400, height: 1050 },
-      { width: 1360, height: 768 },
-      { width: 1280, height: 1024 },
-      { width: 1280, height: 960 },
-      { width: 1280, height: 800 },
-      { width: 1280, height: 720 },
-      { width: 1024, height: 768 },
-      { width: 800, height: 600 },
-    ];
-
-    // Find best matching mode for given dimensions
-    const findBestMode = (width: number, height: number) => {
-      // Find modes that fit within the container
-      const fittingModes = AVAILABLE_MODES.filter(
-        (m) => m.width <= width && m.height <= height,
-      );
-      if (fittingModes.length === 0)
-        return AVAILABLE_MODES[AVAILABLE_MODES.length - 1];
-      // Pick the largest fitting mode
-      return fittingModes[0];
-    };
-
     let resizeTimeout: ReturnType<typeof setTimeout> | null = null;
-    let lastMode = { width: 0, height: 0 };
-    const RESIZE_DEBOUNCE = 1000; // ms
+    let lastSize = { width: 0, height: 0 };
+    const RESIZE_DEBOUNCE = 500; // ms
 
     const handleResize = (entries: ResizeObserverEntry[]) => {
       const entry = entries[0];
       if (!entry) return;
 
       const { width, height } = entry.contentRect;
-      if (width < 640 || height < 480) return;
 
-      const bestMode = findBestMode(Math.floor(width), Math.floor(height));
+      // Round to multiples of 8 (common VNC/X11 requirement)
+      const newWidth = Math.max(640, Math.floor(width / 8) * 8);
+      const newHeight = Math.max(480, Math.floor(height / 8) * 8);
 
-      // Skip if same mode
-      if (
-        bestMode.width === lastMode.width &&
-        bestMode.height === lastMode.height
-      ) {
+      // Skip if size hasn't changed significantly
+      if (newWidth === lastSize.width && newHeight === lastSize.height) {
         return;
       }
 
       if (resizeTimeout) clearTimeout(resizeTimeout);
 
       resizeTimeout = setTimeout(async () => {
-        lastMode = bestMode;
-        log.info(`Resizing desktop to ${bestMode.width}x${bestMode.height}`);
+        lastSize = { width: newWidth, height: newHeight };
+        log.info(`Resizing desktop to ${newWidth}x${newHeight}`);
         try {
+          // Create a custom xrandr mode and apply it
+          // cvt generates modeline, then we add and apply it
+          const modeName = `${newWidth}x${newHeight}_60`;
           await app.callServerTool({
             name: "exec",
             arguments: {
               name: extractedInfo.name,
-              command: `xrandr -s ${bestMode.width}x${bestMode.height}`,
+              command: `
+                modeline=$(cvt ${newWidth} ${newHeight} 60 2>/dev/null | grep Modeline | cut -d' ' -f3-)
+                if [ -n "$modeline" ]; then
+                  xrandr --newmode ${modeName} $modeline 2>/dev/null || true
+                  xrandr --addmode VNC-0 ${modeName} 2>/dev/null || true
+                  xrandr --output VNC-0 --mode ${modeName}
+                fi
+              `,
               background: false,
               timeout: 5000,
             },
