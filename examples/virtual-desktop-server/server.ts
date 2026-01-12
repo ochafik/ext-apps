@@ -529,6 +529,545 @@ export function createVirtualDesktopServer(): McpServer {
     },
   );
 
+  // ==================== TakeScreenshot ====================
+  const TakeScreenshotInputSchema = z.object({
+    name: z.string().describe("Name of the desktop"),
+  });
+
+  server.tool(
+    "take-screenshot",
+    "Take a screenshot of the virtual desktop and return it as an image",
+    TakeScreenshotInputSchema.shape,
+    async (args): Promise<CallToolResult> => {
+      const dockerAvailable = await checkDocker();
+      if (!dockerAvailable) {
+        return {
+          isError: true,
+          content: [
+            {
+              type: "text",
+              text: "Docker is not available. Please ensure Docker is installed and running.",
+            },
+          ],
+        };
+      }
+
+      const desktop = await getDesktop(args.name);
+
+      if (!desktop) {
+        return {
+          isError: true,
+          content: [
+            {
+              type: "text",
+              text: `Desktop "${args.name}" not found. Use list-desktops to see available desktops.`,
+            },
+          ],
+        };
+      }
+
+      if (desktop.status !== "running") {
+        return {
+          isError: true,
+          content: [
+            {
+              type: "text",
+              text: `Desktop "${args.name}" is not running (status: ${desktop.status}).`,
+            },
+          ],
+        };
+      }
+
+      try {
+        const { exec } = await import("node:child_process");
+        const { promisify } = await import("node:util");
+        const execAsync = promisify(exec);
+
+        // Take screenshot using scrot or import (ImageMagick) and output to stdout as PNG
+        // Try scrot first, fall back to import (ImageMagick)
+        const { stdout } = await execAsync(
+          `docker exec ${args.name} bash -c "DISPLAY=:1 scrot -o /tmp/screenshot.png && base64 /tmp/screenshot.png" 2>/dev/null || ` +
+            `docker exec ${args.name} bash -c "DISPLAY=:1 import -window root /tmp/screenshot.png && base64 /tmp/screenshot.png"`,
+          { maxBuffer: 50 * 1024 * 1024 }, // 50MB buffer for large screenshots
+        );
+
+        return {
+          content: [
+            {
+              type: "image",
+              data: stdout.trim(),
+              mimeType: "image/png",
+            },
+          ],
+        };
+      } catch (error) {
+        return {
+          isError: true,
+          content: [
+            {
+              type: "text",
+              text: `Failed to take screenshot: ${error instanceof Error ? error.message : String(error)}`,
+            },
+          ],
+        };
+      }
+    },
+  );
+
+  // ==================== Click ====================
+  const ClickInputSchema = z.object({
+    name: z.string().describe("Name of the desktop"),
+    x: z.number().describe("X coordinate to click"),
+    y: z.number().describe("Y coordinate to click"),
+    button: z
+      .enum(["left", "middle", "right"])
+      .optional()
+      .describe("Mouse button to click (default: left)"),
+    clicks: z
+      .number()
+      .min(1)
+      .max(3)
+      .optional()
+      .describe("Number of clicks (1=single, 2=double, 3=triple; default: 1)"),
+  });
+
+  server.tool(
+    "click",
+    "Click at a specific position on the virtual desktop",
+    ClickInputSchema.shape,
+    async (args): Promise<CallToolResult> => {
+      const dockerAvailable = await checkDocker();
+      if (!dockerAvailable) {
+        return {
+          isError: true,
+          content: [
+            {
+              type: "text",
+              text: "Docker is not available. Please ensure Docker is installed and running.",
+            },
+          ],
+        };
+      }
+
+      const desktop = await getDesktop(args.name);
+
+      if (!desktop) {
+        return {
+          isError: true,
+          content: [
+            {
+              type: "text",
+              text: `Desktop "${args.name}" not found. Use list-desktops to see available desktops.`,
+            },
+          ],
+        };
+      }
+
+      if (desktop.status !== "running") {
+        return {
+          isError: true,
+          content: [
+            {
+              type: "text",
+              text: `Desktop "${args.name}" is not running (status: ${desktop.status}).`,
+            },
+          ],
+        };
+      }
+
+      try {
+        const { exec } = await import("node:child_process");
+        const { promisify } = await import("node:util");
+        const execAsync = promisify(exec);
+
+        const button = args.button || "left";
+        const clicks = args.clicks || 1;
+        const buttonNum = button === "left" ? 1 : button === "middle" ? 2 : 3;
+
+        // Use xdotool to click at the specified position
+        const clickCmd =
+          clicks === 1
+            ? `xdotool mousemove ${args.x} ${args.y} click ${buttonNum}`
+            : `xdotool mousemove ${args.x} ${args.y} click --repeat ${clicks} --delay 100 ${buttonNum}`;
+
+        await execAsync(
+          `docker exec ${args.name} bash -c "DISPLAY=:1 ${clickCmd}"`,
+        );
+
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Clicked ${button} button${clicks > 1 ? ` ${clicks} times` : ""} at (${args.x}, ${args.y}) on ${args.name}.`,
+            },
+          ],
+        };
+      } catch (error) {
+        return {
+          isError: true,
+          content: [
+            {
+              type: "text",
+              text: `Failed to click: ${error instanceof Error ? error.message : String(error)}`,
+            },
+          ],
+        };
+      }
+    },
+  );
+
+  // ==================== TypeText ====================
+  const TypeTextInputSchema = z.object({
+    name: z.string().describe("Name of the desktop"),
+    text: z.string().describe("Text to type"),
+    delay: z
+      .number()
+      .min(0)
+      .max(1000)
+      .optional()
+      .describe("Delay between keystrokes in milliseconds (default: 12)"),
+  });
+
+  server.tool(
+    "type-text",
+    "Type text on the virtual desktop (simulates keyboard input)",
+    TypeTextInputSchema.shape,
+    async (args): Promise<CallToolResult> => {
+      const dockerAvailable = await checkDocker();
+      if (!dockerAvailable) {
+        return {
+          isError: true,
+          content: [
+            {
+              type: "text",
+              text: "Docker is not available. Please ensure Docker is installed and running.",
+            },
+          ],
+        };
+      }
+
+      const desktop = await getDesktop(args.name);
+
+      if (!desktop) {
+        return {
+          isError: true,
+          content: [
+            {
+              type: "text",
+              text: `Desktop "${args.name}" not found. Use list-desktops to see available desktops.`,
+            },
+          ],
+        };
+      }
+
+      if (desktop.status !== "running") {
+        return {
+          isError: true,
+          content: [
+            {
+              type: "text",
+              text: `Desktop "${args.name}" is not running (status: ${desktop.status}).`,
+            },
+          ],
+        };
+      }
+
+      try {
+        const { exec } = await import("node:child_process");
+        const { promisify } = await import("node:util");
+        const execAsync = promisify(exec);
+
+        const delay = args.delay ?? 12;
+
+        // Escape the text for shell and use xdotool to type it
+        // Using --clearmodifiers to ensure modifier keys don't interfere
+        const escapedText = args.text.replace(/'/g, "'\\''");
+        await execAsync(
+          `docker exec ${args.name} bash -c "DISPLAY=:1 xdotool type --clearmodifiers --delay ${delay} '${escapedText}'"`,
+        );
+
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Typed "${args.text.length > 50 ? args.text.substring(0, 50) + "..." : args.text}" on ${args.name}.`,
+            },
+          ],
+        };
+      } catch (error) {
+        return {
+          isError: true,
+          content: [
+            {
+              type: "text",
+              text: `Failed to type text: ${error instanceof Error ? error.message : String(error)}`,
+            },
+          ],
+        };
+      }
+    },
+  );
+
+  // ==================== PressKey ====================
+  const PressKeyInputSchema = z.object({
+    name: z.string().describe("Name of the desktop"),
+    key: z
+      .string()
+      .describe(
+        "Key to press (e.g., 'Return', 'Tab', 'Escape', 'ctrl+c', 'alt+F4', 'super')",
+      ),
+  });
+
+  server.tool(
+    "press-key",
+    "Press a key or key combination on the virtual desktop",
+    PressKeyInputSchema.shape,
+    async (args): Promise<CallToolResult> => {
+      const dockerAvailable = await checkDocker();
+      if (!dockerAvailable) {
+        return {
+          isError: true,
+          content: [
+            {
+              type: "text",
+              text: "Docker is not available. Please ensure Docker is installed and running.",
+            },
+          ],
+        };
+      }
+
+      const desktop = await getDesktop(args.name);
+
+      if (!desktop) {
+        return {
+          isError: true,
+          content: [
+            {
+              type: "text",
+              text: `Desktop "${args.name}" not found. Use list-desktops to see available desktops.`,
+            },
+          ],
+        };
+      }
+
+      if (desktop.status !== "running") {
+        return {
+          isError: true,
+          content: [
+            {
+              type: "text",
+              text: `Desktop "${args.name}" is not running (status: ${desktop.status}).`,
+            },
+          ],
+        };
+      }
+
+      try {
+        const { exec } = await import("node:child_process");
+        const { promisify } = await import("node:util");
+        const execAsync = promisify(exec);
+
+        // Use xdotool to press the key
+        await execAsync(
+          `docker exec ${args.name} bash -c "DISPLAY=:1 xdotool key --clearmodifiers ${args.key}"`,
+        );
+
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Pressed key "${args.key}" on ${args.name}.`,
+            },
+          ],
+        };
+      } catch (error) {
+        return {
+          isError: true,
+          content: [
+            {
+              type: "text",
+              text: `Failed to press key: ${error instanceof Error ? error.message : String(error)}`,
+            },
+          ],
+        };
+      }
+    },
+  );
+
+  // ==================== MoveMouse ====================
+  const MoveMouseInputSchema = z.object({
+    name: z.string().describe("Name of the desktop"),
+    x: z.number().describe("X coordinate to move to"),
+    y: z.number().describe("Y coordinate to move to"),
+  });
+
+  server.tool(
+    "move-mouse",
+    "Move the mouse cursor to a specific position on the virtual desktop",
+    MoveMouseInputSchema.shape,
+    async (args): Promise<CallToolResult> => {
+      const dockerAvailable = await checkDocker();
+      if (!dockerAvailable) {
+        return {
+          isError: true,
+          content: [
+            {
+              type: "text",
+              text: "Docker is not available. Please ensure Docker is installed and running.",
+            },
+          ],
+        };
+      }
+
+      const desktop = await getDesktop(args.name);
+
+      if (!desktop) {
+        return {
+          isError: true,
+          content: [
+            {
+              type: "text",
+              text: `Desktop "${args.name}" not found. Use list-desktops to see available desktops.`,
+            },
+          ],
+        };
+      }
+
+      if (desktop.status !== "running") {
+        return {
+          isError: true,
+          content: [
+            {
+              type: "text",
+              text: `Desktop "${args.name}" is not running (status: ${desktop.status}).`,
+            },
+          ],
+        };
+      }
+
+      try {
+        const { exec } = await import("node:child_process");
+        const { promisify } = await import("node:util");
+        const execAsync = promisify(exec);
+
+        await execAsync(
+          `docker exec ${args.name} bash -c "DISPLAY=:1 xdotool mousemove ${args.x} ${args.y}"`,
+        );
+
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Moved mouse to (${args.x}, ${args.y}) on ${args.name}.`,
+            },
+          ],
+        };
+      } catch (error) {
+        return {
+          isError: true,
+          content: [
+            {
+              type: "text",
+              text: `Failed to move mouse: ${error instanceof Error ? error.message : String(error)}`,
+            },
+          ],
+        };
+      }
+    },
+  );
+
+  // ==================== Scroll ====================
+  const ScrollInputSchema = z.object({
+    name: z.string().describe("Name of the desktop"),
+    direction: z.enum(["up", "down", "left", "right"]).describe("Scroll direction"),
+    amount: z
+      .number()
+      .min(1)
+      .max(10)
+      .optional()
+      .describe("Number of scroll clicks (default: 3)"),
+  });
+
+  server.tool(
+    "scroll",
+    "Scroll on the virtual desktop",
+    ScrollInputSchema.shape,
+    async (args): Promise<CallToolResult> => {
+      const dockerAvailable = await checkDocker();
+      if (!dockerAvailable) {
+        return {
+          isError: true,
+          content: [
+            {
+              type: "text",
+              text: "Docker is not available. Please ensure Docker is installed and running.",
+            },
+          ],
+        };
+      }
+
+      const desktop = await getDesktop(args.name);
+
+      if (!desktop) {
+        return {
+          isError: true,
+          content: [
+            {
+              type: "text",
+              text: `Desktop "${args.name}" not found. Use list-desktops to see available desktops.`,
+            },
+          ],
+        };
+      }
+
+      if (desktop.status !== "running") {
+        return {
+          isError: true,
+          content: [
+            {
+              type: "text",
+              text: `Desktop "${args.name}" is not running (status: ${desktop.status}).`,
+            },
+          ],
+        };
+      }
+
+      try {
+        const { exec } = await import("node:child_process");
+        const { promisify } = await import("node:util");
+        const execAsync = promisify(exec);
+
+        const amount = args.amount || 3;
+        // xdotool uses button 4 for scroll up, 5 for scroll down, 6 for left, 7 for right
+        const buttonMap = { up: 4, down: 5, left: 6, right: 7 };
+        const button = buttonMap[args.direction];
+
+        await execAsync(
+          `docker exec ${args.name} bash -c "DISPLAY=:1 xdotool click --repeat ${amount} --delay 50 ${button}"`,
+        );
+
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Scrolled ${args.direction} ${amount} times on ${args.name}.`,
+            },
+          ],
+        };
+      } catch (error) {
+        return {
+          isError: true,
+          content: [
+            {
+              type: "text",
+              text: `Failed to scroll: ${error instanceof Error ? error.message : String(error)}`,
+            },
+          ],
+        };
+      }
+    },
+  );
+
   return server;
 }
 
