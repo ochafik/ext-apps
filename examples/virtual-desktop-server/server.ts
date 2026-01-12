@@ -20,7 +20,6 @@ import {
   registerAppTool,
   registerAppResource,
   RESOURCE_MIME_TYPE,
-  RESOURCE_URI_META_KEY,
 } from "@modelcontextprotocol/ext-apps/server";
 import { startServer } from "./server-utils.js";
 import {
@@ -254,7 +253,7 @@ export function createVirtualDesktopServer(): McpServer {
       title: "View Desktop",
       description: "View and interact with a virtual desktop",
       inputSchema: ViewDesktopInputSchema.shape,
-      _meta: { [RESOURCE_URI_META_KEY]: viewDesktopResourceUri },
+      _meta: { ui: { resourceUri: viewDesktopResourceUri } },
     },
     async (args: { name: string }): Promise<CallToolResult> => {
       const dockerAvailable = await checkDocker();
