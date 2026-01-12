@@ -10,7 +10,7 @@ import path from "node:path";
 const execAsync = promisify(exec);
 
 /** Prefix for all virtual desktop container names */
-export const CONTAINER_PREFIX = "vd-";
+export const CONTAINER_PREFIX = "mcp-apps-vd-";
 
 /** Base directory for virtual desktop data */
 export const VIRTUAL_DESKTOPS_DIR = path.join(homedir(), ".virtual-desktops");

@@ -30,6 +30,7 @@ import {
   shutdownDesktop,
   checkDocker,
   getPortConfig,
+  CONTAINER_PREFIX,
   DESKTOP_VARIANTS,
   DEFAULT_VARIANT,
   DEFAULT_RESOLUTION,
@@ -54,12 +55,14 @@ const MountSchema = z.object({
   readonly: z.boolean().optional().describe("Mount as read-only"),
 });
 
+const DEFAULT_DESKTOP_NAME = "my-desktop";
+
 const CreateDesktopInputSchema = z.object({
   name: z
     .string()
-    .default("my-desktop")
+    .default(DEFAULT_DESKTOP_NAME)
     .describe(
-      "Name for the desktop (will be sanitized and prefixed with 'vd-')",
+      `Name for the desktop (will be sanitized and prefixed with '${CONTAINER_PREFIX}')`,
     ),
   variant: z
     .enum(DESKTOP_VARIANTS)
@@ -80,7 +83,7 @@ const CreateDesktopInputSchema = z.object({
 const ViewDesktopInputSchema = z.object({
   name: z
     .string()
-    .default("vd-my-desktop")
+    .default(`mcp-apps-vd-${DEFAULT_DESKTOP_NAME}`)
     .describe("Name of the desktop to view"),
 });
 
@@ -269,12 +272,16 @@ export function createVirtualDesktopServer(): McpServer {
       const desktop = await getDesktop(args.name);
 
       if (!desktop) {
+        // Extract the base name from the full container name for the suggestion
+        const baseName = args.name.startsWith(CONTAINER_PREFIX)
+          ? args.name.slice(CONTAINER_PREFIX.length)
+          : args.name;
         return {
           isError: true,
           content: [
             {
               type: "text",
-              text: `Desktop "${args.name}" not found. Use list-desktops to see available desktops.`,
+              text: `Desktop "${args.name}" not found. Create it first with: create-desktop { "name": "${baseName}" }. Or use list-desktops to see available desktops.`,
             },
           ],
         };
