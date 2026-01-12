@@ -38,7 +38,13 @@ interface DesktopInfo {
   password?: string;
 }
 
-type ConnectionState = "loading" | "connecting" | "connected" | "disconnected" | "error" | "csp-blocked";
+type ConnectionState =
+  | "loading"
+  | "connecting"
+  | "connected"
+  | "disconnected"
+  | "error"
+  | "csp-blocked";
 
 const log = {
   info: console.log.bind(console, "[VNC]"),
@@ -89,14 +95,19 @@ async function loadNoVNC(): Promise<void> {
 
     const handleLoad = () => {
       clearTimeout(timeoutId);
-      RFBClass = (window as unknown as { __noVNC_RFB: typeof RFBClass }).__noVNC_RFB;
+      RFBClass = (window as unknown as { __noVNC_RFB: typeof RFBClass })
+        .__noVNC_RFB;
       window.removeEventListener("novnc-loaded", handleLoad);
       if (RFBClass && typeof RFBClass === "function") {
         log.info("noVNC loaded successfully");
         resolve();
       } else {
         rfbLoadFailed = true;
-        reject(new Error("VNC library failed to initialize - RFB is not a constructor"));
+        reject(
+          new Error(
+            "VNC library failed to initialize - RFB is not a constructor",
+          ),
+        );
       }
     };
 
@@ -159,7 +170,9 @@ function ViewDesktopStandalone({ desktopInfo }: { desktopInfo: DesktopInfo }) {
 // Hosted mode component - connects to MCP host
 function ViewDesktopHosted() {
   const [toolResult, setToolResult] = useState<CallToolResult | null>(null);
-  const [hostContext, setHostContext] = useState<McpUiHostContext | undefined>();
+  const [hostContext, setHostContext] = useState<
+    McpUiHostContext | undefined
+  >();
   const [desktopInfo, setDesktopInfo] = useState<DesktopInfo | null>(null);
 
   const { app, error } = useApp({
@@ -246,7 +259,8 @@ function ViewDesktopInner({
   hostContext,
   desktopInfo,
 }: ViewDesktopInnerProps) {
-  const [connectionState, setConnectionState] = useState<ConnectionState>("loading");
+  const [connectionState, setConnectionState] =
+    useState<ConnectionState>("loading");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const rfbRef = useRef<RFBInstance | null>(null);
@@ -268,7 +282,9 @@ function ViewDesktopInner({
       .catch((e) => {
         log.warn("noVNC load failed:", e.message);
         setConnectionState("csp-blocked");
-        setErrorMessage("Embedded viewer not available. Please open in browser.");
+        setErrorMessage(
+          "Embedded viewer not available. Please open in browser.",
+        );
       });
   }, []);
 
@@ -291,7 +307,12 @@ function ViewDesktopInner({
       // Password is provided by the server based on the container variant
       // wsProtocols: ['binary'] is required for websockify to accept the connection
       const password = extractedInfo.password ?? "";
-      log.info("Using password:", password ? "(set)" : "(empty)", "for variant:", extractedInfo.variant);
+      log.info(
+        "Using password:",
+        password ? "(set)" : "(empty)",
+        "for variant:",
+        extractedInfo.variant,
+      );
       const rfb = new RFBClass(containerRef.current, extractedInfo.wsUrl, {
         credentials: { password },
         wsProtocols: ["binary"],
@@ -312,22 +333,32 @@ function ViewDesktopInner({
         setErrorMessage(null);
       });
 
-      rfb.addEventListener("disconnect", (e: CustomEvent<{ clean: boolean; reason?: string }>) => {
-        log.info("Disconnected from VNC server, clean:", e.detail.clean, "reason:", e.detail.reason || "none");
+      rfb.addEventListener(
+        "disconnect",
+        (e: CustomEvent<{ clean: boolean; reason?: string }>) => {
+          log.info(
+            "Disconnected from VNC server, clean:",
+            e.detail.clean,
+            "reason:",
+            e.detail.reason || "none",
+          );
 
-        if (e.detail.clean) {
-          setConnectionState("disconnected");
-          setErrorMessage(`Desktop disconnected. ${e.detail.reason || ""}`);
-        } else {
-          setConnectionState("disconnected");
-          setErrorMessage("Connection lost. Click Reconnect to try again.");
-        }
-      });
+          if (e.detail.clean) {
+            setConnectionState("disconnected");
+            setErrorMessage(`Desktop disconnected. ${e.detail.reason || ""}`);
+          } else {
+            setConnectionState("disconnected");
+            setErrorMessage("Connection lost. Click Reconnect to try again.");
+          }
+        },
+      );
 
       rfb.addEventListener("securityfailure", (e: CustomEvent) => {
         log.error("Security failure:", e.detail);
         setConnectionState("error");
-        setErrorMessage(`Security failure: ${(e.detail as { reason?: string })?.reason || "Unknown"}`);
+        setErrorMessage(
+          `Security failure: ${(e.detail as { reason?: string })?.reason || "Unknown"}`,
+        );
       });
 
       rfb.addEventListener("credentialsrequired", () => {
@@ -336,7 +367,10 @@ function ViewDesktopInner({
       });
 
       // Additional debug events
-      rfb.addEventListener("serververification", logEvent("serververification"));
+      rfb.addEventListener(
+        "serververification",
+        logEvent("serververification"),
+      );
       rfb.addEventListener("clipboard", logEvent("clipboard"));
       rfb.addEventListener("bell", logEvent("bell"));
       rfb.addEventListener("desktopname", logEvent("desktopname"));
@@ -346,13 +380,21 @@ function ViewDesktopInner({
     } catch (e) {
       log.error("Failed to connect:", e);
       setConnectionState("error");
-      setErrorMessage(`Failed to connect: ${e instanceof Error ? e.message : String(e)}`);
+      setErrorMessage(
+        `Failed to connect: ${e instanceof Error ? e.message : String(e)}`,
+      );
     }
   }, [extractedInfo]);
 
   // Connect when library is ready and state is "connecting"
   useEffect(() => {
-    if (noVncReady && extractedInfo && containerRef.current && RFBClass && connectionState === "connecting") {
+    if (
+      noVncReady &&
+      extractedInfo &&
+      containerRef.current &&
+      RFBClass &&
+      connectionState === "connecting"
+    ) {
       log.info("Ready to connect, initiating VNC connection...");
       connect();
     }
@@ -386,7 +428,8 @@ function ViewDesktopInner({
   }, [app, extractedInfo]);
 
   // Track fullscreen from host context (preferred) or document state (standalone)
-  const isFullscreen = hostContext?.displayMode === "fullscreen" ||
+  const isFullscreen =
+    hostContext?.displayMode === "fullscreen" ||
     (typeof document !== "undefined" && !!document.fullscreenElement);
 
   const handleToggleFullscreen = useCallback(async () => {
@@ -420,7 +463,12 @@ function ViewDesktopInner({
     if (app && extractedInfo) {
       await app.sendMessage({
         role: "user",
-        content: [{ type: "text", text: `Please shutdown the ${extractedInfo.name} virtual desktop` }]
+        content: [
+          {
+            type: "text",
+            text: `Please shutdown the ${extractedInfo.name} virtual desktop`,
+          },
+        ],
       });
     }
   }, [app, extractedInfo]);
@@ -430,7 +478,7 @@ function ViewDesktopInner({
       try {
         await app.callServerTool({
           name: "open-home-folder",
-          arguments: { name: extractedInfo.name }
+          arguments: { name: extractedInfo.name },
         });
       } catch (e) {
         log.error("Failed to open home folder:", e);
@@ -525,7 +573,10 @@ function ViewDesktopInner({
             <button className={styles.primaryButton} onClick={handleReconnect}>
               Reconnect
             </button>
-            <button className={styles.secondaryButton} onClick={handleOpenInBrowser}>
+            <button
+              className={styles.secondaryButton}
+              onClick={handleOpenInBrowser}
+            >
               Open in Browser
             </button>
           </div>
@@ -571,7 +622,12 @@ function ViewDesktopInner({
                 title="Open home folder"
                 disabled={connectionState !== "connected"}
               >
-                <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+                <svg
+                  viewBox="0 0 24 24"
+                  width="18"
+                  height="18"
+                  fill="currentColor"
+                >
                   <path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z" />
                 </svg>
               </button>
@@ -580,7 +636,12 @@ function ViewDesktopInner({
                 onClick={handleShutdown}
                 title="Shutdown desktop container"
               >
-                <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+                <svg
+                  viewBox="0 0 24 24"
+                  width="18"
+                  height="18"
+                  fill="currentColor"
+                >
                   <path d="M13 3h-2v10h2V3zm4.83 2.17l-1.42 1.42C17.99 7.86 19 9.81 19 12c0 3.87-3.13 7-7 7s-7-3.13-7-7c0-2.19 1.01-4.14 2.58-5.42L6.17 5.17C4.23 6.82 3 9.26 3 12c0 4.97 4.03 9 9 9s9-4.03 9-9c0-2.74-1.23-5.18-3.17-6.83z" />
                 </svg>
               </button>
@@ -592,11 +653,21 @@ function ViewDesktopInner({
             title={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
           >
             {isFullscreen ? (
-              <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+              <svg
+                viewBox="0 0 24 24"
+                width="18"
+                height="18"
+                fill="currentColor"
+              >
                 <path d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z" />
               </svg>
             ) : (
-              <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+              <svg
+                viewBox="0 0 24 24"
+                width="18"
+                height="18"
+                fill="currentColor"
+              >
                 <path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z" />
               </svg>
             )}
@@ -604,7 +675,11 @@ function ViewDesktopInner({
           <button
             className={styles.toolbarButton}
             onClick={handleOpenInBrowser}
-            title={extractedInfo?.password ? `Open in browser (password: ${extractedInfo.password})` : "Open in browser"}
+            title={
+              extractedInfo?.password
+                ? `Open in browser (password: ${extractedInfo.password})`
+                : "Open in browser"
+            }
           >
             <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
               <path d="M19 19H5V5h7V3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z" />

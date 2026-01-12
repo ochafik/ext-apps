@@ -38,25 +38,32 @@ const VARIANT_IMAGES: Record<DesktopVariant, string> = {
   // ConSol's docker-headless-vnc-container: Ubuntu with XFCE, TigerVNC + noVNC
   // https://github.com/ConSol/docker-headless-vnc-container
   // Port 6901 for noVNC web UI and websockify
-  "xfce": "consol/ubuntu-xfce-vnc:latest",
+  xfce: "consol/ubuntu-xfce-vnc:latest",
   // LinuxServer webtop with KasmVNC (pin to old tag before Selkies migration)
-  "webtop-ubuntu-xfce": "lscr.io/linuxserver/webtop:ubuntu-xfce-version-2024.01.01",
-  "webtop-alpine-xfce": "lscr.io/linuxserver/webtop:alpine-xfce-version-2024.01.01",
+  "webtop-ubuntu-xfce":
+    "lscr.io/linuxserver/webtop:ubuntu-xfce-version-2024.01.01",
+  "webtop-alpine-xfce":
+    "lscr.io/linuxserver/webtop:alpine-xfce-version-2024.01.01",
 };
 
 /** Port configuration for each variant type */
 interface PortConfig {
-  httpPort: number;      // Web UI port inside container
-  vncPort?: number;      // Raw VNC port (if available)
+  httpPort: number; // Web UI port inside container
+  vncPort?: number; // Raw VNC port (if available)
   websocketPath: string; // Path for websocket connection
-  password: string;      // VNC password (empty if none required)
+  password: string; // VNC password (empty if none required)
 }
 
 export function getPortConfig(variant: DesktopVariant): PortConfig {
   if (variant === "xfce") {
     // ConSol's ubuntu-xfce-vnc uses port 6901 for noVNC, 5901 for VNC
     // Default password is "vncpassword"
-    return { httpPort: 6901, vncPort: 5901, websocketPath: "/websockify", password: "vncpassword" };
+    return {
+      httpPort: 6901,
+      vncPort: 5901,
+      websocketPath: "/websockify",
+      password: "vncpassword",
+    };
   }
   // LinuxServer webtop (KasmVNC)
   return { httpPort: 3000, websocketPath: "/websockify", password: "" };
@@ -340,7 +347,9 @@ export async function createDesktop(
     // LinuxServer webtop uses /config for home
     volumes.push(`-v "${homeDir}:/config"`);
     if (commands.length > 0) {
-      volumes.push(`-v "${path.join(desktopDir, "autostart")}:/config/autostart"`);
+      volumes.push(
+        `-v "${path.join(desktopDir, "autostart")}:/config/autostart"`,
+      );
     }
   }
   // Add custom mounts

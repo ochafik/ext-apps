@@ -56,18 +56,26 @@ const MountSchema = z.object({
 });
 
 const CreateDesktopInputSchema = z.object({
-  name: z.string().describe("Name for the desktop (will be sanitized and prefixed with 'vd-')"),
+  name: z
+    .string()
+    .describe(
+      "Name for the desktop (will be sanitized and prefixed with 'vd-')",
+    ),
   variant: z
     .enum(DESKTOP_VARIANTS)
     .optional()
-    .describe(`Desktop variant (default: ${DEFAULT_VARIANT}). Options: xfce (lightweight), webtop-ubuntu-xfce, webtop-alpine-xfce`),
+    .describe(
+      `Desktop variant (default: ${DEFAULT_VARIANT}). Options: xfce (lightweight), webtop-ubuntu-xfce, webtop-alpine-xfce`,
+    ),
   resolution: ResolutionSchema.optional().describe(
     `Initial resolution (default: ${DEFAULT_RESOLUTION.width}x${DEFAULT_RESOLUTION.height})`,
   ),
   commands: z
     .array(z.string())
     .optional()
-    .describe(`Commands to run on startup (default: ${DEFAULT_COMMANDS.join(", ")})`),
+    .describe(
+      `Commands to run on startup (default: ${DEFAULT_COMMANDS.join(", ")})`,
+    ),
   mounts: z.array(MountSchema).optional().describe("Additional volume mounts"),
 });
 
@@ -80,7 +88,9 @@ const ShutdownDesktopInputSchema = z.object({
   cleanup: z
     .boolean()
     .optional()
-    .describe("Delete the desktop's data directory (default: false, preserves data)"),
+    .describe(
+      "Delete the desktop's data directory (default: false, preserves data)",
+    ),
 });
 
 // ============================================================================
@@ -493,7 +503,9 @@ export function createVirtualDesktopServer(): McpServer {
         const execAsync = promisify(exec);
 
         // Use thunar (XFCE file manager) or xdg-open as fallback
-        await execAsync(`docker exec ${args.name} bash -c "DISPLAY=:1 thunar ~ || DISPLAY=:1 xdg-open ~" &`);
+        await execAsync(
+          `docker exec ${args.name} bash -c "DISPLAY=:1 thunar ~ || DISPLAY=:1 xdg-open ~" &`,
+        );
 
         return {
           content: [
