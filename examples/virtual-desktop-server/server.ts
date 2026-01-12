@@ -33,7 +33,6 @@ import {
   DESKTOP_VARIANTS,
   DEFAULT_VARIANT,
   DEFAULT_RESOLUTION,
-  DEFAULT_COMMANDS,
   type DesktopInfo,
   type DesktopVariant,
 } from "./src/docker.js";
@@ -58,14 +57,15 @@ const MountSchema = z.object({
 const CreateDesktopInputSchema = z.object({
   name: z
     .string()
+    .default("my-desktop")
     .describe(
       "Name for the desktop (will be sanitized and prefixed with 'vd-')",
     ),
   variant: z
     .enum(DESKTOP_VARIANTS)
-    .optional()
+    .default(DEFAULT_VARIANT)
     .describe(
-      `Desktop variant (default: ${DEFAULT_VARIANT}). Options: xfce (lightweight), webtop-ubuntu-xfce, webtop-alpine-xfce`,
+      `Desktop variant. Options: xfce (lightweight), webtop-ubuntu-xfce, webtop-alpine-xfce`,
     ),
   resolution: ResolutionSchema.optional().describe(
     `Initial resolution (default: ${DEFAULT_RESOLUTION.width}x${DEFAULT_RESOLUTION.height})`,
@@ -73,14 +73,15 @@ const CreateDesktopInputSchema = z.object({
   commands: z
     .array(z.string())
     .optional()
-    .describe(
-      `Commands to run on startup (default: ${DEFAULT_COMMANDS.join(", ")})`,
-    ),
+    .describe("Commands to run on startup"),
   mounts: z.array(MountSchema).optional().describe("Additional volume mounts"),
 });
 
 const ViewDesktopInputSchema = z.object({
-  name: z.string().describe("Name of the desktop to view"),
+  name: z
+    .string()
+    .default("vd-my-desktop")
+    .describe("Name of the desktop to view"),
 });
 
 const ShutdownDesktopInputSchema = z.object({
