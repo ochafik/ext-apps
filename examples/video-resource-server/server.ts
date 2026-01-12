@@ -129,20 +129,21 @@ ${Object.entries(VIDEO_LIBRARY)
             `Video ID to play. Available: ${Object.keys(VIDEO_LIBRARY).join(", ")}`,
           ),
       },
+      outputSchema: z.object({
+        videoUri: z.string(),
+        description: z.string(),
+      }),
       _meta: { [RESOURCE_URI_META_KEY]: RESOURCE_URI },
     },
     async ({ videoId }): Promise<CallToolResult> => {
       const video = VIDEO_LIBRARY[videoId];
+      const data = {
+        videoUri: `videos://${videoId}`,
+        description: video.description,
+      };
       return {
-        content: [
-          {
-            type: "text",
-            text: JSON.stringify({
-              videoUri: `videos://${videoId}`,
-              description: video.description,
-            }),
-          },
-        ],
+        content: [{ type: "text", text: JSON.stringify(data) }],
+        structuredContent: data,
       };
     },
   );

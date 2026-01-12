@@ -95,6 +95,19 @@ export function createServer(): McpServer {
           .default("https://en.wikipedia.org/wiki/Model_Context_Protocol")
           .describe("Wikipedia page URL"),
       }),
+      outputSchema: z.object({
+        page: z.object({
+          url: z.string(),
+          title: z.string(),
+        }),
+        links: z.array(
+          z.object({
+            url: z.string(),
+            title: z.string(),
+          }),
+        ),
+        error: z.string().nullable(),
+      }),
       _meta: { [RESOURCE_URI_META_KEY]: resourceUri },
     },
     async ({ url }): Promise<CallToolResult> => {
@@ -121,11 +134,17 @@ export function createServer(): McpServer {
         const links = extractWikiLinks(new URL(url), html);
 
         const result = { page: { url, title }, links, error: null };
-        return { content: [{ type: "text", text: JSON.stringify(result) }] };
+        return {
+          content: [{ type: "text", text: JSON.stringify(result) }],
+          structuredContent: result,
+        };
       } catch (err) {
         const error = err instanceof Error ? err.message : String(err);
         const result = { page: { url, title }, links: [], error };
-        return { content: [{ type: "text", text: JSON.stringify(result) }] };
+        return {
+          content: [{ type: "text", text: JSON.stringify(result) }],
+          structuredContent: result,
+        };
       }
     },
   );
