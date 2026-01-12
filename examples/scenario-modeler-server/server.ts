@@ -13,7 +13,7 @@ import {
   registerAppResource,
   registerAppTool,
 } from "@modelcontextprotocol/ext-apps/server";
-import { startServer } from "../shared/server-utils.js";
+import { startServer } from "./server-utils.js";
 
 const DIST_DIR = path.join(import.meta.dirname, "dist");
 
@@ -251,7 +251,7 @@ const DEFAULT_INPUTS: ScenarioInputs = {
  * Creates a new MCP server instance with tools and resources registered.
  * Each HTTP session needs its own server instance because McpServer only supports one transport.
  */
-function createServer(): McpServer {
+export function createServer(): McpServer {
   const server = new McpServer({
     name: "SaaS Scenario Modeler",
     version: "1.0.0",

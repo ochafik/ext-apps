@@ -4,7 +4,7 @@ import type { CallToolResult, ReadResourceResult } from "@modelcontextprotocol/s
 import fs from "node:fs/promises";
 import path from "node:path";
 import { registerAppTool, registerAppResource, RESOURCE_MIME_TYPE, RESOURCE_URI_META_KEY } from "@modelcontextprotocol/ext-apps/server";
-import { startServer } from "../shared/server-utils.js";
+import { startServer } from "./server-utils.js";
 
 const DIST_DIR = path.join(import.meta.dirname, "dist");
 const RESOURCE_URI = "ui://get-time/mcp-app.html";
@@ -13,7 +13,7 @@ const RESOURCE_URI = "ui://get-time/mcp-app.html";
  * Creates a new MCP server instance with tools and resources registered.
  * Each HTTP session needs its own server instance because McpServer only supports one transport.
  */
-function createServer(): McpServer {
+export function createServer(): McpServer {
   const server = new McpServer({
     name: "Basic MCP App Server (Vanilla JS)",
     version: "1.0.0",

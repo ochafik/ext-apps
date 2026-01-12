@@ -43,6 +43,7 @@ export const McpUiStyleVariableKeySchema = z
     z.literal("--color-text-secondary"),
     z.literal("--color-text-tertiary"),
     z.literal("--color-text-inverse"),
+    z.literal("--color-text-ghost"),
     z.literal("--color-text-info"),
     z.literal("--color-text-danger"),
     z.literal("--color-text-success"),
@@ -182,6 +183,32 @@ export const McpUiMessageResultSchema = z
 export const McpUiSandboxProxyReadyNotificationSchema = z.object({
   method: z.literal("ui/notifications/sandbox-proxy-ready"),
   params: z.object({}),
+});
+
+/**
+ * @description Content Security Policy configuration for UI resources.
+ */
+export const McpUiResourceCspSchema = z.object({
+  /** @description Origins for network requests (fetch/XHR/WebSocket). */
+  connectDomains: z
+    .array(z.string())
+    .optional()
+    .describe("Origins for network requests (fetch/XHR/WebSocket)."),
+  /** @description Origins for static resources (scripts, images, styles, fonts). */
+  resourceDomains: z
+    .array(z.string())
+    .optional()
+    .describe("Origins for static resources (scripts, images, styles, fonts)."),
+  /** @description Origins for nested iframes (frame-src directive). */
+  frameDomains: z
+    .array(z.string())
+    .optional()
+    .describe("Origins for nested iframes (frame-src directive)."),
+  /** @description Allowed base URIs for the document (base-uri directive). */
+  baseUriDomains: z
+    .array(z.string())
+    .optional()
+    .describe("Allowed base URIs for the document (base-uri directive)."),
 });
 
 /**
@@ -325,55 +352,6 @@ export const McpUiResourceTeardownResultSchema = z.record(
 );
 
 /**
- * @description Content Security Policy configuration for UI resources.
- */
-export const McpUiResourceCspSchema = z.object({
-  /** @description Origins for network requests (fetch/XHR/WebSocket). */
-  connectDomains: z
-    .array(z.string())
-    .optional()
-    .describe("Origins for network requests (fetch/XHR/WebSocket)."),
-  /** @description Origins for static resources (scripts, images, styles, fonts). */
-  resourceDomains: z
-    .array(z.string())
-    .optional()
-    .describe("Origins for static resources (scripts, images, styles, fonts)."),
-  /** @description Origins for nested iframes (frame-src directive). */
-  frameDomains: z
-    .array(z.string())
-    .optional()
-    .describe("Origins for nested iframes (frame-src directive)."),
-  /** @description Allowed base URIs for the document (base-uri directive). */
-  baseUriDomains: z
-    .array(z.string())
-    .optional()
-    .describe("Allowed base URIs for the document (base-uri directive)."),
-});
-
-/**
- * @description Capabilities provided by the Guest UI (App).
- * @see {@link McpUiInitializeRequest} for the initialization request that includes these capabilities
- */
-export const McpUiAppCapabilitiesSchema = z.object({
-  /** @description Experimental features (structure TBD). */
-  experimental: z
-    .object({})
-    .optional()
-    .describe("Experimental features (structure TBD)."),
-  /** @description App exposes MCP-style tools that the host can call. */
-  tools: z
-    .object({
-      /** @description App supports tools/list_changed notifications. */
-      listChanged: z
-        .boolean()
-        .optional()
-        .describe("App supports tools/list_changed notifications."),
-    })
-    .optional()
-    .describe("App exposes MCP-style tools that the host can call."),
-});
-
-/**
  * @description Capabilities supported by the host application.
  * @see {@link McpUiInitializeResult} for the initialization result that includes these capabilities
  */
@@ -426,6 +404,29 @@ export const McpUiHostCapabilitiesSchema = z.object({
     })
     .optional()
     .describe("Sandbox configuration applied by the host."),
+});
+
+/**
+ * @description Capabilities provided by the Guest UI (App).
+ * @see {@link McpUiInitializeRequest} for the initialization request that includes these capabilities
+ */
+export const McpUiAppCapabilitiesSchema = z.object({
+  /** @description Experimental features (structure TBD). */
+  experimental: z
+    .object({})
+    .optional()
+    .describe("Experimental features (structure TBD)."),
+  /** @description App exposes MCP-style tools that the host can call. */
+  tools: z
+    .object({
+      /** @description App supports tools/list_changed notifications. */
+      listChanged: z
+        .boolean()
+        .optional()
+        .describe("App supports tools/list_changed notifications."),
+    })
+    .optional()
+    .describe("App exposes MCP-style tools that the host can call."),
 });
 
 /**
@@ -502,12 +503,12 @@ export const McpUiToolVisibilitySchema = z
  */
 export const McpUiToolMetaSchema = z.object({
   /**
-   * URI of the UI resource to display for this tool.
+   * URI of the UI resource to display for this tool, if any.
    * This is converted to `_meta["ui/resourceUri"]`.
    *
    * @example "ui://weather/widget.html"
    */
-  resourceUri: z.string(),
+  resourceUri: z.string().optional(),
   /**
    * @description Who can access this tool. Default: ["model", "app"]
    * - "model": Tool visible to and callable by the agent
@@ -555,33 +556,9 @@ export const McpUiSandboxResourceReadyNotificationSchema = z.object({
       .optional()
       .describe("Optional override for the inner iframe's sandbox attribute."),
     /** @description CSP configuration from resource metadata. */
-    csp: z
-      .object({
-        /** @description Origins for network requests (fetch/XHR/WebSocket). */
-        connectDomains: z
-          .array(z.string())
-          .optional()
-          .describe("Origins for network requests (fetch/XHR/WebSocket)."),
-        /** @description Origins for static resources (scripts, images, styles, fonts). */
-        resourceDomains: z
-          .array(z.string())
-          .optional()
-          .describe(
-            "Origins for static resources (scripts, images, styles, fonts).",
-          ),
-        /** @description Origins for nested iframes (frame-src directive). */
-        frameDomains: z
-          .array(z.string())
-          .optional()
-          .describe("Origins for nested iframes (frame-src directive)."),
-        /** @description Allowed base URIs for the document (base-uri directive). */
-        baseUriDomains: z
-          .array(z.string())
-          .optional()
-          .describe("Allowed base URIs for the document (base-uri directive)."),
-      })
-      .optional()
-      .describe("CSP configuration from resource metadata."),
+    csp: McpUiResourceCspSchema.optional().describe(
+      "CSP configuration from resource metadata.",
+    ),
     /** @description Sandbox permissions from resource metadata. */
     permissions: McpUiResourcePermissionsSchema.optional().describe(
       "Sandbox permissions from resource metadata.",
@@ -607,7 +584,9 @@ export const McpUiHostContextSchema = z
     toolInfo: z
       .object({
         /** @description JSON-RPC id of the tools/call request. */
-        id: RequestIdSchema.describe("JSON-RPC id of the tools/call request."),
+        id: RequestIdSchema.optional().describe(
+          "JSON-RPC id of the tools/call request.",
+        ),
         /** @description Tool definition including name, inputSchema, etc. */
         tool: ToolSchema.describe(
           "Tool definition including name, inputSchema, etc.",
@@ -632,26 +611,43 @@ export const McpUiHostContextSchema = z
       .array(z.string())
       .optional()
       .describe("Display modes the host supports."),
-    /** @description Current and maximum dimensions available to the UI. */
-    viewport: z
-      .object({
-        /** @description Current viewport width in pixels. */
-        width: z.number().describe("Current viewport width in pixels."),
-        /** @description Current viewport height in pixels. */
-        height: z.number().describe("Current viewport height in pixels."),
-        /** @description Maximum available height in pixels (if constrained). */
-        maxHeight: z
-          .number()
-          .optional()
-          .describe("Maximum available height in pixels (if constrained)."),
-        /** @description Maximum available width in pixels (if constrained). */
-        maxWidth: z
-          .number()
-          .optional()
-          .describe("Maximum available width in pixels (if constrained)."),
-      })
+    /**
+     * @description Container dimensions. Represents the dimensions of the iframe or other
+     * container holding the app. Specify either width or maxWidth, and either height or maxHeight.
+     */
+    containerDimensions: z
+      .union([
+        z.object({
+          /** @description Fixed container height in pixels. */
+          height: z.number().describe("Fixed container height in pixels."),
+        }),
+        z.object({
+          /** @description Maximum container height in pixels. */
+          maxHeight: z
+            .union([z.number(), z.undefined()])
+            .optional()
+            .describe("Maximum container height in pixels."),
+        }),
+      ])
+      .and(
+        z.union([
+          z.object({
+            /** @description Fixed container width in pixels. */
+            width: z.number().describe("Fixed container width in pixels."),
+          }),
+          z.object({
+            /** @description Maximum container width in pixels. */
+            maxWidth: z
+              .union([z.number(), z.undefined()])
+              .optional()
+              .describe("Maximum container width in pixels."),
+          }),
+        ]),
+      )
       .optional()
-      .describe("Current and maximum dimensions available to the UI."),
+      .describe(
+        "Container dimensions. Represents the dimensions of the iframe or other\ncontainer holding the app. Specify either width or maxWidth, and either height or maxHeight.",
+      ),
     /** @description User's language and region preference in BCP 47 format. */
     locale: z
       .string()

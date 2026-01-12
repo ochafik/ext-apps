@@ -356,7 +356,7 @@ export class AppBridge extends Protocol<
    * adjust the iframe container dimensions based on the Guest UI's content.
    *
    * Note: This is for Guest UI → Host communication. To notify the Guest UI of
-   * host viewport changes, use {@link app.App.sendSizeChanged}.
+   * host container dimension changes, use {@link setHostContext}.
    *
    * @example
    * ```typescript
@@ -1008,7 +1008,7 @@ export class AppBridge extends Protocol<
    * ```typescript
    * bridge.setHostContext({
    *   theme: "dark",
-   *   viewport: { width: 800, height: 600 }
+   *   containerDimensions: { maxHeight: 600, width: 800 }
    * });
    * ```
    *

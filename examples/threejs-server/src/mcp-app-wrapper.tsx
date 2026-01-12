@@ -7,7 +7,7 @@
 import type { App, McpUiHostContext } from "@modelcontextprotocol/ext-apps";
 import { useApp } from "@modelcontextprotocol/ext-apps/react";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
-import { StrictMode, useState, useCallback } from "react";
+import { StrictMode, useState, useCallback, useEffect } from "react";
 import { createRoot } from "react-dom/client";
 import ThreeJSApp from "./threejs-app.tsx";
 import "./global.css";
@@ -25,7 +25,7 @@ export interface WidgetProps<TToolInput = Record<string, unknown>> {
   toolInputsPartial: TToolInput | null;
   /** Tool execution result from the server */
   toolResult: CallToolResult | null;
-  /** Host context (theme, viewport, locale, etc.) */
+  /** Host context (theme, dimensions, locale, etc.) */
   hostContext: McpUiHostContext | null;
   /** Call a tool on the MCP server */
   callServerTool: App["callServerTool"];
@@ -65,12 +65,22 @@ function McpAppWrapper() {
       app.ontoolresult = (params) => {
         setToolResult(params as CallToolResult);
       };
-      // Host context changes (theme, viewport, etc.)
+      // Host context changes (theme, dimensions, etc.)
       app.onhostcontextchanged = (params) => {
-        setHostContext(params);
+        setHostContext((prev) => ({ ...prev, ...params }));
       };
     },
   });
+
+  // Get initial host context after connection
+  useEffect(() => {
+    if (app) {
+      const ctx = app.getHostContext();
+      if (ctx) {
+        setHostContext(ctx);
+      }
+    }
+  }, [app]);
 
   // Memoized callbacks that forward to app methods
   const callServerTool = useCallback<App["callServerTool"]>(

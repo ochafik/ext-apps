@@ -4,10 +4,16 @@ import { test, expect, type Page, type ConsoleMessage } from "@playwright/test";
 // Note: CSS modules generate unique class names, so we use attribute selectors
 // with partial matches (e.g., [class*="heatmapWrapper"]) for those components
 const DYNAMIC_MASKS: Record<string, string[]> = {
-  "basic-react": ["code"], // Server time display
+  integration: ["#server-time"], // Server time display
+  "basic-preact": ["#server-time"], // Server time display
+  "basic-react": ["#server-time"], // Server time display
+  "basic-solid": ["#server-time"], // Server time display
+  "basic-svelte": ["#server-time"], // Server time display
   "basic-vanillajs": ["#server-time"], // Server time display
+  "basic-vue": ["#server-time"], // Server time display
   "cohort-heatmap": ['[class*="heatmapWrapper"]'], // Heatmap grid (random data)
   "customer-segmentation": [".chart-container"], // Scatter plot (random data)
+  // Note: map-server uses SLOW_SERVERS timeout instead of masking to wait for tiles
   "system-monitor": [
     ".chart-container", // CPU chart (highly dynamic)
     "#status-text", // Current timestamp
@@ -16,29 +22,34 @@ const DYNAMIC_MASKS: Record<string, string[]> = {
     "#memory-bar-fill", // Memory bar fill level
     "#info-uptime", // System uptime
   ],
+  threejs: ["#threejs-canvas", ".threejs-container"], // 3D render canvas (dynamic animation)
   "wiki-explorer": ["#graph"], // Force-directed graph (dynamic layout)
-  threejs: ["canvas"], // 3D render canvas (dynamic animation)
 };
 
-// Server configurations
+// Servers that need extra stabilization time (e.g., for tile loading, WebGL init)
+const SLOW_SERVERS: Record<string, number> = {
+  "map-server": 5000, // CesiumJS needs time for tiles to load
+  threejs: 2000, // Three.js WebGL initialization
+};
+
+// Server configurations (key is used for screenshot filenames, name is the MCP server name)
 const SERVERS = [
-  { key: "basic-react", index: 0, name: "Basic MCP App Server (React-based)" },
-  {
-    key: "basic-vanillajs",
-    index: 1,
-    name: "Basic MCP App Server (Vanilla JS)",
-  },
-  { key: "budget-allocator", index: 2, name: "Budget Allocator Server" },
-  { key: "cohort-heatmap", index: 3, name: "Cohort Heatmap Server" },
-  {
-    key: "customer-segmentation",
-    index: 4,
-    name: "Customer Segmentation Server",
-  },
-  { key: "scenario-modeler", index: 5, name: "SaaS Scenario Modeler" },
-  { key: "system-monitor", index: 6, name: "System Monitor Server" },
-  { key: "threejs", index: 7, name: "Three.js Server" },
-  { key: "wiki-explorer", index: 8, name: "Wiki Explorer" },
+  { key: "integration", name: "Integration Test Server" },
+  { key: "basic-preact", name: "Basic MCP App Server (Preact)" },
+  { key: "basic-react", name: "Basic MCP App Server (React)" },
+  { key: "basic-solid", name: "Basic MCP App Server (Solid)" },
+  { key: "basic-svelte", name: "Basic MCP App Server (Svelte)" },
+  { key: "basic-vanillajs", name: "Basic MCP App Server (Vanilla JS)" },
+  { key: "basic-vue", name: "Basic MCP App Server (Vue)" },
+  { key: "budget-allocator", name: "Budget Allocator Server" },
+  { key: "cohort-heatmap", name: "Cohort Heatmap Server" },
+  { key: "customer-segmentation", name: "Customer Segmentation Server" },
+  { key: "map-server", name: "CesiumJS Map Server" },
+  { key: "scenario-modeler", name: "SaaS Scenario Modeler" },
+  { key: "sheet-music", name: "Sheet Music Server" },
+  { key: "system-monitor", name: "System Monitor Server" },
+  { key: "threejs", name: "Three.js Server" },
+  { key: "wiki-explorer", name: "Wiki Explorer" },
 ];
 
 /**
@@ -72,13 +83,13 @@ async function waitForAppLoad(page: Page) {
 }
 
 /**
- * Load a server by selecting it and clicking Call Tool
+ * Load a server by selecting it by name and clicking Call Tool
  */
-async function loadServer(page: Page, serverIndex: number) {
+async function loadServer(page: Page, serverName: string) {
   await page.goto("/");
   // Wait for servers to connect (select becomes enabled when servers are ready)
   await expect(page.locator("select").first()).toBeEnabled({ timeout: 30000 });
-  await page.locator("select").first().selectOption({ index: serverIndex });
+  await page.locator("select").first().selectOption({ label: serverName });
   await page.click('button:has-text("Call Tool")');
   await waitForAppLoad(page);
 }
@@ -113,12 +124,15 @@ test.describe("Host UI", () => {
 SERVERS.forEach((server) => {
   test.describe(server.name, () => {
     test("loads app UI", async ({ page }) => {
-      await loadServer(page, server.index);
+      await loadServer(page, server.name);
     });
 
     test("screenshot matches golden", async ({ page }) => {
-      await loadServer(page, server.index);
-      await page.waitForTimeout(500); // Brief stabilization
+      await loadServer(page, server.name);
+
+      // Some servers (WebGL, tile-based) need extra stabilization time
+      const stabilizationMs = SLOW_SERVERS[server.key] ?? 500;
+      await page.waitForTimeout(stabilizationMs);
 
       // Get mask locators for dynamic content (timestamps, charts, etc.)
       const mask = getMaskLocators(page, server.key);
@@ -131,52 +145,46 @@ SERVERS.forEach((server) => {
   });
 });
 
-// Interaction tests for basic servers (React and Vanilla JS have identical UIs)
-const BASIC_SERVERS = SERVERS.filter(
-  (s) => s.key === "basic-react" || s.key === "basic-vanillajs",
-);
+// Interaction tests for integration server (tests all SDK communication APIs)
+const integrationServer = SERVERS.find((s) => s.key === "integration")!;
 
-BASIC_SERVERS.forEach((server) => {
-  test.describe(`${server.name} - Interactions`, () => {
-    test("Send Message button triggers host callback", async ({ page }) => {
-      const logs = captureHostLogs(page);
-      await loadServer(page, server.index);
+test.describe(`${integrationServer.name} - Interactions`, () => {
+  test("Send Message button triggers host callback", async ({ page }) => {
+    const logs = captureHostLogs(page);
+    await loadServer(page, integrationServer.name);
 
-      const appFrame = getAppFrame(page);
-      await appFrame.locator('button:has-text("Send Message")').click();
+    const appFrame = getAppFrame(page);
+    await appFrame.locator('button:has-text("Send Message")').click();
 
-      // Wait for the async message to be processed
-      await page.waitForTimeout(500);
+    // Wait for the async message to be processed
+    await page.waitForTimeout(500);
 
-      expect(logs.some((log) => log.includes("Message from MCP App"))).toBe(
-        true,
-      );
-    });
+    expect(logs.some((log) => log.includes("Message from MCP App"))).toBe(true);
+  });
 
-    test("Send Log button triggers host callback", async ({ page }) => {
-      const logs = captureHostLogs(page);
-      await loadServer(page, server.index);
+  test("Send Log button triggers host callback", async ({ page }) => {
+    const logs = captureHostLogs(page);
+    await loadServer(page, integrationServer.name);
 
-      const appFrame = getAppFrame(page);
-      await appFrame.locator('button:has-text("Send Log")').click();
+    const appFrame = getAppFrame(page);
+    await appFrame.locator('button:has-text("Send Log")').click();
 
-      await page.waitForTimeout(500);
+    await page.waitForTimeout(500);
 
-      expect(logs.some((log) => log.includes("Log message from MCP App"))).toBe(
-        true,
-      );
-    });
+    expect(logs.some((log) => log.includes("Log message from MCP App"))).toBe(
+      true,
+    );
+  });
 
-    test("Open Link button triggers host callback", async ({ page }) => {
-      const logs = captureHostLogs(page);
-      await loadServer(page, server.index);
+  test("Open Link button triggers host callback", async ({ page }) => {
+    const logs = captureHostLogs(page);
+    await loadServer(page, integrationServer.name);
 
-      const appFrame = getAppFrame(page);
-      await appFrame.locator('button:has-text("Open Link")').click();
+    const appFrame = getAppFrame(page);
+    await appFrame.locator('button:has-text("Open Link")').click();
 
-      await page.waitForTimeout(500);
+    await page.waitForTimeout(500);
 
-      expect(logs.some((log) => log.includes("Open link request"))).toBe(true);
-    });
+    expect(logs.some((log) => log.includes("Open link request"))).toBe(true);
   });
 });

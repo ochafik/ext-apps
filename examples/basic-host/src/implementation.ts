@@ -1,10 +1,10 @@
-import { RESOURCE_MIME_TYPE, getToolUiResourceUri, type McpUiSandboxProxyReadyNotification, AppBridge, PostMessageTransport } from "@modelcontextprotocol/ext-apps/app-bridge";
+import { RESOURCE_MIME_TYPE, getToolUiResourceUri, type McpUiSandboxProxyReadyNotification, AppBridge, PostMessageTransport, type McpUiResourceCsp, type McpUiResourcePermissions } from "@modelcontextprotocol/ext-apps/app-bridge";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import type { CallToolResult, Tool } from "@modelcontextprotocol/sdk/types.js";
 
 
-const SANDBOX_PROXY_URL = new URL("http://localhost:8081/sandbox.html");
+const SANDBOX_PROXY_BASE_URL = "http://localhost:8081/sandbox.html";
 const IMPLEMENTATION = { name: "MCP Apps Host", version: "1.0.0" };
 
 
@@ -42,17 +42,8 @@ export async function connectToServer(serverUrl: URL): Promise<ServerInfo> {
 
 interface UiResourceData {
   html: string;
-  csp?: {
-    connectDomains?: string[];
-    resourceDomains?: string[];
-    frameDomains?: string[];
-    baseUriDomains?: string[];
-  };
-  permissions?: {
-    camera?: boolean;
-    microphone?: boolean;
-    geolocation?: boolean;
-  };
+  csp?: McpUiResourceCsp;
+  permissions?: McpUiResourcePermissions;
 }
 
 export interface ToolCallInfo {
@@ -128,7 +119,10 @@ async function getUiResource(serverInfo: ServerInfo, uri: string): Promise<UiRes
 }
 
 
-export function loadSandboxProxy(iframe: HTMLIFrameElement): Promise<boolean> {
+export function loadSandboxProxy(
+  iframe: HTMLIFrameElement,
+  csp?: McpUiResourceCsp,
+): Promise<boolean> {
   // Prevent reload
   if (iframe.src) return Promise.resolve(false);
 
@@ -148,8 +142,14 @@ export function loadSandboxProxy(iframe: HTMLIFrameElement): Promise<boolean> {
     window.addEventListener("message", listener);
   });
 
-  log.info("Loading sandbox proxy...");
-  iframe.src = SANDBOX_PROXY_URL.href;
+  // Build sandbox URL with CSP query param for HTTP header-based CSP
+  const sandboxUrl = new URL(SANDBOX_PROXY_BASE_URL);
+  if (csp) {
+    sandboxUrl.searchParams.set("csp", JSON.stringify(csp));
+  }
+
+  log.info("Loading sandbox proxy...", csp ? `(CSP: ${JSON.stringify(csp)})` : "");
+  iframe.src = sandboxUrl.href;
 
   return readyPromise;
 }
