@@ -63,4 +63,4 @@ The tool is linked to a UI resource via `_meta.ui.resourceUri`.
 - Generates realistic customer data with Gaussian clustering around segment centers
 - Each segment has characteristic ranges for revenue, employees, engagement, etc.
 - Company names generated from word-list combinations (e.g., "Apex Data Corp")
-- Data cached in memory for session consistency
+- Data cached in memory for consistency across requests

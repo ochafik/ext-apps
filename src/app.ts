@@ -156,7 +156,7 @@ type RequestHandlerExtra = Parameters<
  * - `ontoolinput` - Complete tool arguments from host
  * - `ontoolinputpartial` - Streaming partial tool arguments
  * - `ontoolresult` - Tool execution results
- * - `onhostcontextchanged` - Host context changes (theme, viewport, etc.)
+ * - `onhostcontextchanged` - Host context changes (theme, locale, etc.)
  *
  * These setters are convenience wrappers around `setNotificationHandler()`.
  * Both patterns work; use whichever fits your coding style better.
@@ -295,7 +295,7 @@ export class App extends Protocol<AppRequest, AppNotification, AppResult> {
    * Get the host context discovered during initialization.
    *
    * Returns the host context that was provided in the initialization response,
-   * including tool info, theme, viewport, locale, and other environment details.
+   * including tool info, theme, locale, and other environment details.
    * This context is automatically updated when the host sends
    * `ui/notifications/host-context-changed` notifications.
    *
@@ -480,12 +480,12 @@ export class App extends Protocol<AppRequest, AppNotification, AppResult> {
   }
 
   /**
-   * Convenience handler for host context changes (theme, viewport, locale, etc.).
+   * Convenience handler for host context changes (theme, locale, etc.).
    *
    * Set this property to register a handler that will be called when the host's
-   * context changes, such as theme switching (light/dark), viewport size changes,
-   * locale changes, or other environmental updates. Apps should respond by
-   * updating their UI accordingly.
+   * context changes, such as theme switching (light/dark), locale changes, or
+   * other environmental updates. Apps should respond by updating their UI
+   * accordingly.
    *
    * This setter is a convenience wrapper around `setNotificationHandler()` that
    * automatically handles the notification schema and extracts the params for you.
@@ -1075,7 +1075,10 @@ export class App extends Protocol<AppRequest, AppNotification, AppResult> {
    * @see {@link PostMessageTransport} for the typical transport implementation
    */
   override async connect(
-    transport: Transport = new PostMessageTransport(window.parent),
+    transport: Transport = new PostMessageTransport(
+      window.parent,
+      window.parent,
+    ),
     options?: RequestOptions,
   ): Promise<void> {
     await super.connect(transport);

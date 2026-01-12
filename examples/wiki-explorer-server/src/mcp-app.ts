@@ -1,7 +1,7 @@
 /**
  * Wiki Explorer - Force-directed graph visualization of Wikipedia link networks
  */
-import { App } from "@modelcontextprotocol/ext-apps";
+import { App, type McpUiHostContext } from "@modelcontextprotocol/ext-apps";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import {
   forceCenter,
@@ -322,49 +322,57 @@ app.ontoolresult = (result) => {
 };
 
 function handleToolResultData(result: CallToolResult): void {
-  if (
-    result.isError ||
-    !result.content?.[0] ||
-    result.content[0].type !== "text"
-  ) {
+  if (result.isError) {
     console.error("Tool result error:", result);
     return;
   }
 
-  try {
-    const response: ToolResponse = JSON.parse(result.content[0].text);
-    const { page, links, error } = response;
+  const response = result.structuredContent as unknown as ToolResponse;
+  const { page, links, error } = response;
 
-    // Ensure the source node exists
-    addNode(page.url, page.title);
-    updateNodeTitle(page.url, page.title);
+  // Ensure the source node exists
+  addNode(page.url, page.title);
+  updateNodeTitle(page.url, page.title);
 
-    if (error) {
-      setNodeState(page.url, "error", error);
-    } else {
-      // Get source node position so new nodes appear nearby
-      const sourceNode = graphData.nodes.find((n) => n.url === page.url);
-      const sourcePos = sourceNode
-        ? { x: sourceNode.x ?? 0, y: sourceNode.y ?? 0 }
-        : undefined;
+  if (error) {
+    setNodeState(page.url, "error", error);
+  } else {
+    // Get source node position so new nodes appear nearby
+    const sourceNode = graphData.nodes.find((n) => n.url === page.url);
+    const sourcePos = sourceNode
+      ? { x: sourceNode.x ?? 0, y: sourceNode.y ?? 0 }
+      : undefined;
 
-      // Add all linked nodes and edges
-      for (const link of links) {
-        addNode(link.url, link.title, "default", sourcePos);
-        addEdge(page.url, link.url);
-      }
-      setNodeState(page.url, "expanded");
+    // Add all linked nodes and edges
+    for (const link of links) {
+      addNode(link.url, link.title, "default", sourcePos);
+      addEdge(page.url, link.url);
     }
-
-    updateGraph();
-  } catch (e) {
-    console.error("Failed to parse tool result:", e);
+    setNodeState(page.url, "expanded");
   }
+
+  updateGraph();
 }
 
 app.onerror = (err) => {
   console.error("[Wiki Explorer] App error:", err);
 };
 
+function handleHostContextChanged(ctx: McpUiHostContext) {
+  if (ctx.safeAreaInsets) {
+    document.body.style.paddingTop = `${ctx.safeAreaInsets.top}px`;
+    document.body.style.paddingRight = `${ctx.safeAreaInsets.right}px`;
+    document.body.style.paddingBottom = `${ctx.safeAreaInsets.bottom}px`;
+    document.body.style.paddingLeft = `${ctx.safeAreaInsets.left}px`;
+  }
+}
+
+app.onhostcontextchanged = handleHostContextChanged;
+
 // Connect to host
-app.connect();
+app.connect().then(() => {
+  const ctx = app.getHostContext();
+  if (ctx) {
+    handleHostContextChanged(ctx);
+  }
+});

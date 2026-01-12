@@ -14,7 +14,7 @@ import {
   registerAppResource,
   registerAppTool,
 } from "@modelcontextprotocol/ext-apps/server";
-import { startServer } from "../shared/server-utils.js";
+import { startServer } from "./server-utils.js";
 
 const DIST_DIR = path.join(import.meta.dirname, "dist");
 
@@ -72,7 +72,7 @@ function extractWikiLinks(pageUrl: URL, html: string): PageInfo[] {
   }));
 }
 
-function createServer(): McpServer {
+export function createServer(): McpServer {
   const server = new McpServer({
     name: "Wiki Explorer",
     version: "1.0.0",
@@ -94,6 +94,19 @@ function createServer(): McpServer {
           .url()
           .default("https://en.wikipedia.org/wiki/Model_Context_Protocol")
           .describe("Wikipedia page URL"),
+      }),
+      outputSchema: z.object({
+        page: z.object({
+          url: z.string(),
+          title: z.string(),
+        }),
+        links: z.array(
+          z.object({
+            url: z.string(),
+            title: z.string(),
+          }),
+        ),
+        error: z.string().nullable(),
       }),
       _meta: { [RESOURCE_URI_META_KEY]: resourceUri },
     },
@@ -121,11 +134,17 @@ function createServer(): McpServer {
         const links = extractWikiLinks(new URL(url), html);
 
         const result = { page: { url, title }, links, error: null };
-        return { content: [{ type: "text", text: JSON.stringify(result) }] };
+        return {
+          content: [{ type: "text", text: JSON.stringify(result) }],
+          structuredContent: result,
+        };
       } catch (err) {
         const error = err instanceof Error ? err.message : String(err);
         const result = { page: { url, title }, links: [], error };
-        return { content: [{ type: "text", text: JSON.stringify(result) }] };
+        return {
+          content: [{ type: "text", text: JSON.stringify(result) }],
+          structuredContent: result,
+        };
       }
     },
   );

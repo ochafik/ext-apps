@@ -19,7 +19,7 @@ import {
   registerAppResource,
   registerAppTool,
 } from "@modelcontextprotocol/ext-apps/server";
-import { startServer } from "../shared/server-utils.js";
+import { startServer } from "./server-utils.js";
 
 const DIST_DIR = path.join(import.meta.dirname, "dist");
 
@@ -225,6 +225,30 @@ function generateHistory(
 }
 
 // ---------------------------------------------------------------------------
+// Response Formatting
+// ---------------------------------------------------------------------------
+
+function formatBudgetSummary(data: BudgetDataResponse): string {
+  const lines: string[] = [
+    "Budget Allocator Configuration",
+    "==============================",
+    "",
+    `Default Budget: ${data.config.currencySymbol}${data.config.defaultBudget.toLocaleString()}`,
+    `Available Presets: ${data.config.presetBudgets.map((b) => `${data.config.currencySymbol}${b.toLocaleString()}`).join(", ")}`,
+    "",
+    "Categories:",
+    ...data.config.categories.map(
+      (c) => `  - ${c.name}: ${c.defaultPercent}% default`,
+    ),
+    "",
+    `Historical Data: ${data.analytics.history.length} months`,
+    `Benchmark Stages: ${data.analytics.stages.join(", ")}`,
+    `Default Stage: ${data.analytics.defaultStage}`,
+  ];
+  return lines.join("\n");
+}
+
+// ---------------------------------------------------------------------------
 // MCP Server Setup
 // ---------------------------------------------------------------------------
 
@@ -234,7 +258,7 @@ const resourceUri = "ui://budget-allocator/mcp-app.html";
  * Creates a new MCP server instance with tools and resources registered.
  * Each HTTP session needs its own server instance because McpServer only supports one transport.
  */
-function createServer(): McpServer {
+export function createServer(): McpServer {
   const server = new McpServer({
     name: "Budget Allocator Server",
     version: "1.0.0",
@@ -248,6 +272,7 @@ function createServer(): McpServer {
       description:
         "Returns budget configuration with 24 months of historical allocations and industry benchmarks by company stage",
       inputSchema: {},
+      outputSchema: BudgetDataResponseSchema,
       _meta: { [RESOURCE_URI_META_KEY]: resourceUri },
     },
     async (): Promise<CallToolResult> => {
@@ -276,9 +301,10 @@ function createServer(): McpServer {
         content: [
           {
             type: "text",
-            text: JSON.stringify(response),
+            text: formatBudgetSummary(response),
           },
         ],
+        structuredContent: response,
       };
     },
   );

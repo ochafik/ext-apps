@@ -263,16 +263,21 @@ function AppIFramePanel({ toolCallInfo, isDestroying, onTeardownComplete }: AppI
 
   useEffect(() => {
     const iframe = iframeRef.current!;
-    loadSandboxProxy(iframe).then((firstTime) => {
-      // The `firstTime` check guards against React Strict Mode's double
-      // invocation (mount → unmount → remount simulation in development).
-      // Outside of Strict Mode, this `useEffect` runs only once per
-      // `toolCallInfo`.
-      if (firstTime) {
-        const appBridge = newAppBridge(toolCallInfo.serverInfo, iframe);
-        appBridgeRef.current = appBridge;
-        initializeApp(iframe, appBridge, toolCallInfo);
-      }
+
+    // First get CSP from resource, then load sandbox with CSP in query param
+    // This ensures CSP is set via HTTP headers (tamper-proof)
+    toolCallInfo.appResourcePromise.then(({ csp }) => {
+      loadSandboxProxy(iframe, csp).then((firstTime) => {
+        // The `firstTime` check guards against React Strict Mode's double
+        // invocation (mount → unmount → remount simulation in development).
+        // Outside of Strict Mode, this `useEffect` runs only once per
+        // `toolCallInfo`.
+        if (firstTime) {
+          const appBridge = newAppBridge(toolCallInfo.serverInfo, iframe);
+          appBridgeRef.current = appBridge;
+          initializeApp(iframe, appBridge, toolCallInfo);
+        }
+      });
     });
   }, [toolCallInfo]);
 
@@ -350,7 +355,27 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
 async function connectToAllServers(): Promise<ServerInfo[]> {
   const serverUrlsResponse = await fetch("/api/servers");
   const serverUrls = (await serverUrlsResponse.json()) as string[];
-  return Promise.all(serverUrls.map((url) => connectToServer(new URL(url))));
+
+  // Use allSettled to be resilient to individual server failures
+  const results = await Promise.allSettled(
+    serverUrls.map((url) => connectToServer(new URL(url)))
+  );
+
+  const servers: ServerInfo[] = [];
+  for (let i = 0; i < results.length; i++) {
+    const result = results[i];
+    if (result.status === "fulfilled") {
+      servers.push(result.value);
+    } else {
+      console.warn(`[HOST] Failed to connect to ${serverUrls[i]}:`, result.reason);
+    }
+  }
+
+  if (servers.length === 0 && serverUrls.length > 0) {
+    throw new Error(`Failed to connect to any servers (${serverUrls.length} attempted)`);
+  }
+
+  return servers;
 }
 
 createRoot(document.getElementById("root")!).render(

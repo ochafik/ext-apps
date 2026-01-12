@@ -15,7 +15,7 @@ import {
   registerAppResource,
   registerAppTool,
 } from "@modelcontextprotocol/ext-apps/server";
-import { startServer } from "../shared/server-utils.js";
+import { startServer } from "./server-utils.js";
 
 const DIST_DIR = path.join(import.meta.dirname, "dist");
 
@@ -140,7 +140,7 @@ const resourceUri = "ui://threejs/mcp-app.html";
  * Creates a new MCP server instance with tools and resources registered.
  * Each HTTP session needs its own server instance because McpServer only supports one transport.
  */
-function createServer(): McpServer {
+export function createServer(): McpServer {
   const server = new McpServer({
     name: "Three.js Server",
     version: "1.0.0",
@@ -166,16 +166,17 @@ function createServer(): McpServer {
           .default(400)
           .describe("Height in pixels"),
       },
+      outputSchema: z.object({
+        code: z.string(),
+        height: z.number(),
+      }),
       _meta: { [RESOURCE_URI_META_KEY]: resourceUri },
     },
     async ({ code, height }) => {
+      const data = { code, height };
       return {
-        content: [
-          {
-            type: "text",
-            text: JSON.stringify({ code, height }),
-          },
-        ],
+        content: [{ type: "text", text: JSON.stringify(data) }],
+        structuredContent: data,
       };
     },
   );

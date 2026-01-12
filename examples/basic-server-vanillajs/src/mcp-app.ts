@@ -1,7 +1,7 @@
 /**
  * @file App that demonstrates a few features using MCP Apps SDK with vanilla JS.
  */
-import { App } from "@modelcontextprotocol/ext-apps";
+import { App, type McpUiHostContext } from "@modelcontextprotocol/ext-apps";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import "./global.css";
 import "./mcp-app.css";
@@ -15,16 +15,13 @@ const log = {
 
 
 function extractTime(result: CallToolResult): string {
-  const text = result.content!
-    .filter((c): c is { type: "text"; text: string } => c.type === "text")
-    .map((c) => c.text)
-    .join("");
-  const { time } = JSON.parse(text) as { time: string };
-  return time;
+  const { time } = (result.structuredContent as { time?: string }) ?? {};
+  return time ?? "[ERROR]";
 }
 
 
 // Get element references
+const mainEl = document.querySelector(".main") as HTMLElement;
 const serverTimeEl = document.getElementById("server-time")!;
 const getTimeBtn = document.getElementById("get-time-btn")!;
 const messageText = document.getElementById("message-text") as HTMLTextAreaElement;
@@ -34,14 +31,21 @@ const sendLogBtn = document.getElementById("send-log-btn")!;
 const linkUrl = document.getElementById("link-url") as HTMLInputElement;
 const openLinkBtn = document.getElementById("open-link-btn")!;
 
+function handleHostContextChanged(ctx: McpUiHostContext) {
+  if (ctx.safeAreaInsets) {
+    mainEl.style.paddingTop = `${ctx.safeAreaInsets.top}px`;
+    mainEl.style.paddingRight = `${ctx.safeAreaInsets.right}px`;
+    mainEl.style.paddingBottom = `${ctx.safeAreaInsets.bottom}px`;
+    mainEl.style.paddingLeft = `${ctx.safeAreaInsets.left}px`;
+  }
+}
+
 
 // Create app instance
 const app = new App({ name: "Get Time App", version: "1.0.0" });
 
 app.onteardown = async () => {
   log.info("App is being torn down");
-  await new Promise((resolve) => setTimeout(resolve, 500)); // Simulate cleanup work
-  log.info("App teardown complete");
   return {};
 };
 
@@ -56,6 +60,8 @@ app.ontoolresult = (result) => {
 };
 
 app.onerror = log.error;
+
+app.onhostcontextchanged = handleHostContextChanged;
 
 
 // Add event listeners
@@ -98,4 +104,9 @@ openLinkBtn.addEventListener("click", async () => {
 
 
 // Connect to host
-app.connect();
+app.connect().then(() => {
+  const ctx = app.getHostContext();
+  if (ctx) {
+    handleHostContextChanged(ctx);
+  }
+});

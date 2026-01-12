@@ -90,6 +90,79 @@
           "properties": {},
           "additionalProperties": false
         },
+        "sandbox": {
+          "description": "Sandbox configuration applied by the host.",
+          "type": "object",
+          "properties": {
+            "permissions": {
+              "description": "Permissions granted by the host (camera, microphone, geolocation).",
+              "type": "object",
+              "properties": {
+                "camera": {
+                  "description": "Request camera access (Permission Policy `camera` feature).",
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": false
+                },
+                "microphone": {
+                  "description": "Request microphone access (Permission Policy `microphone` feature).",
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": false
+                },
+                "geolocation": {
+                  "description": "Request geolocation access (Permission Policy `geolocation` feature).",
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": false
+                },
+                "clipboardWrite": {
+                  "description": "Request clipboard write access (Permission Policy `clipboard-write` feature).",
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            },
+            "csp": {
+              "description": "CSP domains approved by the host.",
+              "type": "object",
+              "properties": {
+                "connectDomains": {
+                  "description": "Origins for network requests (fetch/XHR/WebSocket).",
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "resourceDomains": {
+                  "description": "Origins for static resources (scripts, images, styles, fonts).",
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "frameDomains": {
+                  "description": "Origins for nested iframes (frame-src directive).",
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "baseUriDomains": {
+                  "description": "Allowed base URIs for the document (base-uri directive).",
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        },
         "updateModelContext": {
           "description": "Host accepts context updates (ui/update-model-context) to be included in the model's context for future turns.",
           "type": "object",
@@ -195,6 +268,7 @@
               "type": "object",
               "properties": {
                 "id": {
+                  "description": "JSON-RPC id of the tools/call request.",
                   "anyOf": [
                     {
                       "type": "string"
@@ -204,8 +278,7 @@
                       "minimum": -9007199254740991,
                       "maximum": 9007199254740991
                     }
-                  ],
-                  "description": "JSON-RPC id of the tools/call request."
+                  ]
                 },
                 "tool": {
                   "type": "object",
@@ -235,15 +308,10 @@
                           },
                           "theme": {
                             "type": "string",
-                            "enum": [
-                              "light",
-                              "dark"
-                            ]
+                            "enum": ["light", "dark"]
                           }
                         },
-                        "required": [
-                          "src"
-                        ],
+                        "required": ["src"],
                         "additionalProperties": false
                       }
                     },
@@ -271,9 +339,7 @@
                           }
                         }
                       },
-                      "required": [
-                        "type"
-                      ],
+                      "required": ["type"],
                       "additionalProperties": {}
                     },
                     "outputSchema": {
@@ -297,9 +363,7 @@
                           }
                         }
                       },
-                      "required": [
-                        "type"
-                      ],
+                      "required": ["type"],
                       "additionalProperties": {}
                     },
                     "annotations": {
@@ -328,11 +392,7 @@
                       "properties": {
                         "taskSupport": {
                           "type": "string",
-                          "enum": [
-                            "required",
-                            "optional",
-                            "forbidden"
-                          ]
+                          "enum": ["required", "optional", "forbidden"]
                         }
                       },
                       "additionalProperties": false
@@ -345,18 +405,12 @@
                       "additionalProperties": {}
                     }
                   },
-                  "required": [
-                    "name",
-                    "inputSchema"
-                  ],
+                  "required": ["name", "inputSchema"],
                   "additionalProperties": false,
                   "description": "Tool definition including name, inputSchema, etc."
                 }
               },
-              "required": [
-                "id",
-                "tool"
-              ],
+              "required": ["tool"],
               "additionalProperties": false
             },
             "theme": {
@@ -436,6 +490,10 @@
                       {
                         "type": "string",
                         "const": "--color-text-inverse"
+                      },
+                      {
+                        "type": "string",
+                        "const": "--color-text-ghost"
                       },
                       {
                         "type": "string",
@@ -712,12 +770,12 @@
                     "--color-text-secondary",
                     "--color-text-tertiary",
                     "--color-text-inverse",
+                    "--color-text-ghost",
                     "--color-text-info",
                     "--color-text-danger",
                     "--color-text-success",
                     "--color-text-warning",
                     "--color-text-disabled",
-                    "--color-text-ghost",
                     "--color-border-primary",
                     "--color-border-secondary",
                     "--color-border-tertiary",
@@ -814,32 +872,70 @@
                 "type": "string"
               }
             },
-            "viewport": {
-              "description": "Current and maximum dimensions available to the UI.",
-              "type": "object",
-              "properties": {
-                "width": {
-                  "type": "number",
-                  "description": "Current viewport width in pixels."
+            "containerDimensions": {
+              "description": "Container dimensions. Represents the dimensions of the iframe or other\ncontainer holding the app. Specify either width or maxWidth, and either height or maxHeight.",
+              "allOf": [
+                {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "height": {
+                          "type": "number",
+                          "description": "Fixed container height in pixels."
+                        }
+                      },
+                      "required": ["height"],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "maxHeight": {
+                          "description": "Maximum container height in pixels.",
+                          "anyOf": [
+                            {
+                              "type": "number"
+                            },
+                            {}
+                          ]
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  ]
                 },
-                "height": {
-                  "type": "number",
-                  "description": "Current viewport height in pixels."
-                },
-                "maxHeight": {
-                  "description": "Maximum available height in pixels (if constrained).",
-                  "type": "number"
-                },
-                "maxWidth": {
-                  "description": "Maximum available width in pixels (if constrained).",
-                  "type": "number"
+                {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "width": {
+                          "type": "number",
+                          "description": "Fixed container width in pixels."
+                        }
+                      },
+                      "required": ["width"],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "maxWidth": {
+                          "description": "Maximum container width in pixels.",
+                          "anyOf": [
+                            {
+                              "type": "number"
+                            },
+                            {}
+                          ]
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  ]
                 }
-              },
-              "required": [
-                "width",
-                "height"
-              ],
-              "additionalProperties": false
+              ]
             },
             "locale": {
               "description": "User's language and region preference in BCP 47 format.",
@@ -906,12 +1002,7 @@
                   "description": "Left safe area inset in pixels."
                 }
               },
-              "required": [
-                "top",
-                "right",
-                "bottom",
-                "left"
-              ],
+              "required": ["top", "right", "bottom", "left"],
               "additionalProperties": false
             }
           },
@@ -919,10 +1010,7 @@
           "description": "Partial context update containing only changed fields."
         }
       },
-      "required": [
-        "method",
-        "params"
-      ],
+      "required": ["method", "params"],
       "additionalProperties": false
     },
     "McpUiHostContext": {
@@ -934,6 +1022,7 @@
           "type": "object",
           "properties": {
             "id": {
+              "description": "JSON-RPC id of the tools/call request.",
               "anyOf": [
                 {
                   "type": "string"
@@ -943,8 +1032,7 @@
                   "minimum": -9007199254740991,
                   "maximum": 9007199254740991
                 }
-              ],
-              "description": "JSON-RPC id of the tools/call request."
+              ]
             },
             "tool": {
               "type": "object",
@@ -974,15 +1062,10 @@
                       },
                       "theme": {
                         "type": "string",
-                        "enum": [
-                          "light",
-                          "dark"
-                        ]
+                        "enum": ["light", "dark"]
                       }
                     },
-                    "required": [
-                      "src"
-                    ],
+                    "required": ["src"],
                     "additionalProperties": false
                   }
                 },
@@ -1010,9 +1093,7 @@
                       }
                     }
                   },
-                  "required": [
-                    "type"
-                  ],
+                  "required": ["type"],
                   "additionalProperties": {}
                 },
                 "outputSchema": {
@@ -1036,9 +1117,7 @@
                       }
                     }
                   },
-                  "required": [
-                    "type"
-                  ],
+                  "required": ["type"],
                   "additionalProperties": {}
                 },
                 "annotations": {
@@ -1067,11 +1146,7 @@
                   "properties": {
                     "taskSupport": {
                       "type": "string",
-                      "enum": [
-                        "required",
-                        "optional",
-                        "forbidden"
-                      ]
+                      "enum": ["required", "optional", "forbidden"]
                     }
                   },
                   "additionalProperties": false
@@ -1084,18 +1159,12 @@
                   "additionalProperties": {}
                 }
               },
-              "required": [
-                "name",
-                "inputSchema"
-              ],
+              "required": ["name", "inputSchema"],
               "additionalProperties": false,
               "description": "Tool definition including name, inputSchema, etc."
             }
           },
-          "required": [
-            "id",
-            "tool"
-          ],
+          "required": ["tool"],
           "additionalProperties": false
         },
         "theme": {
@@ -1175,6 +1244,10 @@
                   {
                     "type": "string",
                     "const": "--color-text-inverse"
+                  },
+                  {
+                    "type": "string",
+                    "const": "--color-text-ghost"
                   },
                   {
                     "type": "string",
@@ -1451,12 +1524,12 @@
                 "--color-text-secondary",
                 "--color-text-tertiary",
                 "--color-text-inverse",
+                "--color-text-ghost",
                 "--color-text-info",
                 "--color-text-danger",
                 "--color-text-success",
                 "--color-text-warning",
                 "--color-text-disabled",
-                "--color-text-ghost",
                 "--color-border-primary",
                 "--color-border-secondary",
                 "--color-border-tertiary",
@@ -1553,32 +1626,70 @@
             "type": "string"
           }
         },
-        "viewport": {
-          "description": "Current and maximum dimensions available to the UI.",
-          "type": "object",
-          "properties": {
-            "width": {
-              "type": "number",
-              "description": "Current viewport width in pixels."
+        "containerDimensions": {
+          "description": "Container dimensions. Represents the dimensions of the iframe or other\ncontainer holding the app. Specify either width or maxWidth, and either height or maxHeight.",
+          "allOf": [
+            {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "height": {
+                      "type": "number",
+                      "description": "Fixed container height in pixels."
+                    }
+                  },
+                  "required": ["height"],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "maxHeight": {
+                      "description": "Maximum container height in pixels.",
+                      "anyOf": [
+                        {
+                          "type": "number"
+                        },
+                        {}
+                      ]
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              ]
             },
-            "height": {
-              "type": "number",
-              "description": "Current viewport height in pixels."
-            },
-            "maxHeight": {
-              "description": "Maximum available height in pixels (if constrained).",
-              "type": "number"
-            },
-            "maxWidth": {
-              "description": "Maximum available width in pixels (if constrained).",
-              "type": "number"
+            {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "width": {
+                      "type": "number",
+                      "description": "Fixed container width in pixels."
+                    }
+                  },
+                  "required": ["width"],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "maxWidth": {
+                      "description": "Maximum container width in pixels.",
+                      "anyOf": [
+                        {
+                          "type": "number"
+                        },
+                        {}
+                      ]
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              ]
             }
-          },
-          "required": [
-            "width",
-            "height"
-          ],
-          "additionalProperties": false
+          ]
         },
         "locale": {
           "description": "User's language and region preference in BCP 47 format.",
@@ -1645,12 +1756,7 @@
               "description": "Left safe area inset in pixels."
             }
           },
-          "required": [
-            "top",
-            "right",
-            "bottom",
-            "left"
-          ],
+          "required": ["top", "right", "bottom", "left"],
           "additionalProperties": false
         }
       },
@@ -1731,6 +1837,10 @@
               {
                 "type": "string",
                 "const": "--color-text-inverse"
+              },
+              {
+                "type": "string",
+                "const": "--color-text-ghost"
               },
               {
                 "type": "string",
@@ -2007,12 +2117,12 @@
             "--color-text-secondary",
             "--color-text-tertiary",
             "--color-text-inverse",
+            "--color-text-ghost",
             "--color-text-info",
             "--color-text-danger",
             "--color-text-success",
             "--color-text-warning",
             "--color-text-disabled",
-            "--color-text-ghost",
             "--color-border-primary",
             "--color-border-secondary",
             "--color-border-tertiary",
@@ -2124,15 +2234,10 @@
                       },
                       "theme": {
                         "type": "string",
-                        "enum": [
-                          "light",
-                          "dark"
-                        ]
+                        "enum": ["light", "dark"]
                       }
                     },
-                    "required": [
-                      "src"
-                    ],
+                    "required": ["src"],
                     "additionalProperties": false
                   }
                 },
@@ -2146,10 +2251,7 @@
                   "type": "string"
                 }
               },
-              "required": [
-                "name",
-                "version"
-              ],
+              "required": ["name", "version"],
               "additionalProperties": false,
               "description": "App identification (name and version)."
             },
@@ -2182,18 +2284,11 @@
               "description": "Protocol version this app supports."
             }
           },
-          "required": [
-            "appInfo",
-            "appCapabilities",
-            "protocolVersion"
-          ],
+          "required": ["appInfo", "appCapabilities", "protocolVersion"],
           "additionalProperties": false
         }
       },
-      "required": [
-        "method",
-        "params"
-      ],
+      "required": ["method", "params"],
       "additionalProperties": false
     },
     "McpUiInitializeResult": {
@@ -2232,15 +2327,10 @@
                   },
                   "theme": {
                     "type": "string",
-                    "enum": [
-                      "light",
-                      "dark"
-                    ]
+                    "enum": ["light", "dark"]
                   }
                 },
-                "required": [
-                  "src"
-                ],
+                "required": ["src"],
                 "additionalProperties": false
               }
             },
@@ -2254,10 +2344,7 @@
               "type": "string"
             }
           },
-          "required": [
-            "name",
-            "version"
-          ],
+          "required": ["name", "version"],
           "additionalProperties": false,
           "description": "Host application identification and version."
         },
@@ -2302,6 +2389,79 @@
               "description": "Host accepts log messages.",
               "type": "object",
               "properties": {},
+              "additionalProperties": false
+            },
+            "sandbox": {
+              "description": "Sandbox configuration applied by the host.",
+              "type": "object",
+              "properties": {
+                "permissions": {
+                  "description": "Permissions granted by the host (camera, microphone, geolocation).",
+                  "type": "object",
+                  "properties": {
+                    "camera": {
+                      "description": "Request camera access (Permission Policy `camera` feature).",
+                      "type": "object",
+                      "properties": {},
+                      "additionalProperties": false
+                    },
+                    "microphone": {
+                      "description": "Request microphone access (Permission Policy `microphone` feature).",
+                      "type": "object",
+                      "properties": {},
+                      "additionalProperties": false
+                    },
+                    "geolocation": {
+                      "description": "Request geolocation access (Permission Policy `geolocation` feature).",
+                      "type": "object",
+                      "properties": {},
+                      "additionalProperties": false
+                    },
+                    "clipboardWrite": {
+                      "description": "Request clipboard write access (Permission Policy `clipboard-write` feature).",
+                      "type": "object",
+                      "properties": {},
+                      "additionalProperties": false
+                    }
+                  },
+                  "additionalProperties": false
+                },
+                "csp": {
+                  "description": "CSP domains approved by the host.",
+                  "type": "object",
+                  "properties": {
+                    "connectDomains": {
+                      "description": "Origins for network requests (fetch/XHR/WebSocket).",
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "resourceDomains": {
+                      "description": "Origins for static resources (scripts, images, styles, fonts).",
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "frameDomains": {
+                      "description": "Origins for nested iframes (frame-src directive).",
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "baseUriDomains": {
+                      "description": "Allowed base URIs for the document (base-uri directive).",
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
               "additionalProperties": false
             },
             "updateModelContext": {
@@ -2402,6 +2562,7 @@
               "type": "object",
               "properties": {
                 "id": {
+                  "description": "JSON-RPC id of the tools/call request.",
                   "anyOf": [
                     {
                       "type": "string"
@@ -2411,8 +2572,7 @@
                       "minimum": -9007199254740991,
                       "maximum": 9007199254740991
                     }
-                  ],
-                  "description": "JSON-RPC id of the tools/call request."
+                  ]
                 },
                 "tool": {
                   "type": "object",
@@ -2442,15 +2602,10 @@
                           },
                           "theme": {
                             "type": "string",
-                            "enum": [
-                              "light",
-                              "dark"
-                            ]
+                            "enum": ["light", "dark"]
                           }
                         },
-                        "required": [
-                          "src"
-                        ],
+                        "required": ["src"],
                         "additionalProperties": false
                       }
                     },
@@ -2478,9 +2633,7 @@
                           }
                         }
                       },
-                      "required": [
-                        "type"
-                      ],
+                      "required": ["type"],
                       "additionalProperties": {}
                     },
                     "outputSchema": {
@@ -2504,9 +2657,7 @@
                           }
                         }
                       },
-                      "required": [
-                        "type"
-                      ],
+                      "required": ["type"],
                       "additionalProperties": {}
                     },
                     "annotations": {
@@ -2535,11 +2686,7 @@
                       "properties": {
                         "taskSupport": {
                           "type": "string",
-                          "enum": [
-                            "required",
-                            "optional",
-                            "forbidden"
-                          ]
+                          "enum": ["required", "optional", "forbidden"]
                         }
                       },
                       "additionalProperties": false
@@ -2552,18 +2699,12 @@
                       "additionalProperties": {}
                     }
                   },
-                  "required": [
-                    "name",
-                    "inputSchema"
-                  ],
+                  "required": ["name", "inputSchema"],
                   "additionalProperties": false,
                   "description": "Tool definition including name, inputSchema, etc."
                 }
               },
-              "required": [
-                "id",
-                "tool"
-              ],
+              "required": ["tool"],
               "additionalProperties": false
             },
             "theme": {
@@ -2643,6 +2784,10 @@
                       {
                         "type": "string",
                         "const": "--color-text-inverse"
+                      },
+                      {
+                        "type": "string",
+                        "const": "--color-text-ghost"
                       },
                       {
                         "type": "string",
@@ -2919,12 +3064,12 @@
                     "--color-text-secondary",
                     "--color-text-tertiary",
                     "--color-text-inverse",
+                    "--color-text-ghost",
                     "--color-text-info",
                     "--color-text-danger",
                     "--color-text-success",
                     "--color-text-warning",
                     "--color-text-disabled",
-                    "--color-text-ghost",
                     "--color-border-primary",
                     "--color-border-secondary",
                     "--color-border-tertiary",
@@ -3021,32 +3166,70 @@
                 "type": "string"
               }
             },
-            "viewport": {
-              "description": "Current and maximum dimensions available to the UI.",
-              "type": "object",
-              "properties": {
-                "width": {
-                  "type": "number",
-                  "description": "Current viewport width in pixels."
+            "containerDimensions": {
+              "description": "Container dimensions. Represents the dimensions of the iframe or other\ncontainer holding the app. Specify either width or maxWidth, and either height or maxHeight.",
+              "allOf": [
+                {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "height": {
+                          "type": "number",
+                          "description": "Fixed container height in pixels."
+                        }
+                      },
+                      "required": ["height"],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "maxHeight": {
+                          "description": "Maximum container height in pixels.",
+                          "anyOf": [
+                            {
+                              "type": "number"
+                            },
+                            {}
+                          ]
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  ]
                 },
-                "height": {
-                  "type": "number",
-                  "description": "Current viewport height in pixels."
-                },
-                "maxHeight": {
-                  "description": "Maximum available height in pixels (if constrained).",
-                  "type": "number"
-                },
-                "maxWidth": {
-                  "description": "Maximum available width in pixels (if constrained).",
-                  "type": "number"
+                {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "width": {
+                          "type": "number",
+                          "description": "Fixed container width in pixels."
+                        }
+                      },
+                      "required": ["width"],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "maxWidth": {
+                          "description": "Maximum container width in pixels.",
+                          "anyOf": [
+                            {
+                              "type": "number"
+                            },
+                            {}
+                          ]
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  ]
                 }
-              },
-              "required": [
-                "width",
-                "height"
-              ],
-              "additionalProperties": false
+              ]
             },
             "locale": {
               "description": "User's language and region preference in BCP 47 format.",
@@ -3113,12 +3296,7 @@
                   "description": "Left safe area inset in pixels."
                 }
               },
-              "required": [
-                "top",
-                "right",
-                "bottom",
-                "left"
-              ],
+              "required": ["top", "right", "bottom", "left"],
               "additionalProperties": false
             }
           },
@@ -3148,9 +3326,7 @@
           "additionalProperties": false
         }
       },
-      "required": [
-        "method"
-      ],
+      "required": ["method"],
       "additionalProperties": false
     },
     "McpUiMessageRequest": {
@@ -3190,10 +3366,7 @@
                             "type": "array",
                             "items": {
                               "type": "string",
-                              "enum": [
-                                "user",
-                                "assistant"
-                              ]
+                              "enum": ["user", "assistant"]
                             }
                           },
                           "priority": {
@@ -3217,10 +3390,7 @@
                         "additionalProperties": {}
                       }
                     },
-                    "required": [
-                      "type",
-                      "text"
-                    ],
+                    "required": ["type", "text"],
                     "additionalProperties": false
                   },
                   {
@@ -3243,10 +3413,7 @@
                             "type": "array",
                             "items": {
                               "type": "string",
-                              "enum": [
-                                "user",
-                                "assistant"
-                              ]
+                              "enum": ["user", "assistant"]
                             }
                           },
                           "priority": {
@@ -3270,11 +3437,7 @@
                         "additionalProperties": {}
                       }
                     },
-                    "required": [
-                      "type",
-                      "data",
-                      "mimeType"
-                    ],
+                    "required": ["type", "data", "mimeType"],
                     "additionalProperties": false
                   },
                   {
@@ -3297,10 +3460,7 @@
                             "type": "array",
                             "items": {
                               "type": "string",
-                              "enum": [
-                                "user",
-                                "assistant"
-                              ]
+                              "enum": ["user", "assistant"]
                             }
                           },
                           "priority": {
@@ -3324,11 +3484,7 @@
                         "additionalProperties": {}
                       }
                     },
-                    "required": [
-                      "type",
-                      "data",
-                      "mimeType"
-                    ],
+                    "required": ["type", "data", "mimeType"],
                     "additionalProperties": false
                   },
                   {
@@ -3359,15 +3515,10 @@
                             },
                             "theme": {
                               "type": "string",
-                              "enum": [
-                                "light",
-                                "dark"
-                              ]
+                              "enum": ["light", "dark"]
                             }
                           },
-                          "required": [
-                            "src"
-                          ],
+                          "required": ["src"],
                           "additionalProperties": false
                         }
                       },
@@ -3387,10 +3538,7 @@
                             "type": "array",
                             "items": {
                               "type": "string",
-                              "enum": [
-                                "user",
-                                "assistant"
-                              ]
+                              "enum": ["user", "assistant"]
                             }
                           },
                           "priority": {
@@ -3416,11 +3564,7 @@
                         "const": "resource_link"
                       }
                     },
-                    "required": [
-                      "name",
-                      "uri",
-                      "type"
-                    ],
+                    "required": ["name", "uri", "type"],
                     "additionalProperties": false
                   },
                   {
@@ -3452,10 +3596,7 @@
                                 "type": "string"
                               }
                             },
-                            "required": [
-                              "uri",
-                              "text"
-                            ],
+                            "required": ["uri", "text"],
                             "additionalProperties": false
                           },
                           {
@@ -3478,10 +3619,7 @@
                                 "type": "string"
                               }
                             },
-                            "required": [
-                              "uri",
-                              "blob"
-                            ],
+                            "required": ["uri", "blob"],
                             "additionalProperties": false
                           }
                         ]
@@ -3493,10 +3631,7 @@
                             "type": "array",
                             "items": {
                               "type": "string",
-                              "enum": [
-                                "user",
-                                "assistant"
-                              ]
+                              "enum": ["user", "assistant"]
                             }
                           },
                           "priority": {
@@ -3520,10 +3655,7 @@
                         "additionalProperties": {}
                       }
                     },
-                    "required": [
-                      "type",
-                      "resource"
-                    ],
+                    "required": ["type", "resource"],
                     "additionalProperties": false
                   }
                 ]
@@ -3531,17 +3663,11 @@
               "description": "Message content blocks (text, image, etc.)."
             }
           },
-          "required": [
-            "role",
-            "content"
-          ],
+          "required": ["role", "content"],
           "additionalProperties": false
         }
       },
-      "required": [
-        "method",
-        "params"
-      ],
+      "required": ["method", "params"],
       "additionalProperties": false
     },
     "McpUiMessageResult": {
@@ -3571,16 +3697,11 @@
               "description": "URL to open in the host's browser"
             }
           },
-          "required": [
-            "url"
-          ],
+          "required": ["url"],
           "additionalProperties": false
         }
       },
-      "required": [
-        "method",
-        "params"
-      ],
+      "required": ["method", "params"],
       "additionalProperties": false
     },
     "McpUiOpenLinkResult": {
@@ -3623,16 +3744,11 @@
               "description": "The display mode being requested."
             }
           },
-          "required": [
-            "mode"
-          ],
+          "required": ["mode"],
           "additionalProperties": false
         }
       },
-      "required": [
-        "method",
-        "params"
-      ],
+      "required": ["method", "params"],
       "additionalProperties": false
     },
     "McpUiRequestDisplayModeResult": {
@@ -3657,9 +3773,7 @@
           "description": "The display mode that was actually set. May differ from requested if not supported."
         }
       },
-      "required": [
-        "mode"
-      ],
+      "required": ["mode"],
       "additionalProperties": {}
     },
     "McpUiResourceCsp": {
@@ -3675,6 +3789,20 @@
         },
         "resourceDomains": {
           "description": "Origins for static resources (scripts, images, styles, fonts).",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "frameDomains": {
+          "description": "Origins for nested iframes (frame-src directive).",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "baseUriDomains": {
+          "description": "Allowed base URIs for the document (base-uri directive).",
           "type": "array",
           "items": {
             "type": "string"
@@ -3704,6 +3832,51 @@
               "items": {
                 "type": "string"
               }
+            },
+            "frameDomains": {
+              "description": "Origins for nested iframes (frame-src directive).",
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "baseUriDomains": {
+              "description": "Allowed base URIs for the document (base-uri directive).",
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        "permissions": {
+          "description": "Sandbox permissions requested by the UI.",
+          "type": "object",
+          "properties": {
+            "camera": {
+              "description": "Request camera access (Permission Policy `camera` feature).",
+              "type": "object",
+              "properties": {},
+              "additionalProperties": false
+            },
+            "microphone": {
+              "description": "Request microphone access (Permission Policy `microphone` feature).",
+              "type": "object",
+              "properties": {},
+              "additionalProperties": false
+            },
+            "geolocation": {
+              "description": "Request geolocation access (Permission Policy `geolocation` feature).",
+              "type": "object",
+              "properties": {},
+              "additionalProperties": false
+            },
+            "clipboardWrite": {
+              "description": "Request clipboard write access (Permission Policy `clipboard-write` feature).",
+              "type": "object",
+              "properties": {},
+              "additionalProperties": false
             }
           },
           "additionalProperties": false
@@ -3715,6 +3888,37 @@
         "prefersBorder": {
           "description": "Visual boundary preference - true if UI prefers a visible border.",
           "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "McpUiResourcePermissions": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "camera": {
+          "description": "Request camera access (Permission Policy `camera` feature).",
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        },
+        "microphone": {
+          "description": "Request microphone access (Permission Policy `microphone` feature).",
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        },
+        "geolocation": {
+          "description": "Request geolocation access (Permission Policy `geolocation` feature).",
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        },
+        "clipboardWrite": {
+          "description": "Request clipboard write access (Permission Policy `clipboard-write` feature).",
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
         }
       },
       "additionalProperties": false
@@ -3733,10 +3937,7 @@
           "additionalProperties": false
         }
       },
-      "required": [
-        "method",
-        "params"
-      ],
+      "required": ["method", "params"],
       "additionalProperties": false
     },
     "McpUiResourceTeardownResult": {
@@ -3761,10 +3962,7 @@
           "additionalProperties": false
         }
       },
-      "required": [
-        "method",
-        "params"
-      ],
+      "required": ["method", "params"],
       "additionalProperties": false
     },
     "McpUiSandboxResourceReadyNotification": {
@@ -3803,21 +4001,61 @@
                   "items": {
                     "type": "string"
                   }
+                },
+                "frameDomains": {
+                  "description": "Origins for nested iframes (frame-src directive).",
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "baseUriDomains": {
+                  "description": "Allowed base URIs for the document (base-uri directive).",
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "additionalProperties": false
+            },
+            "permissions": {
+              "description": "Sandbox permissions from resource metadata.",
+              "type": "object",
+              "properties": {
+                "camera": {
+                  "description": "Request camera access (Permission Policy `camera` feature).",
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": false
+                },
+                "microphone": {
+                  "description": "Request microphone access (Permission Policy `microphone` feature).",
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": false
+                },
+                "geolocation": {
+                  "description": "Request geolocation access (Permission Policy `geolocation` feature).",
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": false
+                },
+                "clipboardWrite": {
+                  "description": "Request clipboard write access (Permission Policy `clipboard-write` feature).",
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": false
                 }
               },
               "additionalProperties": false
             }
           },
-          "required": [
-            "html"
-          ],
+          "required": ["html"],
           "additionalProperties": false
         }
       },
-      "required": [
-        "method",
-        "params"
-      ],
+      "required": ["method", "params"],
       "additionalProperties": false
     },
     "McpUiSizeChangedNotification": {
@@ -3843,10 +4081,7 @@
           "additionalProperties": false
         }
       },
-      "required": [
-        "method",
-        "params"
-      ],
+      "required": ["method", "params"],
       "additionalProperties": false
     },
     "McpUiStyleVariableKey": {
@@ -3907,6 +4142,10 @@
         {
           "type": "string",
           "const": "--color-text-inverse"
+        },
+        {
+          "type": "string",
+          "const": "--color-text-ghost"
         },
         {
           "type": "string",
@@ -4222,6 +4461,10 @@
           },
           {
             "type": "string",
+            "const": "--color-text-ghost"
+          },
+          {
+            "type": "string",
             "const": "--color-text-info"
           },
           {
@@ -4495,12 +4738,12 @@
         "--color-text-secondary",
         "--color-text-tertiary",
         "--color-text-inverse",
+        "--color-text-ghost",
         "--color-text-info",
         "--color-text-danger",
         "--color-text-success",
         "--color-text-warning",
         "--color-text-disabled",
-        "--color-text-ghost",
         "--color-border-primary",
         "--color-border-secondary",
         "--color-border-tertiary",
@@ -4636,10 +4879,7 @@
           "additionalProperties": false
         }
       },
-      "required": [
-        "method",
-        "params"
-      ],
+      "required": ["method", "params"],
       "additionalProperties": false
     },
     "McpUiToolInputNotification": {
@@ -4667,10 +4907,7 @@
           "additionalProperties": false
         }
       },
-      "required": [
-        "method",
-        "params"
-      ],
+      "required": ["method", "params"],
       "additionalProperties": false
     },
     "McpUiToolInputPartialNotification": {
@@ -4698,10 +4935,7 @@
           "additionalProperties": false
         }
       },
-      "required": [
-        "method",
-        "params"
-      ],
+      "required": ["method", "params"],
       "additionalProperties": false
     },
     "McpUiToolMeta": {
@@ -4729,9 +4963,6 @@
           }
         }
       },
-      "required": [
-        "resourceUri"
-      ],
       "additionalProperties": false
     },
     "McpUiToolResultNotification": {
@@ -4767,9 +4998,7 @@
                       "type": "string"
                     }
                   },
-                  "required": [
-                    "taskId"
-                  ],
+                  "required": ["taskId"],
                   "additionalProperties": false
                 }
               },
@@ -4797,10 +5026,7 @@
                             "type": "array",
                             "items": {
                               "type": "string",
-                              "enum": [
-                                "user",
-                                "assistant"
-                              ]
+                              "enum": ["user", "assistant"]
                             }
                           },
                           "priority": {
@@ -4824,10 +5050,7 @@
                         "additionalProperties": {}
                       }
                     },
-                    "required": [
-                      "type",
-                      "text"
-                    ],
+                    "required": ["type", "text"],
                     "additionalProperties": false
                   },
                   {
@@ -4850,10 +5073,7 @@
                             "type": "array",
                             "items": {
                               "type": "string",
-                              "enum": [
-                                "user",
-                                "assistant"
-                              ]
+                              "enum": ["user", "assistant"]
                             }
                           },
                           "priority": {
@@ -4877,11 +5097,7 @@
                         "additionalProperties": {}
                       }
                     },
-                    "required": [
-                      "type",
-                      "data",
-                      "mimeType"
-                    ],
+                    "required": ["type", "data", "mimeType"],
                     "additionalProperties": false
                   },
                   {
@@ -4904,10 +5120,7 @@
                             "type": "array",
                             "items": {
                               "type": "string",
-                              "enum": [
-                                "user",
-                                "assistant"
-                              ]
+                              "enum": ["user", "assistant"]
                             }
                           },
                           "priority": {
@@ -4931,11 +5144,7 @@
                         "additionalProperties": {}
                       }
                     },
-                    "required": [
-                      "type",
-                      "data",
-                      "mimeType"
-                    ],
+                    "required": ["type", "data", "mimeType"],
                     "additionalProperties": false
                   },
                   {
@@ -4966,15 +5175,10 @@
                             },
                             "theme": {
                               "type": "string",
-                              "enum": [
-                                "light",
-                                "dark"
-                              ]
+                              "enum": ["light", "dark"]
                             }
                           },
-                          "required": [
-                            "src"
-                          ],
+                          "required": ["src"],
                           "additionalProperties": false
                         }
                       },
@@ -4994,10 +5198,7 @@
                             "type": "array",
                             "items": {
                               "type": "string",
-                              "enum": [
-                                "user",
-                                "assistant"
-                              ]
+                              "enum": ["user", "assistant"]
                             }
                           },
                           "priority": {
@@ -5023,11 +5224,7 @@
                         "const": "resource_link"
                       }
                     },
-                    "required": [
-                      "name",
-                      "uri",
-                      "type"
-                    ],
+                    "required": ["name", "uri", "type"],
                     "additionalProperties": false
                   },
                   {
@@ -5059,10 +5256,7 @@
                                 "type": "string"
                               }
                             },
-                            "required": [
-                              "uri",
-                              "text"
-                            ],
+                            "required": ["uri", "text"],
                             "additionalProperties": false
                           },
                           {
@@ -5085,10 +5279,7 @@
                                 "type": "string"
                               }
                             },
-                            "required": [
-                              "uri",
-                              "blob"
-                            ],
+                            "required": ["uri", "blob"],
                             "additionalProperties": false
                           }
                         ]
@@ -5100,10 +5291,7 @@
                             "type": "array",
                             "items": {
                               "type": "string",
-                              "enum": [
-                                "user",
-                                "assistant"
-                              ]
+                              "enum": ["user", "assistant"]
                             }
                           },
                           "priority": {
@@ -5127,10 +5315,7 @@
                         "additionalProperties": {}
                       }
                     },
-                    "required": [
-                      "type",
-                      "resource"
-                    ],
+                    "required": ["type", "resource"],
                     "additionalProperties": false
                   }
                 ]
@@ -5147,17 +5332,12 @@
               "type": "boolean"
             }
           },
-          "required": [
-            "content"
-          ],
+          "required": ["content"],
           "additionalProperties": {},
           "description": "Standard MCP tool execution result."
         }
       },
-      "required": [
-        "method",
-        "params"
-      ],
+      "required": ["method", "params"],
       "additionalProperties": false
     },
     "McpUiToolVisibility": {
@@ -5207,10 +5387,7 @@
                             "type": "array",
                             "items": {
                               "type": "string",
-                              "enum": [
-                                "user",
-                                "assistant"
-                              ]
+                              "enum": ["user", "assistant"]
                             }
                           },
                           "priority": {
@@ -5234,10 +5411,7 @@
                         "additionalProperties": {}
                       }
                     },
-                    "required": [
-                      "type",
-                      "text"
-                    ],
+                    "required": ["type", "text"],
                     "additionalProperties": false
                   },
                   {
@@ -5260,10 +5434,7 @@
                             "type": "array",
                             "items": {
                               "type": "string",
-                              "enum": [
-                                "user",
-                                "assistant"
-                              ]
+                              "enum": ["user", "assistant"]
                             }
                           },
                           "priority": {
@@ -5287,11 +5458,7 @@
                         "additionalProperties": {}
                       }
                     },
-                    "required": [
-                      "type",
-                      "data",
-                      "mimeType"
-                    ],
+                    "required": ["type", "data", "mimeType"],
                     "additionalProperties": false
                   },
                   {
@@ -5314,10 +5481,7 @@
                             "type": "array",
                             "items": {
                               "type": "string",
-                              "enum": [
-                                "user",
-                                "assistant"
-                              ]
+                              "enum": ["user", "assistant"]
                             }
                           },
                           "priority": {
@@ -5341,11 +5505,7 @@
                         "additionalProperties": {}
                       }
                     },
-                    "required": [
-                      "type",
-                      "data",
-                      "mimeType"
-                    ],
+                    "required": ["type", "data", "mimeType"],
                     "additionalProperties": false
                   },
                   {
@@ -5376,15 +5536,10 @@
                             },
                             "theme": {
                               "type": "string",
-                              "enum": [
-                                "light",
-                                "dark"
-                              ]
+                              "enum": ["light", "dark"]
                             }
                           },
-                          "required": [
-                            "src"
-                          ],
+                          "required": ["src"],
                           "additionalProperties": false
                         }
                       },
@@ -5404,10 +5559,7 @@
                             "type": "array",
                             "items": {
                               "type": "string",
-                              "enum": [
-                                "user",
-                                "assistant"
-                              ]
+                              "enum": ["user", "assistant"]
                             }
                           },
                           "priority": {
@@ -5433,11 +5585,7 @@
                         "const": "resource_link"
                       }
                     },
-                    "required": [
-                      "name",
-                      "uri",
-                      "type"
-                    ],
+                    "required": ["name", "uri", "type"],
                     "additionalProperties": false
                   },
                   {
@@ -5469,10 +5617,7 @@
                                 "type": "string"
                               }
                             },
-                            "required": [
-                              "uri",
-                              "text"
-                            ],
+                            "required": ["uri", "text"],
                             "additionalProperties": false
                           },
                           {
@@ -5495,10 +5640,7 @@
                                 "type": "string"
                               }
                             },
-                            "required": [
-                              "uri",
-                              "blob"
-                            ],
+                            "required": ["uri", "blob"],
                             "additionalProperties": false
                           }
                         ]
@@ -5510,10 +5652,7 @@
                             "type": "array",
                             "items": {
                               "type": "string",
-                              "enum": [
-                                "user",
-                                "assistant"
-                              ]
+                              "enum": ["user", "assistant"]
                             }
                           },
                           "priority": {
@@ -5537,10 +5676,7 @@
                         "additionalProperties": {}
                       }
                     },
-                    "required": [
-                      "type",
-                      "resource"
-                    ],
+                    "required": ["type", "resource"],
                     "additionalProperties": false
                   }
                 ]
@@ -5560,10 +5696,7 @@
           "additionalProperties": false
         }
       },
-      "required": [
-        "method",
-        "params"
-      ],
+      "required": ["method", "params"],
       "additionalProperties": false
     },
     "McpUiUpdateModelContextResult": {

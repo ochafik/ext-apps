@@ -3,8 +3,9 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import type { CallToolResult, ReadResourceResult } from "@modelcontextprotocol/sdk/types.js";
 import fs from "node:fs/promises";
 import path from "node:path";
+import { z } from "zod";
 import { registerAppTool, registerAppResource, RESOURCE_MIME_TYPE, RESOURCE_URI_META_KEY } from "@modelcontextprotocol/ext-apps/server";
-import { startServer } from "../shared/server-utils.js";
+import { startServer } from "./server-utils.js";
 
 const DIST_DIR = path.join(import.meta.dirname, "dist");
 const RESOURCE_URI = "ui://get-time/mcp-app.html";
@@ -13,7 +14,7 @@ const RESOURCE_URI = "ui://get-time/mcp-app.html";
  * Creates a new MCP server instance with tools and resources registered.
  * Each HTTP session needs its own server instance because McpServer only supports one transport.
  */
-function createServer(): McpServer {
+export function createServer(): McpServer {
   const server = new McpServer({
     name: "Basic MCP App Server (Vanilla JS)",
     version: "1.0.0",
@@ -28,12 +29,16 @@ function createServer(): McpServer {
       title: "Get Time",
       description: "Returns the current server time as an ISO 8601 string.",
       inputSchema: {},
+      outputSchema: z.object({
+        time: z.string(),
+      }),
       _meta: { [RESOURCE_URI_META_KEY]: RESOURCE_URI },
     },
     async (): Promise<CallToolResult> => {
       const time = new Date().toISOString();
       return {
-        content: [{ type: "text", text: JSON.stringify({ time }) }],
+        content: [{ type: "text", text: time }],
+        structuredContent: { time },
       };
     },
   );

@@ -15,7 +15,7 @@ import {
   registerAppResource,
   registerAppTool,
 } from "@modelcontextprotocol/ext-apps/server";
-import { startServer } from "../shared/server-utils.js";
+import { startServer } from "./server-utils.js";
 
 // Schemas - types are derived from these using z.infer
 const CpuCoreSchema = z.object({
@@ -107,7 +107,7 @@ async function getMemoryStats(): Promise<MemoryStats> {
   };
 }
 
-function createServer(): McpServer {
+export function createServer(): McpServer {
   const server = new McpServer({
     name: "System Monitor Server",
     version: "1.0.0",
@@ -124,6 +124,7 @@ function createServer(): McpServer {
       description:
         "Returns current system statistics including per-core CPU usage, memory, and system info.",
       inputSchema: {},
+      outputSchema: SystemStatsSchema.shape,
       _meta: { [RESOURCE_URI_META_KEY]: resourceUri },
     },
     async (): Promise<CallToolResult> => {
@@ -151,6 +152,7 @@ function createServer(): McpServer {
 
       return {
         content: [{ type: "text", text: JSON.stringify(stats) }],
+        structuredContent: stats,
       };
     },
   );
