@@ -37,7 +37,6 @@ export {
   type McpUiMessageRequest,
   type McpUiMessageResult,
   type McpUiUpdateModelContextRequest,
-  type McpUiUpdateModelContextResult,
   type McpUiSupportedContentBlockModalities,
   type McpUiSandboxProxyReadyNotification,
   type McpUiSandboxResourceReadyNotification,
@@ -84,7 +83,6 @@ import type {
   McpUiInitializeResult,
   McpUiOpenLinkResult,
   McpUiMessageResult,
-  McpUiUpdateModelContextResult,
   McpUiResourceTeardownResult,
   McpUiRequestDisplayModeResult,
 } from "./spec.types.js";
@@ -100,7 +98,6 @@ export {
   McpUiMessageRequestSchema,
   McpUiMessageResultSchema,
   McpUiUpdateModelContextRequestSchema,
-  McpUiUpdateModelContextResultSchema,
   McpUiSupportedContentBlockModalitiesSchema,
   McpUiSandboxProxyReadyNotificationSchema,
   McpUiSandboxResourceReadyNotificationSchema,
@@ -209,7 +206,6 @@ export type AppResult =
   | McpUiInitializeResult
   | McpUiOpenLinkResult
   | McpUiMessageResult
-  | McpUiUpdateModelContextResult
   | McpUiResourceTeardownResult
   | McpUiRequestDisplayModeResult
   | CallToolResult

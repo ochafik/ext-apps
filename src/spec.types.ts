@@ -407,19 +407,6 @@ export interface McpUiUpdateModelContextRequest {
 }
 
 /**
- * @description Result from setting the agent's model context.
- * Empty on success; errors are signaled via JSON-RPC error responses.
- * @see {@link McpUiUpdateModelContextRequest}
- */
-export interface McpUiUpdateModelContextResult {
-  /**
-   * Index signature required for MCP SDK `Protocol` class compatibility.
-   * Note: The schema intentionally omits this to enforce strict validation.
-   */
-  [key: string]: unknown;
-}
-
-/**
  * @description Request for graceful shutdown of the Guest UI (Host -> Guest UI).
  * @see {@link app-bridge.AppBridge.teardownResource} for the host method that sends this
  */

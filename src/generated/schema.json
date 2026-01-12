@@ -5698,14 +5698,6 @@
       },
       "required": ["method", "params"],
       "additionalProperties": false
-    },
-    "McpUiUpdateModelContextResult": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
-      "type": "object",
-      "propertyNames": {
-        "type": "string"
-      },
-      "additionalProperties": {}
     }
   }
 }
