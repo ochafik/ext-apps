@@ -71,6 +71,7 @@ function buildAllowAttribute(permissions?: {
   camera?: boolean;
   microphone?: boolean;
   geolocation?: boolean;
+  clipboardWrite?: boolean;
 }): string {
   if (!permissions) return "";
 
@@ -78,6 +79,7 @@ function buildAllowAttribute(permissions?: {
   if (permissions.camera) allowList.push("camera");
   if (permissions.microphone) allowList.push("microphone");
   if (permissions.geolocation) allowList.push("geolocation");
+  if (permissions.clipboardWrite) allowList.push("clipboard-write");
 
   return allowList.join("; ");
 }

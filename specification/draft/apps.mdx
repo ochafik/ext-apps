@@ -187,6 +187,12 @@ interface UIResourceMeta {
      * Maps to Permission Policy `geolocation` feature
      */
     geolocation?: boolean,
+    /**
+     * Request clipboard write access
+     *
+     * Maps to Permission Policy `clipboard-write` feature
+     */
+    clipboardWrite?: boolean,
   },
   /**
    * Dedicated origin for widget
@@ -236,6 +242,7 @@ The resource content is returned via `resources/read`:
           camera?: boolean;           // Request camera access
           microphone?: boolean;       // Request microphone access
           geolocation?: boolean;      // Request geolocation access
+          clipboardWrite?: boolean;   // Request clipboard write access
         };
         domain?: string;
         prefersBorder?: boolean;
@@ -606,11 +613,12 @@ interface HostCapabilities {
   logging?: {};
   /** Sandbox configuration applied by the host. */
   sandbox?: {
-    /** Permissions granted by the host (camera, microphone, geolocation). */
+    /** Permissions granted by the host (camera, microphone, geolocation, clipboard-write). */
     permissions?: {
       camera?: boolean;
       microphone?: boolean;
       geolocation?: boolean;
+      clipboardWrite?: boolean;
     };
     /** CSP domains approved by the host. */
     csp?: {
@@ -1131,6 +1139,7 @@ These messages are reserved for web-based hosts that implement the recommended d
       camera?: boolean,
       microphone?: boolean,
       geolocation?: boolean,
+      clipboardWrite?: boolean,
     }
   }
 }

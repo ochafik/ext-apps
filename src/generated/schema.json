@@ -109,6 +109,10 @@
                 "geolocation": {
                   "description": "Request geolocation access (Permission Policy `geolocation` feature).",
                   "type": "boolean"
+                },
+                "clipboardWrite": {
+                  "description": "Request clipboard write access (Permission Policy `clipboard-write` feature).",
+                  "type": "boolean"
                 }
               },
               "additionalProperties": false
@@ -2312,6 +2316,10 @@
                     "geolocation": {
                       "description": "Request geolocation access (Permission Policy `geolocation` feature).",
                       "type": "boolean"
+                    },
+                    "clipboardWrite": {
+                      "description": "Request clipboard write access (Permission Policy `clipboard-write` feature).",
+                      "type": "boolean"
                     }
                   },
                   "additionalProperties": false
@@ -3669,6 +3677,10 @@
             "geolocation": {
               "description": "Request geolocation access (Permission Policy `geolocation` feature).",
               "type": "boolean"
+            },
+            "clipboardWrite": {
+              "description": "Request clipboard write access (Permission Policy `clipboard-write` feature).",
+              "type": "boolean"
             }
           },
           "additionalProperties": false
@@ -3698,6 +3710,10 @@
         },
         "geolocation": {
           "description": "Request geolocation access (Permission Policy `geolocation` feature).",
+          "type": "boolean"
+        },
+        "clipboardWrite": {
+          "description": "Request clipboard write access (Permission Policy `clipboard-write` feature).",
           "type": "boolean"
         }
       },
@@ -3813,6 +3829,10 @@
                 },
                 "geolocation": {
                   "description": "Request geolocation access (Permission Policy `geolocation` feature).",
+                  "type": "boolean"
+                },
+                "clipboardWrite": {
+                  "description": "Request clipboard write access (Permission Policy `clipboard-write` feature).",
                   "type": "boolean"
                 }
               },

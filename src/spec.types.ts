@@ -519,6 +519,8 @@ export interface McpUiResourcePermissions {
   microphone?: boolean;
   /** @description Request geolocation access (Permission Policy `geolocation` feature). */
   geolocation?: boolean;
+  /** @description Request clipboard write access (Permission Policy `clipboard-write` feature). */
+  clipboardWrite?: boolean;
 }
 
 /**

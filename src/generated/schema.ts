@@ -236,6 +236,13 @@ export const McpUiResourcePermissionsSchema = z.object({
     .describe(
       "Request geolocation access (Permission Policy `geolocation` feature).",
     ),
+  /** @description Request clipboard write access (Permission Policy `clipboard-write` feature). */
+  clipboardWrite: z
+    .boolean()
+    .optional()
+    .describe(
+      "Request clipboard write access (Permission Policy `clipboard-write` feature).",
+    ),
 });
 
 /**
