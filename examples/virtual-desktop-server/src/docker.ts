@@ -13,7 +13,10 @@ const execAsync = promisify(exec);
 export const CONTAINER_PREFIX = "mcp-apps-vd-";
 
 /** Base directory for virtual desktop data */
-export const VIRTUAL_DESKTOPS_DIR = path.join(homedir(), ".virtual-desktops");
+export const VIRTUAL_DESKTOPS_DIR = path.join(
+  homedir(),
+  ".mcp-virtual-desktops-app",
+);
 
 /** Docker label key for identifying our containers */
 export const LABEL_KEY = "vd.managed";
