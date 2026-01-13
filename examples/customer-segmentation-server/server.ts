@@ -1,5 +1,4 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import type {
   CallToolResult,
   ReadResourceResult,
@@ -12,7 +11,6 @@ import {
   registerAppResource,
   registerAppTool,
 } from "@modelcontextprotocol/ext-apps/server";
-import { startServer } from "./server-utils.js";
 import {
   generateCustomers,
   generateSegmentSummaries,
@@ -142,20 +140,3 @@ export function createServer(): McpServer {
 
   return server;
 }
-
-async function main() {
-  if (process.argv.includes("--stdio")) {
-    await createServer().connect(new StdioServerTransport());
-  } else {
-    const port = parseInt(process.env.PORT ?? "3105", 10);
-    await startServer(createServer, {
-      port,
-      name: "Customer Segmentation Server",
-    });
-  }
-}
-
-main().catch((e) => {
-  console.error(e);
-  process.exit(1);
-});

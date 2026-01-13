@@ -6,7 +6,6 @@
  * - show-map: Display an interactive 3D globe at a given location
  */
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import type {
   CallToolResult,
   ReadResourceResult,
@@ -20,8 +19,6 @@ import {
   RESOURCE_MIME_TYPE,
   RESOURCE_URI_META_KEY,
 } from "@modelcontextprotocol/ext-apps/server";
-import { startServer } from "./server-utils.js";
-
 const DIST_DIR = path.join(import.meta.dirname, "dist");
 const RESOURCE_URI = "ui://cesium-map/mcp-app.html";
 
@@ -252,17 +249,3 @@ export function createServer(): McpServer {
 
   return server;
 }
-
-async function main() {
-  if (process.argv.includes("--stdio")) {
-    await createServer().connect(new StdioServerTransport());
-  } else {
-    const port = parseInt(process.env.PORT ?? "3001", 10);
-    await startServer(createServer, { port, name: "CesiumJS Map Server" });
-  }
-}
-
-main().catch((e) => {
-  console.error(e);
-  process.exit(1);
-});
