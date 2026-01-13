@@ -266,11 +266,9 @@
   right: 0;
   bottom: 0;
   z-index: 1000;
-  overflow: auto; /* Allow scrolling in fullscreen mode */
+  overflow: hidden; /* No scrolling on main - only canvas-container scrolls */
 }
 
 .main.fullscreen .canvas-container {
-  height: auto;
-  max-height: none;
-  overflow: visible;
+  overflow: auto; /* Scroll within the document area only */
 }
