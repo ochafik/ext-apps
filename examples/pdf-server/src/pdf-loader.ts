@@ -76,8 +76,13 @@ export async function loadPdfBytesChunk(
   // Clamp byteCount to remaining bytes
   const actualByteCount = Math.min(byteCount, totalBytes - actualOffset);
 
-  // Extract the chunk
-  const chunk = data.slice(actualOffset, actualOffset + actualByteCount);
+  // Extract the chunk - copy to avoid ArrayBuffer detachment issues
+  const chunk = new Uint8Array(
+    data.buffer.slice(
+      data.byteOffset + actualOffset,
+      data.byteOffset + actualOffset + actualByteCount,
+    ),
+  );
   const base64 = Buffer.from(chunk).toString("base64");
 
   const hasMore = actualOffset + actualByteCount < totalBytes;

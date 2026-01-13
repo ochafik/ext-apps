@@ -427,6 +427,20 @@ async function loadPdfInChunks(pdfIdToLoad: string): Promise<Uint8Array> {
       },
     });
 
+    log.info("Tool result:", result);
+
+    // Check for errors
+    if (result.isError) {
+      const errorText = result.content
+        ?.map((c) => ("text" in c ? c.text : ""))
+        .join(" ");
+      throw new Error(`Tool error: ${errorText}`);
+    }
+
+    if (!result.structuredContent) {
+      throw new Error("No structuredContent in tool response");
+    }
+
     const chunk = result.structuredContent as unknown as PdfBytesChunk;
     totalBytes = chunk.totalBytes;
     hasMore = chunk.hasMore;
@@ -455,7 +469,9 @@ async function loadPdfInChunks(pdfIdToLoad: string): Promise<Uint8Array> {
     pos += chunk.length;
   }
 
-  log.info(`PDF fully loaded: ${totalBytes} bytes in ${chunks.length} chunk(s)`);
+  log.info(
+    `PDF fully loaded: ${totalBytes} bytes in ${chunks.length} chunk(s)`,
+  );
   return fullPdf;
 }
 
