@@ -231,3 +231,18 @@
 .text-layer > span {
   pointer-events: all;
 }
+
+/* Fullscreen mode */
+.main.fullscreen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1000;
+}
+
+.main.fullscreen .canvas-container {
+  height: calc(100vh - 60px) !important;
+  max-height: none !important;
+}

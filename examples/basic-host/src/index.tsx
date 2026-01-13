@@ -318,6 +318,7 @@ function AppIFramePanel({ toolCallInfo, isDestroying, onTeardownComplete }: AppI
   const [modelContext, setModelContext] = useState<ModelContext | null>(null);
   const [toolResult, setToolResult] = useState<object | null>(null);
   const [messages, setMessages] = useState<AppMessage[]>([]);
+  const [displayMode, setDisplayMode] = useState<"inline" | "fullscreen">("inline");
 
   useEffect(() => {
     const iframe = iframeRef.current!;
@@ -334,6 +335,11 @@ function AppIFramePanel({ toolCallInfo, isDestroying, onTeardownComplete }: AppI
           const appBridge = newAppBridge(toolCallInfo.serverInfo, iframe, {
             onContextUpdate: setModelContext,
             onMessage: (msg) => setMessages((prev) => [...prev, msg]),
+            onDisplayModeChange: setDisplayMode,
+          }, {
+            // Provide container dimensions - maxHeight for flexible sizing
+            containerDimensions: { maxHeight: 600 },
+            displayMode: "inline",
           });
           appBridgeRef.current = appBridge;
           initializeApp(iframe, appBridge, toolCallInfo);
@@ -400,9 +406,35 @@ function AppIFramePanel({ toolCallInfo, isDestroying, onTeardownComplete }: AppI
   };
   const messagesText = messages.map(formatMessage).join("\n\n");
 
+  const toggleFullscreen = () => {
+    const newMode = displayMode === "fullscreen" ? "inline" : "fullscreen";
+    setDisplayMode(newMode);
+    // Notify the app of the display mode change
+    appBridgeRef.current?.sendHostContextChange({
+      displayMode: newMode,
+      // In fullscreen, provide fixed height matching viewport
+      containerDimensions: newMode === "fullscreen"
+        ? { height: window.innerHeight - 100 } // Leave room for header
+        : { maxHeight: 600 },
+    });
+  };
+
+  const panelClassName = displayMode === "fullscreen"
+    ? `${styles.appIframePanel} ${styles.fullscreen}`
+    : styles.appIframePanel;
+
   return (
-    <div className={styles.appIframePanel}>
-      <CollapsiblePanel icon="📥" label="Tool Input" content={inputJson} />
+    <div className={panelClassName}>
+      <div className={styles.appToolbar}>
+        <CollapsiblePanel icon="📥" label="Tool Input" content={inputJson} />
+        <button
+          className={styles.fullscreenButton}
+          onClick={toggleFullscreen}
+          title={displayMode === "fullscreen" ? "Exit fullscreen" : "Fullscreen"}
+        >
+          {displayMode === "fullscreen" ? "⛶" : "⛶"}
+        </button>
+      </div>
       <iframe ref={iframeRef} />
       {resultJson && (
         <CollapsiblePanel icon="📤" label="Tool Result" content={resultJson} />

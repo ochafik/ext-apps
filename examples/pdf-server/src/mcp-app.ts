@@ -53,11 +53,12 @@ const zoomInBtn = document.getElementById("zoom-in-btn") as HTMLButtonElement;
 const zoomLevelEl = document.getElementById("zoom-level")!;
 const downloadBtn = document.getElementById("download-btn") as HTMLButtonElement;
 
-// Create app instance with autoResize disabled
+// Create app instance
+// autoResize will be enabled/disabled based on containerDimensions
 const app = new App(
   { name: "PDF Viewer", version: "1.0.0" },
   {},
-  { autoResize: false },
+  { autoResize: true }, // Will be controlled by containerDimensions logic
 );
 
 // UI State functions
@@ -330,11 +331,47 @@ app.onerror = (err) => {
 };
 
 function handleHostContextChanged(ctx: McpUiHostContext) {
+  // Apply safe area insets
   if (ctx.safeAreaInsets) {
     mainEl.style.paddingTop = `${ctx.safeAreaInsets.top}px`;
     mainEl.style.paddingRight = `${ctx.safeAreaInsets.right}px`;
     mainEl.style.paddingBottom = `${ctx.safeAreaInsets.bottom}px`;
     mainEl.style.paddingLeft = `${ctx.safeAreaInsets.left}px`;
+  }
+
+  // Handle containerDimensions for proper sizing
+  const dims = ctx.containerDimensions;
+  const canvasContainer = document.querySelector(".canvas-container") as HTMLElement;
+
+  if (dims && canvasContainer) {
+    if ("height" in dims && dims.height) {
+      // Fixed height: fill the container
+      canvasContainer.style.height = "100%";
+      canvasContainer.style.maxHeight = "none";
+      mainEl.style.height = "100vh";
+      log.info("Fixed height mode:", dims.height);
+    } else if ("maxHeight" in dims && dims.maxHeight) {
+      // Flexible height: set max-height, let content determine actual height
+      canvasContainer.style.height = "auto";
+      canvasContainer.style.maxHeight = `${dims.maxHeight - 60}px`; // Reserve space for toolbar
+      mainEl.style.height = "auto";
+      log.info("Flexible height mode, maxHeight:", dims.maxHeight);
+    } else {
+      // Unbounded: use reasonable default
+      canvasContainer.style.height = "auto";
+      canvasContainer.style.maxHeight = "600px";
+      mainEl.style.height = "auto";
+      log.info("Unbounded height mode");
+    }
+  }
+
+  // Handle display mode changes
+  if (ctx.displayMode === "fullscreen") {
+    mainEl.classList.add("fullscreen");
+    log.info("Fullscreen mode enabled");
+  } else {
+    mainEl.classList.remove("fullscreen");
+    log.info("Inline mode");
   }
 }
 
