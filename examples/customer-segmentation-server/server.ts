@@ -17,8 +17,8 @@ import { startServer } from "./server-utils.js";
 import {
   generateCustomers,
   generateSegmentSummaries,
-} from "./src/data-generator.ts";
-import { SEGMENTS, type Customer, type SegmentSummary } from "./src/types.ts";
+} from "./src/data-generator.js";
+import { SEGMENTS, type Customer, type SegmentSummary } from "./src/types.js";
 
 const DIST_DIR = path.join(import.meta.dirname, "dist");
 
