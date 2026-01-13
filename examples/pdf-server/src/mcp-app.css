@@ -5,7 +5,7 @@
   width: 100%;
   background: var(--bg100, #f5f5f5);
   color: var(--text000, #1a1a1a);
-  overflow: visible;
+  overflow: hidden; /* Prevent scrollbars in inline mode - we request exact size */
 }
 
 /* Loading State */
@@ -266,10 +266,11 @@
   right: 0;
   bottom: 0;
   z-index: 1000;
+  overflow: auto; /* Allow scrolling in fullscreen mode */
 }
 
 .main.fullscreen .canvas-container {
-  height: calc(100vh - 60px) !important;
-  max-height: none !important;
-  overflow: auto; /* Allow scrolling in fullscreen mode */
+  height: auto;
+  max-height: none;
+  overflow: visible;
 }
