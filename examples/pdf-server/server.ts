@@ -14,14 +14,29 @@ import {
 } from "@modelcontextprotocol/ext-apps/server";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import type { CallToolResult, ReadResourceResult } from "@modelcontextprotocol/sdk/types.js";
+import type {
+  CallToolResult,
+  ReadResourceResult,
+} from "@modelcontextprotocol/sdk/types.js";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { z } from "zod";
 
-import { buildPdfIndex, findEntryByUrl, createEntry, isArxivUrl, isFileUrl, toFileUrl, normalizeArxivUrl } from "./src/pdf-indexer.js";
+import {
+  buildPdfIndex,
+  findEntryByUrl,
+  createEntry,
+  isArxivUrl,
+  isFileUrl,
+  toFileUrl,
+  normalizeArxivUrl,
+} from "./src/pdf-indexer.js";
 import { loadPdfBytesChunk, populatePdfMetadata } from "./src/pdf-loader.js";
-import { ReadPdfBytesInputSchema, PdfBytesChunkSchema, type PdfIndex } from "./src/types.js";
+import {
+  ReadPdfBytesInputSchema,
+  PdfBytesChunkSchema,
+  type PdfIndex,
+} from "./src/types.js";
 import { startServer } from "./server-utils.js";
 
 const DIST_DIR = path.join(import.meta.dirname, "dist");
@@ -34,13 +49,20 @@ export function createServer(): McpServer {
   const server = new McpServer({ name: "PDF Server", version: "1.0.0" });
 
   // Tool: list_pdfs
-  server.tool("list_pdfs", "List indexed PDFs", {}, async (): Promise<CallToolResult> => {
-    if (!pdfIndex) throw new Error("Not initialized");
-    return {
-      content: [{ type: "text", text: JSON.stringify(pdfIndex.entries, null, 2) }],
-      structuredContent: { entries: pdfIndex.entries },
-    };
-  });
+  server.tool(
+    "list_pdfs",
+    "List indexed PDFs",
+    {},
+    async (): Promise<CallToolResult> => {
+      if (!pdfIndex) throw new Error("Not initialized");
+      return {
+        content: [
+          { type: "text", text: JSON.stringify(pdfIndex.entries, null, 2) },
+        ],
+        structuredContent: { entries: pdfIndex.entries },
+      };
+    },
+  );
 
   // Tool: read_pdf_bytes (app-only) - Chunked binary loading
   registerAppTool(
@@ -55,14 +77,23 @@ export function createServer(): McpServer {
     },
     async (args: unknown): Promise<CallToolResult> => {
       if (!pdfIndex) throw new Error("Not initialized");
-      const { url: rawUrl, offset, byteCount } = ReadPdfBytesInputSchema.parse(args);
+      const {
+        url: rawUrl,
+        offset,
+        byteCount,
+      } = ReadPdfBytesInputSchema.parse(args);
       const url = isArxivUrl(rawUrl) ? normalizeArxivUrl(rawUrl) : rawUrl;
       const entry = findEntryByUrl(pdfIndex, url);
       if (!entry) throw new Error(`PDF not found: ${url}`);
 
       const chunk = await loadPdfBytesChunk(entry, offset, byteCount);
       return {
-        content: [{ type: "text", text: `${chunk.byteCount} bytes at ${chunk.offset}/${chunk.totalBytes}` }],
+        content: [
+          {
+            type: "text",
+            text: `${chunk.byteCount} bytes at ${chunk.offset}/${chunk.totalBytes}`,
+          },
+        ],
         structuredContent: chunk,
       };
     },
@@ -82,7 +113,10 @@ Use this tool when the user asks to view, display, read, or open a PDF. Accepts:
 
 The viewer supports zoom, navigation, text selection, and fullscreen mode.`,
       inputSchema: {
-        url: z.string().default(DEFAULT_PDF).describe("PDF URL (arxiv.org for dynamic loading)"),
+        url: z
+          .string()
+          .default(DEFAULT_PDF)
+          .describe("PDF URL (arxiv.org for dynamic loading)"),
         page: z.number().min(1).default(1).describe("Initial page"),
       },
       outputSchema: z.object({
@@ -122,7 +156,12 @@ The viewer supports zoom, navigation, text selection, and fullscreen mode.`,
       };
 
       return {
-        content: [{ type: "text", text: `Viewing ${entry.url} (${entry.metadata.pageCount} pages)` }],
+        content: [
+          {
+            type: "text",
+            text: `Viewing ${entry.url} (${entry.metadata.pageCount} pages)`,
+          },
+        ],
         structuredContent: result,
       };
     },
@@ -135,8 +174,15 @@ The viewer supports zoom, navigation, text selection, and fullscreen mode.`,
     RESOURCE_URI,
     { mimeType: RESOURCE_MIME_TYPE },
     async (): Promise<ReadResourceResult> => {
-      const html = await fs.readFile(path.join(DIST_DIR, "mcp-app.html"), "utf-8");
-      return { contents: [{ uri: RESOURCE_URI, mimeType: RESOURCE_MIME_TYPE, text: html }] };
+      const html = await fs.readFile(
+        path.join(DIST_DIR, "mcp-app.html"),
+        "utf-8",
+      );
+      return {
+        contents: [
+          { uri: RESOURCE_URI, mimeType: RESOURCE_MIME_TYPE, text: html },
+        ],
+      };
     },
   );
 
@@ -155,7 +201,11 @@ function parseArgs(): { urls: string[]; stdio: boolean } {
     } else if (!arg.startsWith("-")) {
       // Convert local paths to file:// URLs, normalize arxiv URLs
       let url = arg;
-      if (!arg.startsWith("http://") && !arg.startsWith("https://") && !arg.startsWith("file://")) {
+      if (
+        !arg.startsWith("http://") &&
+        !arg.startsWith("https://") &&
+        !arg.startsWith("file://")
+      ) {
         url = toFileUrl(arg);
       } else if (isArxivUrl(arg)) {
         url = normalizeArxivUrl(arg);

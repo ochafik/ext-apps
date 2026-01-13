@@ -49,6 +49,9 @@ export async function buildPdfIndex(urls: string[]): Promise<PdfIndex> {
 }
 
 /** Find entry by URL */
-export function findEntryByUrl(index: PdfIndex, url: string): PdfEntry | undefined {
+export function findEntryByUrl(
+  index: PdfIndex,
+  url: string,
+): PdfEntry | undefined {
   return index.entries.find((e) => e.url === url);
 }

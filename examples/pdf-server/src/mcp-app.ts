@@ -189,9 +189,7 @@ function formatPageContent(
     const selStart = text.slice(selection.start, selection.start + halfKeep);
     const selEnd = text.slice(selection.end - halfKeep, selection.end);
     return (
-      T +
-      `<pdf-selection>${T}${selStart}...${selEnd}${T}</pdf-selection>` +
-      T
+      T + `<pdf-selection>${T}${selStart}...${selEnd}${T}</pdf-selection>` + T
     );
   }
 
@@ -261,10 +259,17 @@ async function updatePageContext() {
     // Find selection position
     const sel = window.getSelection();
     const selectedText = sel?.toString().replace(/\s+/g, " ").trim();
-    const selection = selectedText ? findSelectionInText(pageText, selectedText) : undefined;
+    const selection = selectedText
+      ? findSelectionInText(pageText, selectedText)
+      : undefined;
 
     if (selection) {
-      log.info("Selection found:", selectedText?.slice(0, 30), "at", selection.start);
+      log.info(
+        "Selection found:",
+        selectedText?.slice(0, 30),
+        "at",
+        selection.start,
+      );
     }
 
     // Format content with selection and truncation
@@ -706,9 +711,17 @@ app.ontoolresult = async (result) => {
 
   // Restore saved page or use initial page
   const savedPage = loadSavedPage();
-  currentPage = savedPage && savedPage <= parsed.pageCount ? savedPage : parsed.initialPage;
+  currentPage =
+    savedPage && savedPage <= parsed.pageCount ? savedPage : parsed.initialPage;
 
-  log.info("URL:", pdfUrl, "Pages:", parsed.pageCount, "Starting:", currentPage);
+  log.info(
+    "URL:",
+    pdfUrl,
+    "Pages:",
+    parsed.pageCount,
+    "Starting:",
+    currentPage,
+  );
 
   showLoading("Loading PDF...");
 

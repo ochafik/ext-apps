@@ -51,12 +51,20 @@ export async function loadPdfData(entry: PdfEntry): Promise<Uint8Array> {
 }
 
 /** Try HTTP Range request for partial content */
-async function fetchRange(url: string, start: number, end: number): Promise<{data: Uint8Array, total: number} | null> {
+async function fetchRange(
+  url: string,
+  start: number,
+  end: number,
+): Promise<{ data: Uint8Array; total: number } | null> {
   try {
-    const res = await fetch(url, { headers: { Range: `bytes=${start}-${end}` } });
+    const res = await fetch(url, {
+      headers: { Range: `bytes=${start}-${end}` },
+    });
     if (res.status !== 206) return null;
 
-    const total = parseInt(res.headers.get("Content-Range")?.split("/")[1] || "0");
+    const total = parseInt(
+      res.headers.get("Content-Range")?.split("/")[1] || "0",
+    );
     return { data: new Uint8Array(await res.arrayBuffer()), total };
   } catch {
     return null;
@@ -115,7 +123,9 @@ export async function populatePdfMetadata(entry: PdfEntry): Promise<void> {
     const pdf = await lib.getDocument({ data: new Uint8Array(data) }).promise;
     entry.metadata.pageCount = pdf.numPages;
 
-    const info = (await pdf.getMetadata()).info as Record<string, unknown> | undefined;
+    const info = (await pdf.getMetadata()).info as
+      | Record<string, unknown>
+      | undefined;
     if (info?.Title) entry.metadata.title = String(info.Title);
     if (info?.Author) entry.metadata.author = String(info.Author);
 
