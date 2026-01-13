@@ -442,27 +442,21 @@ function parseArgs(): { sources: string[]; stdio: boolean } {
   return { sources, stdio };
 }
 
+// Default demo paper: "A Survey of Large Language Models" (75 pages, ~2.5MB)
+const DEFAULT_SOURCE = "https://arxiv.org/pdf/2303.18223.pdf";
+
 async function main() {
   const { sources, stdio } = parseArgs();
 
+  // Use default paper if no sources provided
+  const effectiveSources = sources.length > 0 ? sources : [DEFAULT_SOURCE];
   if (sources.length === 0) {
-    console.error("Usage: bun server.ts [--stdio] <source1> [source2] ...");
-    console.error("");
-    console.error("Sources can be:");
-    console.error("  - Local directories (scanned recursively)");
-    console.error("  - Individual PDF files");
-    console.error(
-      "  - arxiv URLs (https://arxiv.org/pdf/... or https://arxiv.org/abs/...)",
-    );
-    console.error("");
-    console.error("Options:");
-    console.error("  --stdio    Use stdio transport for MCP clients");
-    process.exit(1);
+    console.error(`[pdf-server] No sources provided, using default: ${DEFAULT_SOURCE}`);
   }
 
   // Build the PDF index
   console.error("[pdf-server] Building index...");
-  pdfIndex = await buildPdfIndex(sources);
+  pdfIndex = await buildPdfIndex(effectiveSources);
   console.error(`[pdf-server] Ready: ${pdfIndex.totalPdfs} PDFs indexed`);
 
   if (stdio) {
