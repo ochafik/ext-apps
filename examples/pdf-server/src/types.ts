@@ -16,9 +16,7 @@ export const PdfMetadataSchema = z.object({
 export type PdfMetadata = z.infer<typeof PdfMetadataSchema>;
 
 export const PdfEntrySchema = z.object({
-  id: z.string(),
-  url: z.string(),
-  displayName: z.string(),
+  url: z.string(), // Also serves as unique ID
   metadata: PdfMetadataSchema,
 });
 export type PdfEntry = z.infer<typeof PdfEntrySchema>;
@@ -36,7 +34,7 @@ export type PdfIndex = z.infer<typeof PdfIndexSchema>;
 export const MAX_CHUNK_BYTES = 500 * 1024; // 500KB
 
 export const PdfBytesChunkSchema = z.object({
-  pdfId: z.string(),
+  url: z.string(),
   bytes: z.string(), // base64
   offset: z.number(),
   byteCount: z.number(),
@@ -46,7 +44,7 @@ export const PdfBytesChunkSchema = z.object({
 export type PdfBytesChunk = z.infer<typeof PdfBytesChunkSchema>;
 
 export const ReadPdfBytesInputSchema = z.object({
-  pdfId: z.string().describe("PDF identifier"),
+  url: z.string().describe("PDF URL"),
   offset: z.number().min(0).default(0).describe("Byte offset"),
   byteCount: z.number().default(MAX_CHUNK_BYTES).describe("Bytes to read"),
 });

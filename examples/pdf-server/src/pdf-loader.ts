@@ -29,18 +29,16 @@ async function getPdfjs() {
 
 /** Fetch PDF data (with caching) */
 export async function loadPdfData(entry: PdfEntry): Promise<Uint8Array> {
-  const cached = pdfCache.get(entry.id);
+  const cached = pdfCache.get(entry.url);
   if (cached) return cached;
 
   console.error(`[loader] Fetching: ${entry.url}`);
 
   let data: Uint8Array;
   if (isFileUrl(entry.url)) {
-    // Local file: read from disk
     const filePath = entry.url.replace("file://", "");
     data = new Uint8Array(await fs.readFile(filePath));
   } else {
-    // HTTP: fetch from network
     const response = await fetch(entry.url);
     if (!response.ok) {
       throw new Error(`Failed to fetch: ${response.status}`);
@@ -48,7 +46,7 @@ export async function loadPdfData(entry: PdfEntry): Promise<Uint8Array> {
     data = new Uint8Array(await response.arrayBuffer());
   }
 
-  pdfCache.set(entry.id, data);
+  pdfCache.set(entry.url, data);
   return data;
 }
 
@@ -75,11 +73,11 @@ export async function loadPdfBytesChunk(
   byteCount = MAX_CHUNK_BYTES,
 ): Promise<PdfBytesChunk> {
   // Try Range request first (streaming without full download)
-  if (!pdfCache.has(entry.id)) {
+  if (!pdfCache.has(entry.url)) {
     const range = await fetchRange(entry.url, offset, offset + byteCount - 1);
     if (range) {
       return {
-        pdfId: entry.id,
+        url: entry.url,
         bytes: Buffer.from(range.data).toString("base64"),
         offset,
         byteCount: range.data.length,
@@ -94,7 +92,7 @@ export async function loadPdfBytesChunk(
   const chunk = data.slice(offset, offset + byteCount);
 
   return {
-    pdfId: entry.id,
+    url: entry.url,
     bytes: Buffer.from(chunk).toString("base64"),
     offset,
     byteCount: chunk.length,
@@ -120,11 +118,6 @@ export async function populatePdfMetadata(entry: PdfEntry): Promise<void> {
     const info = (await pdf.getMetadata()).info as Record<string, unknown> | undefined;
     if (info?.Title) entry.metadata.title = String(info.Title);
     if (info?.Author) entry.metadata.author = String(info.Author);
-
-    // Use title as display name if available
-    if (entry.metadata.title) {
-      entry.displayName = entry.metadata.title;
-    }
 
     await pdf.destroy();
   } catch (err) {

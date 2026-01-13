@@ -6,10 +6,6 @@
  * - Model context updates (current page text + selection)
  * - Display modes: fullscreen with scrolling vs inline with resize
  * - External link opening (openLink)
- *
- * Usage:
- *   bun server.ts https://arxiv.org/pdf/2303.18223.pdf
- *   bun server.ts --stdio https://example.com/doc.pdf
  */
 import {
   registerAppResource,
@@ -23,13 +19,9 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { z } from "zod";
 
-import { buildPdfIndex, findEntryById, createEntry, isArxivUrl, isFileUrl, toFileUrl } from "./src/pdf-indexer.js";
+import { buildPdfIndex, findEntryByUrl, createEntry, isArxivUrl, isFileUrl, toFileUrl } from "./src/pdf-indexer.js";
 import { loadPdfBytesChunk, populatePdfMetadata } from "./src/pdf-loader.js";
-import {
-  ReadPdfBytesInputSchema,
-  PdfBytesChunkSchema,
-  type PdfIndex,
-} from "./src/types.js";
+import { ReadPdfBytesInputSchema, PdfBytesChunkSchema, type PdfIndex } from "./src/types.js";
 import { startServer } from "./server-utils.js";
 
 const DIST_DIR = path.join(import.meta.dirname, "dist");
@@ -41,9 +33,7 @@ let pdfIndex: PdfIndex | null = null;
 export function createServer(): McpServer {
   const server = new McpServer({ name: "PDF Server", version: "1.0.0" });
 
-  // ============================================================================
-  // Tool: list_pdfs - List all indexed PDFs
-  // ============================================================================
+  // Tool: list_pdfs
   server.tool("list_pdfs", "List indexed PDFs", {}, async (): Promise<CallToolResult> => {
     if (!pdfIndex) throw new Error("Not initialized");
     return {
@@ -52,28 +42,24 @@ export function createServer(): McpServer {
     };
   });
 
-  // ============================================================================
-  // Tool: read_pdf_bytes - Chunked binary loading (app-only)
-  // Demonstrates: Streaming with HTTP Range requests
-  // ============================================================================
+  // Tool: read_pdf_bytes (app-only) - Chunked binary loading
   registerAppTool(
     server,
     "read_pdf_bytes",
     {
       title: "Read PDF Bytes",
-      description: "Load binary data in chunks (uses HTTP Range requests when available)",
+      description: "Load binary data in chunks",
       inputSchema: ReadPdfBytesInputSchema.shape,
       outputSchema: PdfBytesChunkSchema,
       _meta: { ui: { visibility: ["app"] } },
     },
     async (args: unknown): Promise<CallToolResult> => {
       if (!pdfIndex) throw new Error("Not initialized");
-      const { pdfId, offset, byteCount } = ReadPdfBytesInputSchema.parse(args);
-      const entry = findEntryById(pdfIndex, pdfId);
-      if (!entry) throw new Error(`PDF not found: ${pdfId}`);
+      const { url, offset, byteCount } = ReadPdfBytesInputSchema.parse(args);
+      const entry = findEntryByUrl(pdfIndex, url);
+      if (!entry) throw new Error(`PDF not found: ${url}`);
 
       const chunk = await loadPdfBytesChunk(entry, offset, byteCount);
-
       return {
         content: [{ type: "text", text: `${chunk.byteCount} bytes at ${chunk.offset}/${chunk.totalBytes}` }],
         structuredContent: chunk,
@@ -81,79 +67,59 @@ export function createServer(): McpServer {
     },
   );
 
-  // ============================================================================
-  // Tool: view_pdf - Interactive viewer with UI
-  // Demonstrates: App tools with UI, display modes, model context updates
-  // ============================================================================
+  // Tool: display_pdf - Interactive viewer with UI
   registerAppTool(
     server,
-    "view_pdf",
+    "display_pdf",
     {
-      title: "View PDF",
-      description: `Interactive PDF viewer. Demonstrates:
-- Display modes: fullscreen (scrolling) vs inline (resize)
-- Model context updates (page text + selection)
-- External links (openLink)
-
-Use pdfId from list_pdfs, or provide an arxiv.org URL.`,
+      title: "Display PDF",
+      description: "Display an interactive PDF viewer in the chat. The viewer supports zoom, navigation, text selection, and fullscreen mode. Use a URL from list_pdfs, or provide an arxiv.org URL for dynamic loading.",
       inputSchema: {
-        pdfId: z.string().optional().describe("PDF ID from list_pdfs"),
-        url: z.string().default(DEFAULT_PDF).describe("arxiv.org PDF URL"),
+        url: z.string().default(DEFAULT_PDF).describe("PDF URL (arxiv.org for dynamic loading)"),
         page: z.number().min(1).default(1).describe("Initial page"),
       },
       outputSchema: z.object({
-        pdfId: z.string(),
-        title: z.string(),
-        sourceUrl: z.string(),
+        url: z.string(),
+        title: z.string().optional(),
         pageCount: z.number(),
         initialPage: z.number(),
       }),
       _meta: { ui: { resourceUri: RESOURCE_URI } },
     },
-    async ({ pdfId, url, page }): Promise<CallToolResult> => {
+    async ({ url, page }): Promise<CallToolResult> => {
       if (!pdfIndex) throw new Error("Not initialized");
 
-      let entry;
-      if (pdfId) {
-        entry = findEntryById(pdfIndex, pdfId);
-        if (!entry) throw new Error(`PDF not found: ${pdfId}`);
-      } else {
-        // Check if URL is already indexed (file:// URLs must be pre-indexed)
-        entry = pdfIndex.entries.find((e) => e.url === url);
+      let entry = findEntryByUrl(pdfIndex, url);
 
-        if (!entry) {
-          // Dynamic URLs: only arxiv.org allowed (file:// must be in initial list)
-          if (isFileUrl(url)) {
-            throw new Error(`File URLs must be in the initial list. Use pdfId instead.`);
-          }
-          if (!isArxivUrl(url)) {
-            throw new Error(`Only arxiv.org URLs can be loaded dynamically. Got: ${url}`);
-          }
-
-          entry = createEntry(url);
-          await populatePdfMetadata(entry);
-          pdfIndex.entries.push(entry);
+      if (!entry) {
+        // Dynamic loading: only arxiv.org allowed
+        if (isFileUrl(url)) {
+          throw new Error("File URLs must be in the initial list");
         }
+        if (!isArxivUrl(url)) {
+          throw new Error(`Only arxiv.org URLs can be loaded dynamically`);
+        }
+
+        entry = createEntry(url);
+        await populatePdfMetadata(entry);
+        pdfIndex.entries.push(entry);
       }
 
       const result = {
-        pdfId: entry.id,
-        title: entry.displayName,
-        sourceUrl: entry.url,
+        url: entry.url,
+        title: entry.metadata.title,
         pageCount: entry.metadata.pageCount,
         initialPage: Math.min(page, entry.metadata.pageCount),
       };
 
       return {
-        content: [{ type: "text", text: `Viewing "${entry.displayName}" (${entry.metadata.pageCount} pages)` }],
+        content: [{ type: "text", text: `Viewing ${entry.url} (${entry.metadata.pageCount} pages)` }],
         structuredContent: result,
       };
     },
   );
 
-  // ============================================================================
   // Resource: UI HTML
-  // ============================================================================
   registerAppResource(
     server,
     RESOURCE_URI,
@@ -168,10 +134,7 @@ Use pdfId from list_pdfs, or provide an arxiv.org URL.`,
   return server;
 }
 
-// ============================================================================
 // CLI
-// ============================================================================
-
 function parseArgs(): { urls: string[]; stdio: boolean } {
   const args = process.argv.slice(2);
   const urls: string[] = [];

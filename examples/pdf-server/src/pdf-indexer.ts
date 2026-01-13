@@ -1,7 +1,6 @@
 /**
- * PDF Indexer - Simplified URL-based indexing
+ * PDF Indexer
  */
-import { createHash } from "node:crypto";
 import path from "node:path";
 import type { PdfIndex, PdfEntry } from "./types.js";
 import { populatePdfMetadata } from "./pdf-loader.js";
@@ -18,19 +17,13 @@ export function isFileUrl(url: string): boolean {
 
 /** Convert local path to file:// URL */
 export function toFileUrl(filePath: string): string {
-  const abs = path.resolve(filePath);
-  return `file://${abs}`;
+  return `file://${path.resolve(filePath)}`;
 }
 
 /** Create a PdfEntry from a URL */
 export function createEntry(url: string): PdfEntry {
-  const id = createHash("sha256").update(url).digest("hex").slice(0, 8);
-  const filename = new URL(url).pathname.split("/").pop()?.replace(".pdf", "") || "document";
-
   return {
-    id,
     url,
-    displayName: filename,
     metadata: { pageCount: 0, fileSizeBytes: 0 },
   };
 }
@@ -50,7 +43,7 @@ export async function buildPdfIndex(urls: string[]): Promise<PdfIndex> {
   return { entries };
 }
 
-/** Find entry by ID */
-export function findEntryById(index: PdfIndex, id: string): PdfEntry | undefined {
-  return index.entries.find((e) => e.id === id);
+/** Find entry by URL */
+export function findEntryByUrl(index: PdfIndex, url: string): PdfEntry | undefined {
+  return index.entries.find((e) => e.url === url);
 }

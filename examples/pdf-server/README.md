@@ -102,7 +102,7 @@ bun examples/pdf-server/server.ts --stdio ./papers/
 | Tool | Visibility | Purpose |
 |------|------------|---------|
 | `list_pdfs` | Model | List indexed PDFs |
-| `view_pdf` | Model + UI | Open interactive viewer |
+| `display_pdf` | Model + UI | Display interactive viewer in chat |
 | `read_pdf_bytes` | App only | Chunked binary loading |
 
 ## Architecture

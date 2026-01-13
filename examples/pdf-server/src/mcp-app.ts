@@ -30,10 +30,16 @@ let pdfBytes: Uint8Array | null = null;
 let currentPage = 1;
 let totalPages = 0;
 let scale = 1.0;
-let pdfTitle = "";
-let pdfSourceUrl: string | undefined;
-let pdfId = "";
+let pdfUrl = "";
+let pdfTitle: string | undefined;
 let currentRenderTask: { cancel: () => void } | null = null;
+
+/** Elide URL for display, keeping start and end */
+function elideUrl(url: string, maxLen = 50): string {
+  if (url.length <= maxLen) return url;
+  const keep = Math.floor((maxLen - 3) / 2);
+  return url.slice(0, keep) + "..." + url.slice(-keep);
+}
 
 // DOM Elements
 const mainEl = document.querySelector(".main") as HTMLElement;
@@ -136,21 +142,12 @@ function showViewer() {
 }
 
 function updateControls() {
-  // Make title clickable if we have a source URL
-  titleEl.textContent = pdfTitle;
-  if (pdfSourceUrl) {
-    titleEl.style.textDecoration = "underline";
-    titleEl.style.cursor = "pointer";
-    titleEl.onclick = () => {
-      if (pdfSourceUrl) {
-        app.openLink({ url: pdfSourceUrl });
-      }
-    };
-  } else {
-    titleEl.style.textDecoration = "none";
-    titleEl.style.cursor = "default";
-    titleEl.onclick = null;
-  }
+  // Show elided URL with full URL as tooltip, clickable to open
+  titleEl.textContent = elideUrl(pdfUrl, 60);
+  titleEl.title = pdfUrl;
+  titleEl.style.textDecoration = "underline";
+  titleEl.style.cursor = "pointer";
+  titleEl.onclick = () => app.openLink({ url: pdfUrl });
   pageInputEl.value = String(currentPage);
   pageInputEl.max = String(totalPages);
   totalPagesEl.textContent = `of ${totalPages}`;
@@ -281,8 +278,8 @@ async function updatePageContext() {
     const content = formatPageContent(pageText, 5000, selection);
 
     const markdown = `---
-pdf-title: ${pdfTitle}
-url: ${pdfSourceUrl || pdfId}
+title: ${pdfTitle || ""}
+url: ${pdfUrl}
 current-page: ${currentPage}/${totalPages}
 ---
 
@@ -397,16 +394,10 @@ async function renderPage() {
 
 // Page persistence
 function getStorageKey(): string | null {
+  if (!pdfUrl) return null;
   const ctx = app.getHostContext();
-  const toolId = ctx?.toolInfo?.id ?? pdfId;
-  log.info("getStorageKey: pdfSourceUrl=", pdfSourceUrl, "toolId=", toolId);
-  if (!pdfSourceUrl || !toolId) {
-    log.info("getStorageKey: returning null (missing pdfSourceUrl or toolId)");
-    return null;
-  }
-  const key = `pdf:${pdfSourceUrl}:${toolId}`;
-  log.info("getStorageKey: key=", key);
-  return key;
+  const toolId = ctx?.toolInfo?.id ?? pdfUrl;
+  return `pdf:${pdfUrl}:${toolId}`;
 }
 
 function saveCurrentPage() {
@@ -611,16 +602,14 @@ canvasContainerEl.addEventListener(
 
 // Parse tool result
 function parseToolResult(result: CallToolResult): {
-  pdfId: string;
-  title: string;
-  sourceUrl: string;
+  url: string;
+  title?: string;
   pageCount: number;
   initialPage: number;
 } | null {
   return result.structuredContent as {
-    pdfId: string;
-    title: string;
-    sourceUrl: string;
+    url: string;
+    title?: string;
     pageCount: number;
     initialPage: number;
   } | null;
@@ -628,7 +617,7 @@ function parseToolResult(result: CallToolResult): {
 
 // Chunked binary loading types
 interface PdfBytesChunk {
-  pdfId: string;
+  url: string;
   bytes: string;
   offset: number;
   byteCount: number;
@@ -644,7 +633,7 @@ function updateProgress(loaded: number, total: number) {
 }
 
 // Load PDF in chunks with progress
-async function loadPdfInChunks(pdfIdToLoad: string): Promise<Uint8Array> {
+async function loadPdfInChunks(urlToLoad: string): Promise<Uint8Array> {
   const CHUNK_SIZE = 500 * 1024; // 500KB chunks
   const chunks: Uint8Array[] = [];
   let offset = 0;
@@ -658,11 +647,7 @@ async function loadPdfInChunks(pdfIdToLoad: string): Promise<Uint8Array> {
   while (hasMore) {
     const result = await app.callServerTool({
       name: "read_pdf_bytes",
-      arguments: {
-        pdfId: pdfIdToLoad,
-        offset,
-        byteCount: CHUNK_SIZE,
-      },
+      arguments: { url: urlToLoad, offset, byteCount: CHUNK_SIZE },
     });
 
     // Check for errors
@@ -713,37 +698,24 @@ app.ontoolresult = async (result) => {
 
   const parsed = parseToolResult(result);
   if (!parsed) {
-    showError("Invalid tool result - could not parse PDF info");
+    showError("Invalid tool result");
     return;
   }
 
-  pdfId = parsed.pdfId;
-  const { title, sourceUrl, pageCount, initialPage } = parsed;
-  pdfTitle = title;
-  pdfSourceUrl = sourceUrl;
-  totalPages = pageCount;
+  pdfUrl = parsed.url;
+  pdfTitle = parsed.title;
+  totalPages = parsed.pageCount;
 
-  // Restore saved page or use initial page from tool result
+  // Restore saved page or use initial page
   const savedPage = loadSavedPage();
-  currentPage = savedPage && savedPage <= pageCount ? savedPage : initialPage;
+  currentPage = savedPage && savedPage <= parsed.pageCount ? savedPage : parsed.initialPage;
 
-  log.info(
-    "PDF ID:",
-    pdfId,
-    "Title:",
-    title,
-    "Pages:",
-    pageCount,
-    "Starting at:",
-    currentPage,
-    savedPage ? "(restored)" : "",
-  );
+  log.info("URL:", pdfUrl, "Pages:", parsed.pageCount, "Starting:", currentPage);
 
-  showLoading("Loading PDF in chunks...");
+  showLoading("Loading PDF...");
 
   try {
-    // Load PDF using chunked binary API
-    pdfBytes = await loadPdfInChunks(pdfId);
+    pdfBytes = await loadPdfInChunks(pdfUrl);
 
     showLoading("Rendering PDF...");
 
