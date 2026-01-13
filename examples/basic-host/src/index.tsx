@@ -307,70 +307,50 @@ function ToolCallInfoPanel({ toolCallInfo, isDestroying, onRequestClose, onClose
     }
   }, [isDestroying, isApp, onCloseComplete]);
 
+  const inputJson = JSON.stringify(toolCallInfo.input, null, 2);
+
   return (
     <div
       className={styles.toolCallInfoPanel}
       style={isDestroying ? { opacity: 0.5, pointerEvents: "none" } : undefined}
     >
-      {/* For non-app tools, show input/output side by side */}
-      {!isApp && (
-        <div className={styles.inputInfoPanel}>
-          <h2>
-            <span>{toolCallInfo.serverInfo.name}</span>
-            <span className={styles.toolName}>{toolCallInfo.tool.name}</span>
-            {onRequestClose && !isDestroying && (
-              <button
-                className={styles.closeButton}
-                onClick={onRequestClose}
-                title="Close"
-              >
-                ×
-              </button>
-            )}
-          </h2>
-          <JsonBlock value={toolCallInfo.input} />
-        </div>
-      )}
-      <div className={isApp ? styles.appOutputPanel : styles.outputInfoPanel}>
-        {/* For apps, show header above the app: ServerName:tool_name */}
-        {isApp && (
-          <div className={styles.appHeader}>
-            <span>{toolCallInfo.serverInfo.name}:<span className={styles.toolName}>{toolCallInfo.tool.name}</span></span>
-            {onRequestClose && !isDestroying && (
-              <button
-                className={styles.closeButton}
-                onClick={onRequestClose}
-                title="Close"
-              >
-                ×
-              </button>
-            )}
-          </div>
+      {/* Row 1: Header with server:tool name and close button */}
+      <div className={styles.appHeader}>
+        <span>{toolCallInfo.serverInfo.name}:<span className={styles.toolName}>{toolCallInfo.tool.name}</span></span>
+        {onRequestClose && !isDestroying && (
+          <button
+            className={styles.closeButton}
+            onClick={onRequestClose}
+            title="Close"
+          >
+            ×
+          </button>
         )}
+      </div>
+
+      {/* Row 2: Tool Input */}
+      <CollapsiblePanel icon="📥" label="Tool Input" content={inputJson} />
+
+      {/* Row 3: App iframe (if app) */}
+      {isApp && (
         <ErrorBoundary>
           <Suspense fallback="Loading...">
-            {
-              isApp
-                ? <AppIFramePanel
-                    toolCallInfo={toolCallInfo}
-                    isDestroying={isDestroying}
-                    onTeardownComplete={onCloseComplete}
-                  />
-                : <ToolResultPanel toolCallInfo={toolCallInfo} />
-            }
+            <AppIFramePanel
+              toolCallInfo={toolCallInfo}
+              isDestroying={isDestroying}
+              onTeardownComplete={onCloseComplete}
+            />
           </Suspense>
         </ErrorBoundary>
-      </div>
+      )}
+
+      {/* Row 4: Tool Result */}
+      <ErrorBoundary>
+        <Suspense fallback="Loading result...">
+          <ToolResultPanel toolCallInfo={toolCallInfo} />
+        </Suspense>
+      </ErrorBoundary>
     </div>
-  );
-}
-
-
-function JsonBlock({ value }: { value: object }) {
-  return (
-    <pre className={styles.jsonBlock}>
-      <code>{JSON.stringify(value, null, 2)}</code>
-    </pre>
   );
 }
 
@@ -421,7 +401,6 @@ function AppIFramePanel({ toolCallInfo, isDestroying, onTeardownComplete }: AppI
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const appBridgeRef = useRef<ReturnType<typeof newAppBridge> | null>(null);
   const [modelContext, setModelContext] = useState<ModelContext | null>(null);
-  const [toolResult, setToolResult] = useState<object | null>(null);
   const [messages, setMessages] = useState<AppMessage[]>([]);
   const [displayMode, setDisplayMode] = useState<"inline" | "fullscreen">("inline");
 
@@ -452,8 +431,6 @@ function AppIFramePanel({ toolCallInfo, isDestroying, onTeardownComplete }: AppI
       });
     });
 
-    // Track tool result for display
-    toolCallInfo.resultPromise.then(setToolResult).catch(() => {});
   }, [toolCallInfo]);
 
   // Graceful teardown: wait for guest to respond before unmounting
@@ -501,9 +478,6 @@ function AppIFramePanel({ toolCallInfo, isDestroying, onTeardownComplete }: AppI
     : "";
   const fullContext = [contextText, contextJson].filter(Boolean).join("\n\n");
 
-  const inputJson = JSON.stringify(toolCallInfo.input, null, 2);
-  const resultJson = toolResult ? JSON.stringify(toolResult, null, 2) : null;
-
   // Format messages
   const formatMessage = (m: AppMessage) => {
     const content = m.content.map(formatContentBlock).join("\n");
@@ -517,11 +491,7 @@ function AppIFramePanel({ toolCallInfo, isDestroying, onTeardownComplete }: AppI
 
   return (
     <div className={panelClassName}>
-      <CollapsiblePanel icon="📥" label="Tool Input" content={inputJson} />
       <iframe ref={iframeRef} />
-      {resultJson && (
-        <CollapsiblePanel icon="📤" label="Tool Result" content={resultJson} />
-      )}
       {messages.length > 0 && (
         <CollapsiblePanel
           icon="💬"
@@ -543,7 +513,8 @@ interface ToolResultPanelProps {
 }
 function ToolResultPanel({ toolCallInfo }: ToolResultPanelProps) {
   const result = use(toolCallInfo.resultPromise);
-  return <JsonBlock value={result} />;
+  const resultJson = JSON.stringify(result, null, 2);
+  return <CollapsiblePanel icon="📤" label="Tool Result" content={resultJson} />;
 }
 
 
