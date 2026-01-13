@@ -84,7 +84,10 @@ async function main() {
     await createServer().connect(new StdioServerTransport());
   } else {
     const port = parseInt(process.env.PORT ?? "3105", 10);
-    await startServer(createServer, { port, name: "Customer Segmentation Server" });
+    await startServer(createServer, {
+      port,
+      name: "Customer Segmentation Server",
+    });
   }
 }
 
