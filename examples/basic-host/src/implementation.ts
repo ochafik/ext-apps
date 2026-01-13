@@ -1,6 +1,6 @@
 import { RESOURCE_MIME_TYPE, getToolUiResourceUri, type McpUiSandboxProxyReadyNotification, AppBridge, PostMessageTransport, type McpUiResourceCsp, type McpUiResourcePermissions, buildAllowAttribute, type McpUiUpdateModelContextRequest, type McpUiMessageRequest } from "@modelcontextprotocol/ext-apps/app-bridge";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
+import { WebSocketClientTransport } from "@modelcontextprotocol/sdk/client/websocket.js";
 import type { CallToolResult, Tool } from "@modelcontextprotocol/sdk/types.js";
 
 
@@ -23,14 +23,25 @@ export interface ServerInfo {
 }
 
 
-export async function connectToServer(serverUrl: URL): Promise<ServerInfo> {
+/**
+ * Connect to an MCP server via WebSocket.
+ * @param serverName Server name from config (used as query param)
+ * @returns Server info including client and available tools
+ */
+export async function connectToServer(serverName: string): Promise<ServerInfo> {
   const client = new Client(IMPLEMENTATION);
 
-  log.info("Connecting to server:", serverUrl.href);
-  await client.connect(new StreamableHTTPClientTransport(serverUrl));
+  // Build WebSocket URL with server name as query param
+  const wsUrl = new URL(`ws://localhost:8080/ws?server=${encodeURIComponent(serverName)}`);
+
+  log.info("Connecting to server:", serverName);
+  const transport = new WebSocketClientTransport(wsUrl);
+  transport.onclose = () => log.warn("WebSocket closed:", serverName);
+  transport.onerror = (error) => log.error("WebSocket error:", serverName, error);
+  await client.connect(transport);
   log.info("Connection successful");
 
-  const name = client.getServerVersion()?.name ?? serverUrl.href;
+  const name = client.getServerVersion()?.name ?? serverName;
 
   const toolsList = await client.listTools();
   const tools = new Map(toolsList.tools.map((tool) => [tool.name, tool]));

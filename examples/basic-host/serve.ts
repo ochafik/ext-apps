@@ -1,10 +1,14 @@
 #!/usr/bin/env npx tsx
 /**
- * HTTP servers for the MCP UI example:
- * - Host server (port 8080): serves host HTML files (React and Vanilla examples)
+ * HTTP + WebSocket servers for the MCP UI example:
+ * - Host server (port 8080): serves host HTML files, API endpoints, and WebSocket for MCP
  * - Sandbox server (port 8081): serves sandbox.html with CSP headers
  *
  * Running on separate ports ensures proper origin isolation for security.
+ *
+ * WebSocket endpoint: ws://localhost:8080/ws?server={name}
+ * - Spawns MCP servers from config file (Claude Desktop format)
+ * - Bridges WebSocket ↔ stdio communication
  *
  * Security: CSP is set via HTTP headers based on ?csp= query param.
  * This ensures content cannot tamper with CSP (unlike meta tags).
@@ -12,9 +16,13 @@
 
 import express from "express";
 import cors from "cors";
+import { createServer } from "http";
+import { WebSocketServer, WebSocket } from "ws";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
 import type { McpUiResourceCsp } from "@modelcontextprotocol/ext-apps";
+import { loadConfig, parseConfigArg, type McpServersConfig } from "./config.js";
+import { StdioBridge } from "./stdio-bridge.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -22,9 +30,21 @@ const __dirname = dirname(__filename);
 const HOST_PORT = parseInt(process.env.HOST_PORT || "8080", 10);
 const SANDBOX_PORT = parseInt(process.env.SANDBOX_PORT || "8081", 10);
 const DIRECTORY = join(__dirname, "dist");
-const SERVERS: string[] = process.env.SERVERS
-  ? JSON.parse(process.env.SERVERS)
-  : ["http://localhost:3001/mcp"];
+
+// Load MCP server config
+const CONFIG_PATH = parseConfigArg();
+let mcpConfig: McpServersConfig = { mcpServers: {} };
+
+try {
+  mcpConfig = await loadConfig(CONFIG_PATH);
+  const serverNames = Object.keys(mcpConfig.mcpServers ?? {});
+  console.log(`[Config] Loaded ${serverNames.length} server(s): ${serverNames.join(", ") || "(none)"}`);
+  if (CONFIG_PATH) {
+    console.log(`[Config] Config file: ${CONFIG_PATH}`);
+  }
+} catch (error) {
+  console.error("[Config] Failed to load config:", error);
+}
 
 // ============ Host Server (port 8080) ============
 const hostApp = express();
@@ -41,13 +61,58 @@ hostApp.use((req, res, next) => {
 
 hostApp.use(express.static(DIRECTORY));
 
-// API endpoint to get configured server URLs
+// API endpoint to get available server names
 hostApp.get("/api/servers", (_req, res) => {
-  res.json(SERVERS);
+  res.json(Object.keys(mcpConfig.mcpServers ?? {}));
 });
 
 hostApp.get("/", (_req, res) => {
   res.redirect("/index.html");
+});
+
+// Create HTTP server for host app (needed for WebSocket upgrade)
+const httpServer = createServer(hostApp);
+
+// ============ WebSocket Server ============
+const wss = new WebSocketServer({ server: httpServer, path: "/ws" });
+
+// Track active bridges for cleanup
+const activeBridges = new Map<WebSocket, StdioBridge>();
+
+wss.on("connection", async (ws, req) => {
+  const url = new URL(req.url ?? "", `http://${req.headers.host}`);
+  const serverName = url.searchParams.get("server");
+
+  if (!serverName) {
+    console.warn("[WebSocket] Missing 'server' query param");
+    ws.close(4000, "Missing 'server' query param");
+    return;
+  }
+
+  const serverConfig = mcpConfig.mcpServers?.[serverName];
+  if (!serverConfig) {
+    console.warn(`[WebSocket] Unknown server: ${serverName}`);
+    ws.close(4001, `Unknown server: ${serverName}`);
+    return;
+  }
+
+  console.log(`[WebSocket] New connection for server: ${serverName}`);
+
+  const bridge = new StdioBridge(ws, serverName, serverConfig);
+  activeBridges.set(ws, bridge);
+
+  try {
+    await bridge.start();
+  } catch (error) {
+    console.error(`[WebSocket] Failed to start bridge for ${serverName}:`, error);
+    ws.close(1011, `Failed to start server: ${(error as Error).message}`);
+    activeBridges.delete(ws);
+    return;
+  }
+
+  ws.on("close", () => {
+    activeBridges.delete(ws);
+  });
 });
 
 // ============ Sandbox Server (port 8081) ============
@@ -130,12 +195,9 @@ sandboxApp.use((_req, res) => {
 });
 
 // ============ Start both servers ============
-hostApp.listen(HOST_PORT, (err) => {
-  if (err) {
-    console.error("Error starting server:", err);
-    process.exit(1);
-  }
+httpServer.listen(HOST_PORT, () => {
   console.log(`Host server:    http://localhost:${HOST_PORT}`);
+  console.log(`WebSocket:      ws://localhost:${HOST_PORT}/ws?server={name}`);
 });
 
 sandboxApp.listen(SANDBOX_PORT, (err) => {
@@ -146,3 +208,27 @@ sandboxApp.listen(SANDBOX_PORT, (err) => {
   console.log(`Sandbox server: http://localhost:${SANDBOX_PORT}`);
   console.log("\nPress Ctrl+C to stop\n");
 });
+
+// ============ Graceful shutdown ============
+async function shutdown() {
+  console.log("\n[Shutdown] Closing connections...");
+
+  // Close all active bridges
+  const closePromises: Promise<void>[] = [];
+  for (const bridge of activeBridges.values()) {
+    closePromises.push(bridge.close());
+  }
+  await Promise.all(closePromises);
+
+  // Close WebSocket server
+  wss.close();
+
+  // Close HTTP servers
+  httpServer.close();
+
+  console.log("[Shutdown] Done");
+  process.exit(0);
+}
+
+process.on("SIGINT", shutdown);
+process.on("SIGTERM", shutdown);
