@@ -102,7 +102,7 @@ function requestFitToContent() {
   // toolbar + padding-top + page-wrapper height + padding-bottom + buffer
   const toolbarHeight = toolbarEl.offsetHeight;
   const pageWrapperHeight = pageWrapperEl.offsetHeight;
-  const BUFFER = 2; // Small buffer for sub-pixel rounding
+  const BUFFER = 10; // Buffer for sub-pixel rounding and browser quirks
   const totalHeight =
     toolbarHeight + paddingTop + pageWrapperHeight + paddingBottom + BUFFER;
 
