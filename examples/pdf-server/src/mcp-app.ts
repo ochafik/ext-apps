@@ -68,7 +68,7 @@ let currentDisplayMode: "inline" | "fullscreen" = "inline";
 // Layout constants (must match CSS)
 const TOOLBAR_HEIGHT = 48;
 const CANVAS_PADDING = 16; // 1rem on each side
-const HEIGHT_BUFFER = 2; // Extra pixels to prevent sub-pixel scrolling
+const HEIGHT_BUFFER = 4; // Extra pixels to prevent sub-pixel scrolling
 
 /**
  * Request the host to resize the app to fit the current PDF page.
@@ -144,7 +144,6 @@ function updateControls() {
   nextBtn.disabled = currentPage >= totalPages;
   zoomLevelEl.textContent = `${Math.round(scale * 100)}%`;
 }
-
 
 // Extract text from current page and update model context
 async function updatePageContext() {

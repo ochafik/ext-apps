@@ -232,29 +232,29 @@ interface ServerSelectProps {
 }
 function ServerSelect({ serversPromise, onSelect, initialServer, initialTool, autoCall, onAutoCall }: ServerSelectProps) {
   const servers = use(serversPromise);
-  const [selectedIndex, setSelectedIndex] = useState(() => {
+  const [hasInitialized, setHasInitialized] = useState(false);
+  const [selectedIndex, setSelectedIndex] = useState(0);
+
+  // Initialize with the correct server/tool when servers are loaded
+  useEffect(() => {
+    if (hasInitialized || servers.length === 0) return;
+
     // Find initial server index if specified
+    let idx = 0;
     if (initialServer) {
-      const idx = servers.findIndex(s => s.name === initialServer);
-      return idx >= 0 ? idx : 0;
+      const foundIdx = servers.findIndex(s => s.name === initialServer);
+      if (foundIdx >= 0) idx = foundIdx;
     }
-    return 0;
-  });
-  const [hasCalledAutoCall, setHasCalledAutoCall] = useState(false);
 
-  useEffect(() => {
-    if (servers.length > selectedIndex) {
-      onSelect(servers[selectedIndex], initialTool ?? undefined);
-    }
-  }, [servers]);
+    setSelectedIndex(idx);
+    onSelect(servers[idx], initialTool ?? undefined);
+    setHasInitialized(true);
 
-  // Auto-call after initial render if requested
-  useEffect(() => {
-    if (autoCall && !hasCalledAutoCall && servers.length > 0) {
-      setHasCalledAutoCall(true);
-      onAutoCall?.();
+    // Auto-call after initial selection if requested
+    if (autoCall) {
+      setTimeout(() => onAutoCall?.(), 100);
     }
-  }, [autoCall, hasCalledAutoCall, servers, onAutoCall]);
+  }, [servers, hasInitialized, initialServer, initialTool, autoCall, onSelect, onAutoCall]);
 
   if (servers.length === 0) {
     return <select disabled><option>No servers configured</option></select>;
