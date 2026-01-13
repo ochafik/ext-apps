@@ -186,39 +186,63 @@ export const McpUiSandboxProxyReadyNotificationSchema = z.object({
 });
 
 /**
- * @description Notification containing HTML resource for the sandbox proxy to load.
- * @internal
- * @see https://github.com/modelcontextprotocol/ext-apps/blob/main/specification/draft/apps.mdx#sandbox-proxy
+ * @description Content Security Policy configuration for UI resources.
  */
-export const McpUiSandboxResourceReadyNotificationSchema = z.object({
-  method: z.literal("ui/notifications/sandbox-resource-ready"),
-  params: z.object({
-    /** @description HTML content to load into the inner iframe. */
-    html: z.string().describe("HTML content to load into the inner iframe."),
-    /** @description Optional override for the inner iframe's sandbox attribute. */
-    sandbox: z
-      .string()
-      .optional()
-      .describe("Optional override for the inner iframe's sandbox attribute."),
-    /** @description CSP configuration from resource metadata. */
-    csp: z
-      .object({
-        /** @description Origins for network requests (fetch/XHR/WebSocket). */
-        connectDomains: z
-          .array(z.string())
-          .optional()
-          .describe("Origins for network requests (fetch/XHR/WebSocket)."),
-        /** @description Origins for static resources (scripts, images, styles, fonts). */
-        resourceDomains: z
-          .array(z.string())
-          .optional()
-          .describe(
-            "Origins for static resources (scripts, images, styles, fonts).",
-          ),
-      })
-      .optional()
-      .describe("CSP configuration from resource metadata."),
-  }),
+export const McpUiResourceCspSchema = z.object({
+  /** @description Origins for network requests (fetch/XHR/WebSocket). */
+  connectDomains: z
+    .array(z.string())
+    .optional()
+    .describe("Origins for network requests (fetch/XHR/WebSocket)."),
+  /** @description Origins for static resources (scripts, images, styles, fonts). */
+  resourceDomains: z
+    .array(z.string())
+    .optional()
+    .describe("Origins for static resources (scripts, images, styles, fonts)."),
+  /** @description Origins for nested iframes (frame-src directive). */
+  frameDomains: z
+    .array(z.string())
+    .optional()
+    .describe("Origins for nested iframes (frame-src directive)."),
+  /** @description Allowed base URIs for the document (base-uri directive). */
+  baseUriDomains: z
+    .array(z.string())
+    .optional()
+    .describe("Allowed base URIs for the document (base-uri directive)."),
+});
+
+/**
+ * @description Sandbox permissions requested by the UI resource.
+ * Hosts MAY honor these by setting appropriate iframe `allow` attributes.
+ * Apps SHOULD NOT assume permissions are granted; use JS feature detection as fallback.
+ */
+export const McpUiResourcePermissionsSchema = z.object({
+  /** @description Request camera access (Permission Policy `camera` feature). */
+  camera: z
+    .object({})
+    .optional()
+    .describe("Request camera access (Permission Policy `camera` feature)."),
+  /** @description Request microphone access (Permission Policy `microphone` feature). */
+  microphone: z
+    .object({})
+    .optional()
+    .describe(
+      "Request microphone access (Permission Policy `microphone` feature).",
+    ),
+  /** @description Request geolocation access (Permission Policy `geolocation` feature). */
+  geolocation: z
+    .object({})
+    .optional()
+    .describe(
+      "Request geolocation access (Permission Policy `geolocation` feature).",
+    ),
+  /** @description Request clipboard write access (Permission Policy `clipboard-write` feature). */
+  clipboardWrite: z
+    .object({})
+    .optional()
+    .describe(
+      "Request clipboard write access (Permission Policy `clipboard-write` feature).",
+    ),
 });
 
 /**
@@ -334,6 +358,36 @@ export const McpUiResourceTeardownResultSchema = z.record(
   z.unknown(),
 );
 
+export const McpUiSupportedContentBlockModalitiesSchema = z.object({
+  /** @description Host supports text content blocks. */
+  text: z.object({}).optional().describe("Host supports text content blocks."),
+  /** @description Host supports image content blocks. */
+  image: z
+    .object({})
+    .optional()
+    .describe("Host supports image content blocks."),
+  /** @description Host supports audio content blocks. */
+  audio: z
+    .object({})
+    .optional()
+    .describe("Host supports audio content blocks."),
+  /** @description Host supports resource content blocks. */
+  resource: z
+    .object({})
+    .optional()
+    .describe("Host supports resource content blocks."),
+  /** @description Host supports resource link content blocks. */
+  resourceLink: z
+    .object({})
+    .optional()
+    .describe("Host supports resource link content blocks."),
+  /** @description Host supports structured content. */
+  structuredContent: z
+    .object({})
+    .optional()
+    .describe("Host supports structured content."),
+});
+
 /**
  * @description Capabilities supported by the host application.
  * @see {@link McpUiInitializeResult} for the initialization result that includes these capabilities
@@ -373,6 +427,29 @@ export const McpUiHostCapabilitiesSchema = z.object({
     .describe("Host can proxy resource reads to the MCP server."),
   /** @description Host accepts log messages. */
   logging: z.object({}).optional().describe("Host accepts log messages."),
+  /** @description Sandbox configuration applied by the host. */
+  sandbox: z
+    .object({
+      /** @description Permissions granted by the host (camera, microphone, geolocation). */
+      permissions: McpUiResourcePermissionsSchema.optional().describe(
+        "Permissions granted by the host (camera, microphone, geolocation).",
+      ),
+      /** @description CSP domains approved by the host. */
+      csp: McpUiResourceCspSchema.optional().describe(
+        "CSP domains approved by the host.",
+      ),
+    })
+    .optional()
+    .describe("Sandbox configuration applied by the host."),
+  /** @description Host accepts context updates (ui/update-model-context) to be included in the model's context for future turns. */
+  updateModelContext:
+    McpUiSupportedContentBlockModalitiesSchema.optional().describe(
+      "Host accepts context updates (ui/update-model-context) to be included in the model's context for future turns.",
+    ),
+  /** @description Host supports receiving content messages (ui/message) from the Guest UI. */
+  message: McpUiSupportedContentBlockModalitiesSchema.optional().describe(
+    "Host supports receiving content messages (ui/message) from the Guest UI.",
+  ),
 });
 
 /**
@@ -408,28 +485,16 @@ export const McpUiInitializedNotificationSchema = z.object({
 });
 
 /**
- * @description Content Security Policy configuration for UI resources.
- */
-export const McpUiResourceCspSchema = z.object({
-  /** @description Origins for network requests (fetch/XHR/WebSocket). */
-  connectDomains: z
-    .array(z.string())
-    .optional()
-    .describe("Origins for network requests (fetch/XHR/WebSocket)."),
-  /** @description Origins for static resources (scripts, images, styles, fonts). */
-  resourceDomains: z
-    .array(z.string())
-    .optional()
-    .describe("Origins for static resources (scripts, images, styles, fonts)."),
-});
-
-/**
  * @description UI Resource metadata for security and rendering configuration.
  */
 export const McpUiResourceMetaSchema = z.object({
   /** @description Content Security Policy configuration. */
   csp: McpUiResourceCspSchema.optional().describe(
     "Content Security Policy configuration.",
+  ),
+  /** @description Sandbox permissions requested by the UI. */
+  permissions: McpUiResourcePermissionsSchema.optional().describe(
+    "Sandbox permissions requested by the UI.",
   ),
   /** @description Dedicated origin for widget sandbox. */
   domain: z
@@ -518,6 +583,32 @@ export const McpUiMessageRequestSchema = z.object({
     content: z
       .array(ContentBlockSchema)
       .describe("Message content blocks (text, image, etc.)."),
+  }),
+});
+
+/**
+ * @description Notification containing HTML resource for the sandbox proxy to load.
+ * @internal
+ * @see https://github.com/modelcontextprotocol/ext-apps/blob/main/specification/draft/apps.mdx#sandbox-proxy
+ */
+export const McpUiSandboxResourceReadyNotificationSchema = z.object({
+  method: z.literal("ui/notifications/sandbox-resource-ready"),
+  params: z.object({
+    /** @description HTML content to load into the inner iframe. */
+    html: z.string().describe("HTML content to load into the inner iframe."),
+    /** @description Optional override for the inner iframe's sandbox attribute. */
+    sandbox: z
+      .string()
+      .optional()
+      .describe("Optional override for the inner iframe's sandbox attribute."),
+    /** @description CSP configuration from resource metadata. */
+    csp: McpUiResourceCspSchema.optional().describe(
+      "CSP configuration from resource metadata.",
+    ),
+    /** @description Sandbox permissions from resource metadata. */
+    permissions: McpUiResourcePermissionsSchema.optional().describe(
+      "Sandbox permissions from resource metadata.",
+    ),
   }),
 });
 
@@ -660,6 +751,39 @@ export const McpUiHostContextChangedNotificationSchema = z.object({
   params: McpUiHostContextSchema.describe(
     "Partial context update containing only changed fields.",
   ),
+});
+
+/**
+ * @description Request to update the agent's context without requiring a follow-up action (Guest UI -> Host).
+ *
+ * Unlike `notifications/message` which is for debugging/logging, this request is intended
+ * to update the Host's model context. Each request overwrites the previous context sent by the Guest UI.
+ * Unlike messages, context updates do not trigger follow-ups.
+ *
+ * The host will typically defer sending the context to the model until the next user message
+ * (including `ui/message`), and will only send the last update received.
+ *
+ * @see {@link app.App.updateModelContext} for the method that sends this request
+ */
+export const McpUiUpdateModelContextRequestSchema = z.object({
+  method: z.literal("ui/update-model-context"),
+  params: z.object({
+    /** @description Context content blocks (text, image, etc.). */
+    content: z
+      .array(ContentBlockSchema)
+      .optional()
+      .describe("Context content blocks (text, image, etc.)."),
+    /** @description Structured content for machine-readable context data. */
+    structuredContent: z
+      .record(
+        z.string(),
+        z
+          .unknown()
+          .describe("Structured content for machine-readable context data."),
+      )
+      .optional()
+      .describe("Structured content for machine-readable context data."),
+  }),
 });
 
 /**
