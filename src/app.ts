@@ -44,6 +44,13 @@ import {
   McpUiToolInputPartialNotificationSchema,
   McpUiToolResultNotification,
   McpUiToolResultNotificationSchema,
+  McpUiWidgetStateNotification,
+  McpUiWidgetStateNotificationSchema,
+  McpUiUpdateModelContextNotification,
+  McpUiUploadFileRequest,
+  McpUiUploadFileResultSchema,
+  McpUiGetFileUrlRequest,
+  McpUiGetFileUrlResultSchema,
   McpUiRequestDisplayModeRequest,
   McpUiRequestDisplayModeResultSchema,
 } from "./types";
@@ -257,6 +264,7 @@ export class App extends Protocol<AppRequest, AppNotification, AppResult> {
     this.ontoolinputpartial = () => {};
     this.ontoolresult = () => {};
     this.ontoolcancelled = () => {};
+    this.onwidgetstate = () => {};
   }
 
   /**
@@ -498,6 +506,47 @@ export class App extends Protocol<AppRequest, AppNotification, AppResult> {
     callback: (params: McpUiToolCancelledNotification["params"]) => void,
   ) {
     this.setNotificationHandler(McpUiToolCancelledNotificationSchema, (n) =>
+      callback(n.params),
+    );
+  }
+
+  /**
+   * Convenience handler for receiving persisted widget state from the host.
+   *
+   * Set this property to register a handler that will be called when the host
+   * delivers previously persisted widget state. This is sent during initialization
+   * when running in OpenAI mode, allowing apps to hydrate their UI state.
+   *
+   * The state can be either a simple object or a StructuredWidgetState with
+   * modelContent/privateContent/imageIds separation.
+   *
+   * This setter is a convenience wrapper around `setNotificationHandler()` that
+   * automatically handles the notification schema and extracts the params for you.
+   *
+   * Register handlers before calling {@link connect} to avoid missing notifications.
+   *
+   * @param callback - Function called with the persisted widget state
+   *
+   * @example Hydrate app state from previous session
+   * ```typescript
+   * app.onwidgetstate = (params) => {
+   *   if (params.state.selectedId) {
+   *     setSelectedItem(params.state.selectedId);
+   *   }
+   *   if (params.state.privateContent?.viewMode) {
+   *     setViewMode(params.state.privateContent.viewMode);
+   *   }
+   * };
+   * ```
+   *
+   * @see {@link setNotificationHandler} for the underlying method
+   * @see {@link McpUiWidgetStateNotification} for the notification structure
+   * @see {@link updateModelContext} for persisting state updates
+   */
+  set onwidgetstate(
+    callback: (params: McpUiWidgetStateNotification["params"]) => void,
+  ) {
+    this.setNotificationHandler(McpUiWidgetStateNotificationSchema, (n) =>
       callback(n.params),
     );
   }
@@ -982,6 +1031,137 @@ export class App extends Protocol<AppRequest, AppNotification, AppResult> {
       method: "ui/notifications/size-changed",
       params,
     });
+  }
+
+  /**
+   * Update model context and persist widget state.
+   *
+   * This method allows apps to update what the model sees for follow-up turns
+   * and persist UI state. In OpenAI mode, this calls window.openai.setWidgetState().
+   *
+   * Use the structured format with modelContent/privateContent/imageIds for fine-grained
+   * control over what the model sees vs. what stays private to the UI:
+   * - `modelContent`: Text or JSON visible to the model for follow-up reasoning
+   * - `privateContent`: UI-only state hidden from the model (view mode, selections, etc.)
+   * - `imageIds`: File IDs from uploadFile() for images the model should reason about
+   *
+   * @param params - Model context and widget state to persist
+   *
+   * @example Update model context with selection
+   * ```typescript
+   * app.updateModelContext({
+   *   modelContent: { selectedItem: item.name, quantity: 5 },
+   *   privateContent: { viewMode: "grid", scrollPosition: 150 },
+   * });
+   * ```
+   *
+   * @example Update with uploaded images
+   * ```typescript
+   * const { fileId } = await app.uploadFile(imageFile);
+   * app.updateModelContext({
+   *   modelContent: "User uploaded an image for analysis",
+   *   imageIds: [fileId],
+   * });
+   * ```
+   *
+   * @returns Promise that resolves when the notification is sent
+   *
+   * @see {@link McpUiUpdateModelContextNotification} for notification structure
+   * @see {@link onwidgetstate} for receiving persisted state on reload
+   */
+  updateModelContext(
+    params: McpUiUpdateModelContextNotification["params"],
+  ) {
+    return this.notification(<McpUiUpdateModelContextNotification>{
+      method: "ui/notifications/update-model-context",
+      params,
+    });
+  }
+
+  /**
+   * Upload a file for use in model context.
+   *
+   * This allows apps to upload images and other files that can be referenced
+   * in model context via imageIds in {@link updateModelContext}.
+   *
+   * In OpenAI mode, this delegates to window.openai.uploadFile().
+   *
+   * @param file - The File object to upload
+   * @param options - Request options (timeout, etc.)
+   * @returns Promise resolving to the file ID
+   *
+   * @throws {Error} If file upload is not supported in this environment
+   * @throws {Error} If the upload fails
+   *
+   * @example Upload an image and add to model context
+   * ```typescript
+   * const file = new File([imageBlob], "screenshot.png", { type: "image/png" });
+   * const { fileId } = await app.uploadFile(file);
+   *
+   * // Make the image available to the model
+   * app.updateModelContext({
+   *   modelContent: "User uploaded a screenshot",
+   *   imageIds: [fileId],
+   * });
+   * ```
+   *
+   * @see {@link updateModelContext} for using uploaded files in model context
+   * @see {@link getFileDownloadUrl} for retrieving uploaded files
+   */
+  async uploadFile(file: File, options?: RequestOptions) {
+    // Convert File to base64
+    const arrayBuffer = await file.arrayBuffer();
+    const base64 = btoa(
+      String.fromCharCode(...new Uint8Array(arrayBuffer)),
+    );
+
+    return this.request(
+      <McpUiUploadFileRequest>{
+        method: "ui/upload-file",
+        params: {
+          name: file.name,
+          mimeType: file.type,
+          data: base64,
+        },
+      },
+      McpUiUploadFileResultSchema,
+      options,
+    );
+  }
+
+  /**
+   * Get a temporary download URL for a previously uploaded file.
+   *
+   * In OpenAI mode, this delegates to window.openai.getFileDownloadUrl().
+   *
+   * @param params - The file ID from a previous upload
+   * @param options - Request options (timeout, etc.)
+   * @returns Promise resolving to the download URL
+   *
+   * @throws {Error} If file URL retrieval is not supported in this environment
+   * @throws {Error} If the file ID is invalid or expired
+   *
+   * @example Download a previously uploaded file
+   * ```typescript
+   * const { url } = await app.getFileDownloadUrl({ fileId });
+   * const response = await fetch(url);
+   * const blob = await response.blob();
+   * ```
+   *
+   * @see {@link uploadFile} for uploading files
+   */
+  getFileDownloadUrl(
+    params: McpUiGetFileUrlRequest["params"],
+    options?: RequestOptions,
+  ) {
+    return this.request(
+      <McpUiGetFileUrlRequest>{
+        method: "ui/get-file-url",
+        params,
+      },
+      McpUiGetFileUrlResultSchema,
+      options,
+    );
   }
 
   /**

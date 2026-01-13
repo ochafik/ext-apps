@@ -194,6 +194,15 @@ export class OpenAITransport implements Transport {
             params as { mode: string },
           );
 
+        case "ui/upload-file":
+          return await this.handleUploadFile(
+            id,
+            params as { name: string; mimeType: string; data: string },
+          );
+
+        case "ui/get-file-url":
+          return await this.handleGetFileUrl(id, params as { fileId: string });
+
         case "ping":
           return this.createSuccessResponse(id, {});
 
@@ -341,6 +350,9 @@ export class OpenAITransport implements Transport {
 
   /**
    * Handle ui/message request by delegating to window.openai.sendFollowUpMessage().
+   *
+   * For image content, images are uploaded via uploadFile and added to model context
+   * via setWidgetState, since sendFollowUpMessage only accepts text.
    */
   private async handleMessage(
     id: RequestId,
@@ -365,9 +377,74 @@ export class OpenAITransport implements Transport {
       .map((c) => c.text)
       .join("\n");
 
-    await this.openai.sendFollowUpMessage({ prompt: textContent });
+    // Extract image content blocks
+    const imageContent = params.content.filter(
+      (c): c is { type: "image"; data: string; mimeType: string } =>
+        typeof c === "object" &&
+        c !== null &&
+        (c as { type?: string }).type === "image",
+    );
+
+    // Upload images if present and uploadFile is available
+    const imageIds: string[] = [];
+    if (imageContent.length > 0 && this.openai.uploadFile) {
+      for (const image of imageContent) {
+        try {
+          // Convert base64 data to File object
+          const binaryString = atob(image.data);
+          const bytes = new Uint8Array(binaryString.length);
+          for (let i = 0; i < binaryString.length; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+          }
+          const blob = new Blob([bytes], { type: image.mimeType });
+          const file = new File([blob], `image.${this.getExtension(image.mimeType)}`, {
+            type: image.mimeType,
+          });
+
+          const result = await this.openai.uploadFile(file);
+          imageIds.push(result.fileId);
+        } catch (error) {
+          console.warn("[MCP App] Failed to upload image:", error);
+        }
+      }
+
+      // Add uploaded images to model context via setWidgetState
+      if (imageIds.length > 0 && this.openai.setWidgetState) {
+        // Get current state and merge with new imageIds
+        const currentState = this.openai.widgetState ?? {};
+        const existingImageIds = Array.isArray(
+          (currentState as { imageIds?: unknown }).imageIds,
+        )
+          ? ((currentState as { imageIds: string[] }).imageIds)
+          : [];
+
+        this.openai.setWidgetState({
+          ...currentState,
+          imageIds: [...existingImageIds, ...imageIds],
+        });
+      }
+    }
+
+    // Send text message (or empty if only images were sent)
+    if (textContent || imageIds.length === 0) {
+      await this.openai.sendFollowUpMessage({ prompt: textContent });
+    }
 
     return this.createSuccessResponse(id, {});
+  }
+
+  /**
+   * Get file extension from MIME type.
+   */
+  private getExtension(mimeType: string): string {
+    const mimeToExt: Record<string, string> = {
+      "image/png": "png",
+      "image/jpeg": "jpg",
+      "image/gif": "gif",
+      "image/webp": "webp",
+      "image/svg+xml": "svg",
+    };
+    return mimeToExt[mimeType] ?? "bin";
   }
 
   /**
@@ -412,6 +489,57 @@ export class OpenAITransport implements Transport {
   }
 
   /**
+   * Handle ui/upload-file by delegating to window.openai.uploadFile().
+   */
+  private async handleUploadFile(
+    id: RequestId,
+    params: { name: string; mimeType: string; data: string },
+  ): Promise<JSONRPCSuccessResponse | JSONRPCErrorResponse> {
+    if (!this.openai.uploadFile) {
+      return this.createErrorResponse(
+        id,
+        -32601,
+        "File upload is not supported in this OpenAI environment",
+      );
+    }
+
+    // Convert base64 data back to File object
+    const binaryString = atob(params.data);
+    const bytes = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) {
+      bytes[i] = binaryString.charCodeAt(i);
+    }
+    const blob = new Blob([bytes], { type: params.mimeType });
+    const file = new File([blob], params.name, { type: params.mimeType });
+
+    const result = await this.openai.uploadFile(file);
+
+    return this.createSuccessResponse(id, { fileId: result.fileId });
+  }
+
+  /**
+   * Handle ui/get-file-url by delegating to window.openai.getFileDownloadUrl().
+   */
+  private async handleGetFileUrl(
+    id: RequestId,
+    params: { fileId: string },
+  ): Promise<JSONRPCSuccessResponse | JSONRPCErrorResponse> {
+    if (!this.openai.getFileDownloadUrl) {
+      return this.createErrorResponse(
+        id,
+        -32601,
+        "File URL retrieval is not supported in this OpenAI environment",
+      );
+    }
+
+    const result = await this.openai.getFileDownloadUrl({
+      fileId: params.fileId,
+    });
+
+    return this.createSuccessResponse(id, { url: result.url });
+  }
+
+  /**
    * Handle an outgoing notification.
    */
   private handleNotification(notification: JSONRPCNotification): void {
@@ -420,6 +548,16 @@ export class OpenAITransport implements Transport {
     switch (method) {
       case "ui/notifications/size-changed":
         this.handleSizeChanged(params as { width?: number; height?: number });
+        break;
+
+      case "ui/notifications/update-model-context":
+        this.handleUpdateModelContext(
+          params as {
+            modelContent?: string | Record<string, unknown> | null;
+            privateContent?: Record<string, unknown> | null;
+            imageIds?: string[];
+          },
+        );
         break;
 
       case "ui/notifications/initialized":
@@ -443,6 +581,24 @@ export class OpenAITransport implements Transport {
   private handleSizeChanged(params: { width?: number; height?: number }): void {
     if (this.openai.notifyIntrinsicHeight && params.height !== undefined) {
       this.openai.notifyIntrinsicHeight(params.height);
+    }
+  }
+
+  /**
+   * Handle update model context notification by calling window.openai.setWidgetState().
+   */
+  private handleUpdateModelContext(params: {
+    modelContent?: string | Record<string, unknown> | null;
+    privateContent?: Record<string, unknown> | null;
+    imageIds?: string[];
+  }): void {
+    if (this.openai.setWidgetState) {
+      // Construct StructuredWidgetState format
+      this.openai.setWidgetState({
+        modelContent: params.modelContent ?? null,
+        privateContent: params.privateContent ?? null,
+        imageIds: params.imageIds ?? [],
+      });
     }
   }
 
@@ -476,7 +632,7 @@ export class OpenAITransport implements Transport {
   }
 
   /**
-   * Deliver initial tool input and result notifications.
+   * Deliver initial tool input, result, and widget state notifications.
    *
    * Called by App after connection to deliver pre-populated data from
    * window.openai as notifications that the app's handlers expect.
@@ -491,6 +647,17 @@ export class OpenAITransport implements Transport {
           jsonrpc: "2.0",
           method: "ui/notifications/tool-input",
           params: { arguments: this.openai.toolInput },
+        } as JSONRPCNotification);
+      });
+    }
+
+    // Deliver widget state if available (for state hydration)
+    if (this.openai.widgetState !== undefined) {
+      queueMicrotask(() => {
+        this.onmessage?.({
+          jsonrpc: "2.0",
+          method: "ui/notifications/widget-state",
+          params: { state: this.openai.widgetState },
         } as JSONRPCNotification);
       });
     }

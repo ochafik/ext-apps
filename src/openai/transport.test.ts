@@ -492,5 +492,304 @@ describe("OpenAITransport", () => {
 
       expect(messages).toHaveLength(0);
     });
+
+    test("delivers widget state notification when widgetState is present", async () => {
+      mockOpenAI.widgetState = {
+        modelContent: "Selected item: Widget A",
+        privateContent: { viewMode: "grid" },
+        imageIds: ["file_123"],
+      };
+
+      const transport = new OpenAITransport();
+      const messages: unknown[] = [];
+      transport.onmessage = (msg) => {
+        messages.push(msg);
+      };
+
+      transport.deliverInitialState();
+
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      const widgetStateNotification = messages.find(
+        (m: unknown) =>
+          (m as { method?: string }).method === "ui/notifications/widget-state",
+      );
+      expect(widgetStateNotification).toMatchObject({
+        jsonrpc: "2.0",
+        method: "ui/notifications/widget-state",
+        params: {
+          state: {
+            modelContent: "Selected item: Widget A",
+            privateContent: { viewMode: "grid" },
+            imageIds: ["file_123"],
+          },
+        },
+      });
+    });
+  });
+
+  describe("ui/notifications/update-model-context notification", () => {
+    test("delegates to window.openai.setWidgetState()", async () => {
+      mockOpenAI.setWidgetState = mock(() => {}) as unknown as OpenAIGlobal["setWidgetState"];
+
+      const transport = new OpenAITransport();
+
+      await transport.send({
+        jsonrpc: "2.0",
+        method: "ui/notifications/update-model-context",
+        params: {
+          modelContent: { selectedItem: "Widget B" },
+          privateContent: { scrollPosition: 100 },
+          imageIds: ["file_456"],
+        },
+      });
+
+      expect(mockOpenAI.setWidgetState).toHaveBeenCalledWith({
+        modelContent: { selectedItem: "Widget B" },
+        privateContent: { scrollPosition: 100 },
+        imageIds: ["file_456"],
+      });
+    });
+
+    test("uses defaults when params are missing", async () => {
+      mockOpenAI.setWidgetState = mock(() => {}) as unknown as OpenAIGlobal["setWidgetState"];
+
+      const transport = new OpenAITransport();
+
+      await transport.send({
+        jsonrpc: "2.0",
+        method: "ui/notifications/update-model-context",
+        params: {
+          modelContent: "Just text",
+        },
+      });
+
+      expect(mockOpenAI.setWidgetState).toHaveBeenCalledWith({
+        modelContent: "Just text",
+        privateContent: null,
+        imageIds: [],
+      });
+    });
+
+    test("does nothing when setWidgetState is not available", async () => {
+      delete mockOpenAI.setWidgetState;
+
+      const transport = new OpenAITransport();
+
+      // Should not throw
+      await transport.send({
+        jsonrpc: "2.0",
+        method: "ui/notifications/update-model-context",
+        params: { modelContent: "test" },
+      });
+    });
+  });
+
+  describe("ui/upload-file request", () => {
+    test("delegates to window.openai.uploadFile()", async () => {
+      mockOpenAI.uploadFile = mock(() =>
+        Promise.resolve({ fileId: "file_abc123" }),
+      ) as unknown as OpenAIGlobal["uploadFile"];
+
+      const transport = new OpenAITransport();
+      let response: unknown;
+      transport.onmessage = (msg) => {
+        response = msg;
+      };
+
+      // Base64 encoded "test"
+      const base64Data = btoa("test file content");
+
+      await transport.send({
+        jsonrpc: "2.0",
+        id: 10,
+        method: "ui/upload-file",
+        params: {
+          name: "test.txt",
+          mimeType: "text/plain",
+          data: base64Data,
+        },
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(mockOpenAI.uploadFile).toHaveBeenCalled();
+      expect(response).toMatchObject({
+        jsonrpc: "2.0",
+        id: 10,
+        result: { fileId: "file_abc123" },
+      });
+    });
+
+    test("returns error when uploadFile is not available", async () => {
+      delete mockOpenAI.uploadFile;
+
+      const transport = new OpenAITransport();
+      let response: unknown;
+      transport.onmessage = (msg) => {
+        response = msg;
+      };
+
+      await transport.send({
+        jsonrpc: "2.0",
+        id: 11,
+        method: "ui/upload-file",
+        params: {
+          name: "test.txt",
+          mimeType: "text/plain",
+          data: btoa("test"),
+        },
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(response).toMatchObject({
+        jsonrpc: "2.0",
+        id: 11,
+        error: {
+          code: -32601,
+          message: expect.stringContaining("not supported"),
+        },
+      });
+    });
+  });
+
+  describe("ui/get-file-url request", () => {
+    test("delegates to window.openai.getFileDownloadUrl()", async () => {
+      mockOpenAI.getFileDownloadUrl = mock(() =>
+        Promise.resolve({ url: "https://cdn.openai.com/files/file_abc123" }),
+      ) as unknown as OpenAIGlobal["getFileDownloadUrl"];
+
+      const transport = new OpenAITransport();
+      let response: unknown;
+      transport.onmessage = (msg) => {
+        response = msg;
+      };
+
+      await transport.send({
+        jsonrpc: "2.0",
+        id: 12,
+        method: "ui/get-file-url",
+        params: { fileId: "file_abc123" },
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(mockOpenAI.getFileDownloadUrl).toHaveBeenCalledWith({
+        fileId: "file_abc123",
+      });
+      expect(response).toMatchObject({
+        jsonrpc: "2.0",
+        id: 12,
+        result: { url: "https://cdn.openai.com/files/file_abc123" },
+      });
+    });
+
+    test("returns error when getFileDownloadUrl is not available", async () => {
+      delete mockOpenAI.getFileDownloadUrl;
+
+      const transport = new OpenAITransport();
+      let response: unknown;
+      transport.onmessage = (msg) => {
+        response = msg;
+      };
+
+      await transport.send({
+        jsonrpc: "2.0",
+        id: 13,
+        method: "ui/get-file-url",
+        params: { fileId: "file_xyz" },
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(response).toMatchObject({
+        jsonrpc: "2.0",
+        id: 13,
+        error: {
+          code: -32601,
+          message: expect.stringContaining("not supported"),
+        },
+      });
+    });
+  });
+
+  describe("ui/message with image content", () => {
+    test("uploads images and adds to model context", async () => {
+      mockOpenAI.uploadFile = mock(() =>
+        Promise.resolve({ fileId: "file_img123" }),
+      ) as unknown as OpenAIGlobal["uploadFile"];
+      mockOpenAI.setWidgetState = mock(() => {}) as unknown as OpenAIGlobal["setWidgetState"];
+
+      const transport = new OpenAITransport();
+      let response: unknown;
+      transport.onmessage = (msg) => {
+        response = msg;
+      };
+
+      // Base64 encoded minimal PNG (1x1 pixel)
+      const pngData = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
+
+      await transport.send({
+        jsonrpc: "2.0",
+        id: 14,
+        method: "ui/message",
+        params: {
+          role: "user",
+          content: [
+            { type: "text", text: "Check out this image" },
+            { type: "image", data: pngData, mimeType: "image/png" },
+          ],
+        },
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(mockOpenAI.uploadFile).toHaveBeenCalled();
+      expect(mockOpenAI.setWidgetState).toHaveBeenCalledWith(
+        expect.objectContaining({
+          imageIds: expect.arrayContaining(["file_img123"]),
+        }),
+      );
+      expect(mockOpenAI.sendFollowUpMessage).toHaveBeenCalledWith({
+        prompt: "Check out this image",
+      });
+      expect(response).toMatchObject({
+        jsonrpc: "2.0",
+        id: 14,
+        result: {},
+      });
+    });
+
+    test("merges new imageIds with existing ones", async () => {
+      mockOpenAI.widgetState = { imageIds: ["existing_file"] };
+      mockOpenAI.uploadFile = mock(() =>
+        Promise.resolve({ fileId: "new_file" }),
+      ) as unknown as OpenAIGlobal["uploadFile"];
+      mockOpenAI.setWidgetState = mock(() => {}) as unknown as OpenAIGlobal["setWidgetState"];
+
+      const transport = new OpenAITransport();
+      transport.onmessage = () => {};
+
+      const pngData = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
+
+      await transport.send({
+        jsonrpc: "2.0",
+        id: 15,
+        method: "ui/message",
+        params: {
+          role: "user",
+          content: [{ type: "image", data: pngData, mimeType: "image/png" }],
+        },
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(mockOpenAI.setWidgetState).toHaveBeenCalledWith(
+        expect.objectContaining({
+          imageIds: ["existing_file", "new_file"],
+        }),
+      );
+    });
   });
 });
