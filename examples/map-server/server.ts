@@ -80,7 +80,7 @@ async function geocodeWithNominatim(query: string): Promise<NominatimResult[]> {
     );
   }
 
-  return response.json();
+  return response.json() as Promise<NominatimResult[]>;
 }
 
 /**
