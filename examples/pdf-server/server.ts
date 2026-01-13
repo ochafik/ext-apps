@@ -187,10 +187,12 @@ export function createServer(): McpServer {
       if (!pdfIndex) {
         throw new Error("PDF index not initialized");
       }
-      const pdfId = Array.isArray(variables.pdfId)
+      const rawPdfId = Array.isArray(variables.pdfId)
         ? variables.pdfId[0]
         : variables.pdfId;
-      const entry = findEntryById(pdfIndex, pdfId as string);
+      // Decode URL-encoded pdfId (e.g., arxiv%3A2301.00001 -> arxiv:2301.00001)
+      const pdfId = decodeURIComponent(rawPdfId as string);
+      const entry = findEntryById(pdfIndex, pdfId);
       if (!entry) {
         throw new Error(`PDF not found: ${pdfId}`);
       }
