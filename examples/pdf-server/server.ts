@@ -55,7 +55,8 @@ export function createServer(): McpServer {
     },
     async (args: unknown): Promise<CallToolResult> => {
       if (!pdfIndex) throw new Error("Not initialized");
-      const { url, offset, byteCount } = ReadPdfBytesInputSchema.parse(args);
+      const { url: rawUrl, offset, byteCount } = ReadPdfBytesInputSchema.parse(args);
+      const url = isArxivUrl(rawUrl) ? normalizeArxivUrl(rawUrl) : rawUrl;
       const entry = findEntryByUrl(pdfIndex, url);
       if (!entry) throw new Error(`PDF not found: ${url}`);
 
