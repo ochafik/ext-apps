@@ -97,15 +97,16 @@ export function createServer(): McpServer {
   const cspMeta = {
     ui: {
       csp: {
-        // Allow fetching tiles from OSM (tiles + geocoding) and Cesium assets
+        // Allow fetching tiles from Carto, OSM (Nominatim geocoding), and Cesium assets
         connectDomains: [
-          "https://*.openstreetmap.org", // OSM tiles + Nominatim geocoding
+          "https://*.basemaps.cartocdn.com", // Carto basemap tiles (retina support)
+          "https://*.openstreetmap.org", // Nominatim geocoding
           "https://cesium.com",
           "https://*.cesium.com",
         ],
         // Allow loading tile images, scripts, and Cesium CDN resources
         resourceDomains: [
-          "https://*.openstreetmap.org", // OSM map tiles (covers tile.openstreetmap.org)
+          "https://*.basemaps.cartocdn.com", // Carto basemap tiles (retina support)
           "https://cesium.com",
           "https://*.cesium.com",
         ],

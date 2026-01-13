@@ -508,14 +508,20 @@ async function initCesium(): Promise<any> {
   // Disable request render mode - helps with initial rendering
   cesiumViewer.scene.requestRenderMode = false;
 
-  // Fix pixelated rendering on high-DPI displays
-  // CesiumJS sets image-rendering: pixelated by default which looks bad on scaled displays
-  // Setting to "auto" allows the browser to apply smooth interpolation
+  // Log resolution info for debugging
+  log.info(
+    `Canvas: ${cesiumViewer.canvas.width}x${cesiumViewer.canvas.height}, ` +
+      `CSS: ${cesiumViewer.canvas.offsetWidth}x${cesiumViewer.canvas.offsetHeight}, ` +
+      `DPR: ${window.devicePixelRatio}, ` +
+      `resolutionScale: ${cesiumViewer.resolutionScale}`,
+  );
+
+  // Note: useBrowserRecommendedResolution: false (set above) should render at device
+  // pixel resolution. DO NOT set resolutionScale = devicePixelRatio as that would
+  // double the scaling.
+
+  // Allow browser to apply smooth interpolation when scaling down from device resolution
   cesiumViewer.canvas.style.imageRendering = "auto";
-  // Note: DO NOT set resolutionScale = devicePixelRatio here!
-  // When useBrowserRecommendedResolution: false, Cesium already uses devicePixelRatio.
-  // Setting resolutionScale = devicePixelRatio would double the scaling (e.g., 2x2=4x on Retina)
-  // which causes blurriness when scaled back down. Leave resolutionScale at default (1.0).
 
   // Disable FXAA anti-aliasing which can cause blurriness on high-DPI displays
   cesiumViewer.scene.postProcessStages.fxaa.enabled = false;
@@ -523,39 +529,49 @@ async function initCesium(): Promise<any> {
   log.info("Globe configured");
 
   // Create and add map imagery layer
-  // Use standard OSM tiles - they render sharply with Cesium's settings
-  log.info("Creating OpenStreetMap imagery provider...");
+  // Use Carto basemaps which provide @2x tiles for high-DPI displays
+  log.info("Creating Carto basemap imagery provider...");
   try {
-    // Use standard OpenStreetMap tile server
-    // While these are 256x256 tiles, Cesium handles the rendering well
-    // with useBrowserRecommendedResolution: false
-    const osmProvider = new Cesium.UrlTemplateImageryProvider({
-      url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+    // Detect high-DPI display and use retina (@2x) tiles for sharper rendering
+    // Carto Voyager style looks similar to OSM and is free to use
+    // Note: @2x tiles are 512x512 pixels but still represent 256x256 geographic area
+    // DO NOT set tileWidth/tileHeight to 512 - that would make tiles cover wrong area
+    const isHighDPI = window.devicePixelRatio >= 1.5;
+    const retinaModifier = isHighDPI ? "@2x" : "";
+    const tileUrl = `https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}${retinaModifier}.png`;
+
+    log.info(
+      `Using ${isHighDPI ? "retina" : "standard"} tiles, devicePixelRatio: ${window.devicePixelRatio}`,
+    );
+
+    const cartoProvider = new Cesium.UrlTemplateImageryProvider({
+      url: tileUrl,
       minimumLevel: 0,
       maximumLevel: 19,
+      // tileWidth/tileHeight stay at default 256 - @2x tiles have more pixels but cover same area
       credit: new Cesium.Credit(
-        '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+        '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, © <a href="https://carto.com/attribution">CARTO</a>',
         true,
       ),
     });
-    log.info("OSM provider created (256x256 tiles)");
+    log.info(`Carto provider created (${isHighDPI ? "@2x" : "standard"} tiles)`);
 
     // Log any imagery provider errors
-    osmProvider.errorEvent.addEventListener((error: any) => {
-      log.error("OSM imagery provider error:", error);
+    cartoProvider.errorEvent.addEventListener((error: any) => {
+      log.error("Carto imagery provider error:", error);
     });
 
     // Wait for provider to be ready
-    if (osmProvider.ready !== undefined && !osmProvider.ready) {
-      log.info("Waiting for OSM provider to be ready...");
-      await osmProvider.readyPromise;
-      log.info("OSM provider ready");
+    if (cartoProvider.ready !== undefined && !cartoProvider.ready) {
+      log.info("Waiting for Carto provider to be ready...");
+      await cartoProvider.readyPromise;
+      log.info("Carto provider ready");
     }
 
     // Add the imagery layer to the viewer
-    cesiumViewer.imageryLayers.addImageryProvider(osmProvider);
+    cesiumViewer.imageryLayers.addImageryProvider(cartoProvider);
     log.info(
-      "OSM imagery layer added, layer count:",
+      "Carto imagery layer added, layer count:",
       cesiumViewer.imageryLayers.length,
     );
 
@@ -572,7 +588,7 @@ async function initCesium(): Promise<any> {
     cesiumViewer.scene.requestRender();
     log.info("Render requested");
   } catch (error) {
-    log.error("Failed to create OSM provider:", error);
+    log.error("Failed to create Carto provider:", error);
   }
 
   // Fly to default USA view - using Rectangle is most reliable
