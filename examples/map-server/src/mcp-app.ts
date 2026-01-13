@@ -828,9 +828,29 @@ function setupHomeButton(cesiumViewer: any): void {
   btn.style.display = "flex";
   btn.addEventListener("click", () => {
     if (initialBoundingBox && cesiumViewer) {
-      log.info("Returning to initial view:", initialBoundingBox);
-      setViewToBoundingBox(cesiumViewer, initialBoundingBox);
+      log.info("Flying to initial view:", initialBoundingBox);
+      flyToBoundingBox(cesiumViewer, initialBoundingBox);
     }
+  });
+}
+
+/**
+ * Fly camera to view a bounding box with animation
+ */
+function flyToBoundingBox(cesiumViewer: any, bbox: BoundingBox): void {
+  const { destination, centerLon, centerLat, height } =
+    calculateDestination(bbox);
+
+  log.info("flyTo destination:", centerLon, centerLat, "height:", height);
+
+  cesiumViewer.camera.flyTo({
+    destination,
+    orientation: {
+      heading: 0,
+      pitch: Cesium.Math.toRadians(-90),
+      roll: 0,
+    },
+    duration: 1.5,
   });
 }
 
