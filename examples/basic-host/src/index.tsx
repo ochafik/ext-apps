@@ -60,8 +60,7 @@ function getQueryParams() {
   return {
     server: params.get("server"),
     tool: params.get("tool"),
-    // Support both "call" and legacy "autoCall"
-    autoCall: params.get("call") === "true" || params.get("autoCall") === "true",
+    call: params.get("call") === "true",
   };
 }
 
@@ -99,7 +98,7 @@ function Host({ serversPromise }: HostProps) {
         addToolCall={(info) => setToolCalls([...toolCalls, { ...info, id: nextToolCallId++ }])}
         initialServer={queryParams.server}
         initialTool={queryParams.tool}
-        autoCall={queryParams.autoCall}
+        autoCall={queryParams.call}
       />
     </>
   );
@@ -160,17 +159,20 @@ function CallToolPanel({ serversPromise, addToolCall, initialServer, initialTool
     setInputJson(getToolDefaults(selectedServer?.tools.get(toolName)));
   };
 
-  const handleSubmit = () => {
-    if (!selectedServer) return;
-    const toolCallInfo = callTool(selectedServer, selectedTool, JSON.parse(inputJson));
+  // Submit with optional override for server/tool (used by auto-call)
+  const handleSubmit = (overrideServer?: ServerInfo, overrideTool?: string) => {
+    const server = overrideServer ?? selectedServer;
+    const tool = overrideTool ?? selectedTool;
+    if (!server) return;
+
+    const toolCallInfo = callTool(server, tool, JSON.parse(inputJson));
     addToolCall(toolCallInfo);
 
     // Update URL for easy refresh/sharing (without triggering navigation)
     const url = new URL(window.location.href);
-    url.searchParams.set("server", selectedServer.name);
-    url.searchParams.set("tool", selectedTool);
+    url.searchParams.set("server", server.name);
+    url.searchParams.set("tool", tool);
     url.searchParams.set("call", "true"); // Auto-call on refresh
-    url.searchParams.delete("autoCall"); // Remove legacy param
     history.replaceState(null, "", url.toString());
   };
 
@@ -186,9 +188,9 @@ function CallToolPanel({ serversPromise, addToolCall, initialServer, initialTool
               initialServer={initialServer}
               initialTool={initialTool}
               autoCall={autoCall && !hasAutoCalledRef.called}
-              onAutoCall={() => {
+              onAutoCall={(server, tool) => {
                 hasAutoCalledRef.called = true;
-                setTimeout(handleSubmit, 100); // Small delay to ensure state is set
+                handleSubmit(server, tool);
               }}
             />
           </Suspense>
@@ -230,7 +232,7 @@ interface ServerSelectProps {
   initialServer?: string | null;
   initialTool?: string | null;
   autoCall?: boolean;
-  onAutoCall?: () => void;
+  onAutoCall?: (server: ServerInfo, tool: string) => void;
 }
 function ServerSelect({ serversPromise, onSelect, initialServer, initialTool, autoCall, onAutoCall }: ServerSelectProps) {
   const servers = use(serversPromise);
@@ -248,13 +250,23 @@ function ServerSelect({ serversPromise, onSelect, initialServer, initialTool, au
       if (foundIdx >= 0) idx = foundIdx;
     }
 
+    const server = servers[idx];
     setSelectedIndex(idx);
-    onSelect(servers[idx], initialTool ?? undefined);
+
+    // Find the tool to use
+    const visibleTools = Array.from(server.tools.values())
+      .filter((tool) => isToolVisibleToModel(tool))
+      .sort(compareTools);
+    const targetTool = initialTool && visibleTools.some(t => t.name === initialTool)
+      ? initialTool
+      : visibleTools[0]?.name ?? "";
+
+    onSelect(server, targetTool);
     setHasInitialized(true);
 
     // Auto-call after initial selection if requested
-    if (autoCall) {
-      setTimeout(() => onAutoCall?.(), 100);
+    if (autoCall && targetTool) {
+      onAutoCall?.(server, targetTool);
     }
   }, [servers, hasInitialized, initialServer, initialTool, autoCall, onSelect, onAutoCall]);
 
