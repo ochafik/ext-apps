@@ -146,9 +146,9 @@ function persistViewState(cesiumViewer: any): void {
 
   try {
     localStorage.setItem(key, JSON.stringify(state));
-    log.info("[ViewState] saved to", key, state);
+    log.info("[localStorage] saved", key, state);
   } catch (e) {
-    log.warn("[ViewState] save failed:", e);
+    log.warn("[localStorage] save failed:", e);
   }
 }
 
@@ -161,7 +161,7 @@ function loadPersistedViewState(): PersistedCameraState | null {
   try {
     const stored = localStorage.getItem(key);
     if (!stored) {
-      log.info("[ViewState] none found for", key);
+      log.info("[localStorage] no data for", key);
       return null;
     }
 
@@ -172,13 +172,13 @@ function loadPersistedViewState(): PersistedCameraState | null {
       typeof state.latitude !== "number" ||
       typeof state.height !== "number"
     ) {
-      log.warn("[ViewState] invalid data, ignoring:", state);
+      log.warn("[localStorage] invalid data for", key, state);
       return null;
     }
-    log.info("[ViewState] loaded from", key, state);
+    log.info("[localStorage] loaded", key, state);
     return state;
   } catch (e) {
-    log.warn("[ViewState] load failed:", e);
+    log.warn("[localStorage] load failed:", e);
     return null;
   }
 }
@@ -823,8 +823,12 @@ const DEFAULT_BOUNDING_BOX: BoundingBox = {
  */
 function setupHomeButton(cesiumViewer: any): void {
   const btn = document.getElementById("home-btn");
-  if (!btn) return;
+  if (!btn) {
+    log.warn("Home button element not found");
+    return;
+  }
 
+  log.info("Setting up home button");
   btn.style.display = "flex";
   btn.addEventListener("click", () => {
     // Use initial bbox from tool input, or default to USA view
@@ -1024,7 +1028,7 @@ app.ontoolinput = async (params) => {
       // Check if we have a persisted view state - if so, use it instead of tool input
       const persistedState = loadPersistedViewState();
       if (persistedState) {
-        log.info("[ViewState] using persisted view instead of tool input");
+        log.info("[localStorage] using persisted view instead of tool input");
         restorePersistedView(viewer);
       } else {
         log.info("Positioning camera to tool input bbox:", bbox);
