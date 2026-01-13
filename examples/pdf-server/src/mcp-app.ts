@@ -293,37 +293,47 @@ async function renderPage() {
 function getStorageKey(): string | null {
   const ctx = app.getHostContext();
   const toolId = ctx?.toolInfo?.id;
+  log.info("getStorageKey: pdfSourceUrl=", pdfSourceUrl, "toolId=", toolId);
   if (!pdfSourceUrl || toolId === undefined) {
+    log.info("getStorageKey: returning null (missing pdfSourceUrl or toolId)");
     return null;
   }
-  return `pdf:${pdfSourceUrl}:${toolId}`;
+  const key = `pdf:${pdfSourceUrl}:${toolId}`;
+  log.info("getStorageKey: key=", key);
+  return key;
 }
 
 function saveCurrentPage() {
   const key = getStorageKey();
+  log.info("saveCurrentPage: key=", key, "page=", currentPage);
   if (key) {
     try {
       localStorage.setItem(key, String(currentPage));
-    } catch {
-      // Ignore storage errors
+      log.info("saveCurrentPage: saved successfully");
+    } catch (err) {
+      log.error("saveCurrentPage: error", err);
     }
   }
 }
 
 function loadSavedPage(): number | null {
   const key = getStorageKey();
+  log.info("loadSavedPage: key=", key);
   if (!key) return null;
   try {
     const saved = localStorage.getItem(key);
+    log.info("loadSavedPage: saved value=", saved);
     if (saved) {
       const page = parseInt(saved, 10);
       if (!isNaN(page) && page >= 1) {
+        log.info("loadSavedPage: returning page=", page);
         return page;
       }
     }
-  } catch {
-    // Ignore storage errors
+  } catch (err) {
+    log.error("loadSavedPage: error", err);
   }
+  log.info("loadSavedPage: returning null");
   return null;
 }
 
@@ -466,20 +476,14 @@ canvasContainerEl.addEventListener(
       return; // Vertical scroll - let it scroll normally
     }
 
-    // Check if navigation would be valid before preventing default
-    const wouldGoNext = e.deltaX > 0 && currentPage < totalPages;
-    const wouldGoPrev = e.deltaX < 0 && currentPage > 1;
-    if (!wouldGoNext && !wouldGoPrev) {
-      return; // Don't prevent default - let browser handle (e.g., back navigation)
-    }
-
+    // Always prevent default for horizontal scroll to avoid browser back navigation
     e.preventDefault();
     horizontalScrollAccumulator += e.deltaX;
 
-    if (horizontalScrollAccumulator > SCROLL_THRESHOLD) {
+    if (horizontalScrollAccumulator > SCROLL_THRESHOLD && currentPage < totalPages) {
       nextPage();
       horizontalScrollAccumulator = 0;
-    } else if (horizontalScrollAccumulator < -SCROLL_THRESHOLD) {
+    } else if (horizontalScrollAccumulator < -SCROLL_THRESHOLD && currentPage > 1) {
       prevPage();
       horizontalScrollAccumulator = 0;
     }
@@ -605,8 +609,7 @@ app.ontoolresult = async (result) => {
 
   // Restore saved page or use initial page from tool result
   const savedPage = loadSavedPage();
-  currentPage =
-    savedPage && savedPage <= pageCount ? savedPage : initialPage;
+  currentPage = savedPage && savedPage <= pageCount ? savedPage : initialPage;
 
   log.info(
     "PDF ID:",
