@@ -6,7 +6,7 @@ A didactic MCP server example demonstrating key MCP Apps SDK patterns.
 
 ### 1. Chunked Data Through Size-Limited Tool Calls
 
-Large PDFs can't be sent in a single response. This example shows how to implement elegant chunked loading:
+On some host platforms, tool calls have size limits, so large PDFs cannot be sent in a single response. This example shows a possible workaround:
 
 **Server side** (`pdf-loader.ts`):
 ```typescript
@@ -103,7 +103,6 @@ bun examples/pdf-server/server.ts --stdio ./papers/
 |------|------------|---------|
 | `list_pdfs` | Model | List indexed PDFs |
 | `view_pdf` | Model + UI | Open interactive viewer |
-| `read_pdf_text` | App only | Chunked text extraction |
 | `read_pdf_bytes` | App only | Chunked binary loading |
 
 ## Architecture

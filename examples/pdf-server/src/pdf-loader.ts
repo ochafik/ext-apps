@@ -7,7 +7,7 @@
  * - Caching for repeated requests
  */
 import fs from "node:fs/promises";
-import type { PdfEntry, PdfTextChunk, PdfBytesChunk } from "./types.js";
+import type { PdfEntry, PdfBytesChunk } from "./types.js";
 import { MAX_CHUNK_BYTES } from "./types.js";
 import { isFileUrl } from "./pdf-indexer.js";
 
@@ -100,55 +100,6 @@ export async function loadPdfBytesChunk(
     byteCount: chunk.length,
     totalBytes: data.length,
     hasMore: offset + chunk.length < data.length,
-  };
-}
-
-// ============================================================================
-// Chunked Text Extraction (demonstrates paginated content)
-// ============================================================================
-
-export async function loadPdfTextChunk(
-  entry: PdfEntry,
-  startPage = 1,
-  maxBytes = MAX_CHUNK_BYTES,
-): Promise<PdfTextChunk> {
-  const lib = await getPdfjs();
-  const data = await loadPdfData(entry);
-  const pdf = await lib.getDocument({ data: new Uint8Array(data) }).promise;
-
-  let page = startPage;
-  let text = "";
-  let bytes = 0;
-
-  while (page <= pdf.numPages && bytes < maxBytes) {
-    const pageObj = await pdf.getPage(page);
-    const content = await pageObj.getTextContent();
-    const pageText = (content.items as Array<{str?: string}>)
-      .map(item => item.str || "")
-      .join(" ")
-      .replace(/\s+/g, " ");
-
-    const header = `\n--- Page ${page}/${pdf.numPages} ---\n`;
-    const chunk = header + pageText;
-
-    if (bytes + chunk.length > maxBytes && page > startPage) break;
-
-    text += chunk;
-    bytes += chunk.length;
-    page++;
-    pageObj.cleanup();
-  }
-
-  await pdf.destroy();
-
-  return {
-    pdfId: entry.id,
-    startPage,
-    endPage: page - 1,
-    totalPages: pdf.numPages,
-    text: text.trim(),
-    hasMore: page <= pdf.numPages,
-    nextStartPage: page <= pdf.numPages ? page : undefined,
   };
 }
 

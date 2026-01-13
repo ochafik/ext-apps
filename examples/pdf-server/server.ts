@@ -24,20 +24,17 @@ import path from "node:path";
 import { z } from "zod";
 
 import { buildPdfIndex, findEntryById, createEntry, isArxivUrl, isFileUrl, toFileUrl } from "./src/pdf-indexer.js";
-import { loadPdfTextChunk, loadPdfBytesChunk, populatePdfMetadata } from "./src/pdf-loader.js";
+import { loadPdfBytesChunk, populatePdfMetadata } from "./src/pdf-loader.js";
 import {
-  ReadPdfTextInputSchema,
   ReadPdfBytesInputSchema,
-  PdfTextChunkSchema,
   PdfBytesChunkSchema,
-  MAX_CHUNK_BYTES,
   type PdfIndex,
 } from "./src/types.js";
 import { startServer } from "./server-utils.js";
 
 const DIST_DIR = path.join(import.meta.dirname, "dist");
 const RESOURCE_URI = "ui://pdf-viewer/mcp-app.html";
-const DEFAULT_PDF = "https://arxiv.org/pdf/2303.18223.pdf";
+const DEFAULT_PDF = "https://arxiv.org/pdf/1706.03762"; // Attention Is All You Need
 
 let pdfIndex: PdfIndex | null = null;
 
@@ -54,36 +51,6 @@ export function createServer(): McpServer {
       structuredContent: { entries: pdfIndex.entries },
     };
   });
-
-  // ============================================================================
-  // Tool: read_pdf_text - Chunked text extraction (app-only)
-  // Demonstrates: Size-limited responses with pagination
-  // ============================================================================
-  registerAppTool(
-    server,
-    "read_pdf_text",
-    {
-      title: "Read PDF Text",
-      description: "Extract text in chunks (demonstrates size-limited responses)",
-      inputSchema: ReadPdfTextInputSchema.shape,
-      outputSchema: PdfTextChunkSchema,
-      _meta: { ui: { visibility: ["app"] } },
-    },
-    async (args: unknown): Promise<CallToolResult> => {
-      if (!pdfIndex) throw new Error("Not initialized");
-      const { pdfId, startPage, maxBytes } = ReadPdfTextInputSchema.parse(args);
-      const entry = findEntryById(pdfIndex, pdfId);
-      if (!entry) throw new Error(`PDF not found: ${pdfId}`);
-
-      const chunk = await loadPdfTextChunk(entry, startPage, Math.min(maxBytes, MAX_CHUNK_BYTES));
-      console.error(`[read_pdf_text] pages ${chunk.startPage}-${chunk.endPage}/${chunk.totalPages}`);
-
-      return {
-        content: [{ type: "text", text: chunk.text }],
-        structuredContent: chunk,
-      };
-    },
-  );
 
   // ============================================================================
   // Tool: read_pdf_bytes - Chunked binary loading (app-only)
