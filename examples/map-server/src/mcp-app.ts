@@ -1014,18 +1014,22 @@ app.ontoolinput = async (params) => {
     }
 
     if (bbox) {
-      // Mark that we received explicit tool input (overrides persisted state)
       hasReceivedToolInput = true;
 
-      // Store initial bbox for home button (first tool input becomes the "home" view)
+      // Store tool input bbox for home button (first tool input becomes the "home" view)
       if (!initialBoundingBox) {
         initialBoundingBox = bbox;
       }
 
-      log.info("Positioning camera to bbox:", bbox);
-
-      // Position camera instantly (no animation)
-      setViewToBoundingBox(viewer, bbox);
+      // Check if we have a persisted view state - if so, use it instead of tool input
+      const persistedState = loadPersistedViewState();
+      if (persistedState) {
+        log.info("[ViewState] using persisted view instead of tool input");
+        restorePersistedView(viewer);
+      } else {
+        log.info("Positioning camera to tool input bbox:", bbox);
+        setViewToBoundingBox(viewer, bbox);
+      }
 
       // Wait for tiles to load at this location
       await waitForTilesLoaded(viewer);
