@@ -54,9 +54,20 @@ interface HostProps {
 type ToolCallEntry = ToolCallInfo & { id: number };
 let nextToolCallId = 0;
 
+// Parse URL query params for debugging: ?server=name&tool=name&call=true
+function getQueryParams() {
+  const params = new URLSearchParams(window.location.search);
+  return {
+    server: params.get("server"),
+    tool: params.get("tool"),
+    call: params.get("call") === "true",
+  };
+}
+
 function Host({ serversPromise }: HostProps) {
   const [toolCalls, setToolCalls] = useState<ToolCallEntry[]>([]);
   const [destroyingIds, setDestroyingIds] = useState<Set<number>>(new Set());
+  const queryParams = useMemo(() => getQueryParams(), []);
 
   const requestClose = (id: number) => {
     setDestroyingIds((s) => new Set(s).add(id));
@@ -85,6 +96,9 @@ function Host({ serversPromise }: HostProps) {
       <CallToolPanel
         serversPromise={serversPromise}
         addToolCall={(info) => setToolCalls([...toolCalls, { ...info, id: nextToolCallId++ }])}
+        initialServer={queryParams.server}
+        initialTool={queryParams.tool}
+        autoCall={queryParams.call}
       />
     </>
   );
@@ -95,11 +109,15 @@ function Host({ serversPromise }: HostProps) {
 interface CallToolPanelProps {
   serversPromise: Promise<ServerInfo[]>;
   addToolCall: (info: ToolCallInfo) => void;
+  initialServer?: string | null;
+  initialTool?: string | null;
+  autoCall?: boolean;
 }
-function CallToolPanel({ serversPromise, addToolCall }: CallToolPanelProps) {
+function CallToolPanel({ serversPromise, addToolCall, initialServer, initialTool, autoCall }: CallToolPanelProps) {
   const [selectedServer, setSelectedServer] = useState<ServerInfo | null>(null);
   const [selectedTool, setSelectedTool] = useState("");
   const [inputJson, setInputJson] = useState("{}");
+  const [hasAutoCalledRef] = useState({ called: false });
 
   // Filter out app-only tools, prioritize tools with UIs
   const toolNames = selectedServer
@@ -118,16 +136,21 @@ function CallToolPanel({ serversPromise, addToolCall }: CallToolPanelProps) {
     }
   }, [inputJson]);
 
-  const handleServerSelect = (server: ServerInfo) => {
+  const handleServerSelect = (server: ServerInfo, preferredTool?: string) => {
     setSelectedServer(server);
     // Filter out app-only tools, prioritize tools with UIs
     const visibleTools = Array.from(server.tools.values())
       .filter((tool) => isToolVisibleToModel(tool))
       .sort(compareTools);
-    const firstTool = visibleTools[0]?.name ?? "";
-    setSelectedTool(firstTool);
+
+    // Use preferred tool if it exists and is visible, otherwise first visible tool
+    const targetTool = preferredTool && visibleTools.some(t => t.name === preferredTool)
+      ? preferredTool
+      : visibleTools[0]?.name ?? "";
+
+    setSelectedTool(targetTool);
     // Set input JSON to tool defaults (if any)
-    setInputJson(getToolDefaults(server.tools.get(firstTool)));
+    setInputJson(getToolDefaults(server.tools.get(targetTool)));
   };
 
   const handleToolSelect = (toolName: string) => {
@@ -136,10 +159,21 @@ function CallToolPanel({ serversPromise, addToolCall }: CallToolPanelProps) {
     setInputJson(getToolDefaults(selectedServer?.tools.get(toolName)));
   };
 
-  const handleSubmit = () => {
-    if (!selectedServer) return;
-    const toolCallInfo = callTool(selectedServer, selectedTool, JSON.parse(inputJson));
+  // Submit with optional override for server/tool (used by auto-call)
+  const handleSubmit = (overrideServer?: ServerInfo, overrideTool?: string) => {
+    const server = overrideServer ?? selectedServer;
+    const tool = overrideTool ?? selectedTool;
+    if (!server) return;
+
+    const toolCallInfo = callTool(server, tool, JSON.parse(inputJson));
     addToolCall(toolCallInfo);
+
+    // Update URL for easy refresh/sharing (without triggering navigation)
+    const url = new URL(window.location.href);
+    url.searchParams.set("server", server.name);
+    url.searchParams.set("tool", tool);
+    url.searchParams.set("call", "true"); // Auto-call on refresh
+    history.replaceState(null, "", url.toString());
   };
 
   return (
@@ -148,7 +182,17 @@ function CallToolPanel({ serversPromise, addToolCall }: CallToolPanelProps) {
         <label>
           Server
           <Suspense fallback={<select disabled><option>Loading...</option></select>}>
-            <ServerSelect serversPromise={serversPromise} onSelect={handleServerSelect} />
+            <ServerSelect
+              serversPromise={serversPromise}
+              onSelect={handleServerSelect}
+              initialServer={initialServer}
+              initialTool={initialTool}
+              autoCall={autoCall && !hasAutoCalledRef.called}
+              onAutoCall={(server, tool) => {
+                hasAutoCalledRef.called = true;
+                handleSubmit(server, tool);
+              }}
+            />
           </Suspense>
         </label>
         <label>
@@ -184,17 +228,47 @@ function CallToolPanel({ serversPromise, addToolCall }: CallToolPanelProps) {
 // ServerSelect calls use() and renders the server <select>
 interface ServerSelectProps {
   serversPromise: Promise<ServerInfo[]>;
-  onSelect: (server: ServerInfo) => void;
+  onSelect: (server: ServerInfo, toolName?: string) => void;
+  initialServer?: string | null;
+  initialTool?: string | null;
+  autoCall?: boolean;
+  onAutoCall?: (server: ServerInfo, tool: string) => void;
 }
-function ServerSelect({ serversPromise, onSelect }: ServerSelectProps) {
+function ServerSelect({ serversPromise, onSelect, initialServer, initialTool, autoCall, onAutoCall }: ServerSelectProps) {
   const servers = use(serversPromise);
+  const [hasInitialized, setHasInitialized] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(0);
 
+  // Initialize with the correct server/tool when servers are loaded
   useEffect(() => {
-    if (servers.length > selectedIndex) {
-      onSelect(servers[selectedIndex]);
+    if (hasInitialized || servers.length === 0) return;
+
+    // Find initial server index if specified
+    let idx = 0;
+    if (initialServer) {
+      const foundIdx = servers.findIndex(s => s.name === initialServer);
+      if (foundIdx >= 0) idx = foundIdx;
     }
-  }, [servers]);
+
+    const server = servers[idx];
+    setSelectedIndex(idx);
+
+    // Find the tool to use
+    const visibleTools = Array.from(server.tools.values())
+      .filter((tool) => isToolVisibleToModel(tool))
+      .sort(compareTools);
+    const targetTool = initialTool && visibleTools.some(t => t.name === initialTool)
+      ? initialTool
+      : visibleTools[0]?.name ?? "";
+
+    onSelect(server, targetTool);
+    setHasInitialized(true);
+
+    // Auto-call after initial selection if requested
+    if (autoCall && targetTool) {
+      onAutoCall?.(server, targetTool);
+    }
+  }, [servers, hasInitialized, initialServer, initialTool, autoCall, onSelect, onAutoCall]);
 
   if (servers.length === 0) {
     return <select disabled><option>No servers configured</option></select>;
@@ -349,6 +423,7 @@ function AppIFramePanel({ toolCallInfo, isDestroying, onTeardownComplete }: AppI
   const [modelContext, setModelContext] = useState<ModelContext | null>(null);
   const [toolResult, setToolResult] = useState<object | null>(null);
   const [messages, setMessages] = useState<AppMessage[]>([]);
+  const [displayMode, setDisplayMode] = useState<"inline" | "fullscreen">("inline");
 
   useEffect(() => {
     const iframe = iframeRef.current!;
@@ -365,6 +440,11 @@ function AppIFramePanel({ toolCallInfo, isDestroying, onTeardownComplete }: AppI
           const appBridge = newAppBridge(toolCallInfo.serverInfo, iframe, {
             onContextUpdate: setModelContext,
             onMessage: (msg) => setMessages((prev) => [...prev, msg]),
+            onDisplayModeChange: setDisplayMode,
+          }, {
+            // Provide container dimensions - maxHeight for flexible sizing
+            containerDimensions: { maxHeight: 600 },
+            displayMode: "inline",
           });
           appBridgeRef.current = appBridge;
           initializeApp(iframe, appBridge, toolCallInfo);
@@ -431,8 +511,12 @@ function AppIFramePanel({ toolCallInfo, isDestroying, onTeardownComplete }: AppI
   };
   const messagesText = messages.map(formatMessage).join("\n\n");
 
+  const panelClassName = displayMode === "fullscreen"
+    ? `${styles.appIframePanel} ${styles.fullscreen}`
+    : styles.appIframePanel;
+
   return (
-    <div className={styles.appIframePanel}>
+    <div className={panelClassName}>
       <CollapsiblePanel icon="📥" label="Tool Input" content={inputJson} />
       <iframe ref={iframeRef} />
       {resultJson && (
