@@ -172,15 +172,33 @@ async function updatePageContext() {
       .replace(/\s+/g, " ")
       .trim();
 
-    // Check for text selection (normalize same way as pageText)
+    // Check for text selection
     let selection: { text: string; start: number; end: number } | undefined;
     const sel = window.getSelection();
     if (sel && sel.rangeCount > 0) {
-      const selectedText = sel.toString().replace(/\s+/g, " ").trim();
+      const rawSelected = sel.toString();
+      const selectedText = rawSelected.replace(/\s+/g, " ").trim();
+
       if (selectedText && selectedText.length > 2) {
-        const start = pageText.indexOf(selectedText);
+        // Try exact match first
+        let start = pageText.indexOf(selectedText);
+
+        // If no match, try matching without spaces (TextLayer spans may not have spaces)
+        if (start < 0) {
+          const noSpaceSelected = selectedText.replace(/\s+/g, "");
+          const noSpacePageText = pageText.replace(/\s+/g, "");
+          const noSpaceStart = noSpacePageText.indexOf(noSpaceSelected);
+          if (noSpaceStart >= 0) {
+            // Map back to original position (approximate)
+            start = Math.floor((noSpaceStart / noSpacePageText.length) * pageText.length);
+          }
+        }
+
         if (start >= 0) {
           selection = { text: selectedText, start, end: start + selectedText.length };
+          log.info("Selection detected:", selectedText.slice(0, 30), "at", start);
+        } else {
+          log.info("Selection not matched:", selectedText.slice(0, 30));
         }
       }
     }
@@ -477,7 +495,12 @@ let selectionUpdateTimeout: ReturnType<typeof setTimeout> | null = null;
 document.addEventListener("selectionchange", () => {
   if (selectionUpdateTimeout) clearTimeout(selectionUpdateTimeout);
   selectionUpdateTimeout = setTimeout(() => {
-    updatePageContext();
+    const sel = window.getSelection();
+    const text = sel?.toString().trim();
+    if (text && text.length > 2) {
+      log.info("Selection changed:", text.slice(0, 50));
+      updatePageContext();
+    }
   }, 300);
 });
 

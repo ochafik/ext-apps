@@ -236,7 +236,8 @@ async function main() {
   if (stdio) {
     await createServer().connect(new StdioServerTransport());
   } else {
-    await startServer(createServer, { port: 3110, name: "PDF Server" });
+    const port = parseInt(process.env.PORT ?? "3001", 10);
+    await startServer(createServer, { port, name: "PDF Server" });
   }
 }
 
