@@ -366,6 +366,11 @@ function zoomOut() {
   renderPage();
 }
 
+function resetZoom() {
+  scale = 1.0;
+  renderPage();
+}
+
 function downloadPdf() {
   if (!pdfBytes) return;
   const buffer = new Uint8Array(pdfBytes).buffer;
@@ -433,6 +438,13 @@ pageInputEl.addEventListener("keydown", (e) => {
 document.addEventListener("keydown", (e) => {
   if (document.activeElement === pageInputEl) return;
 
+  // Ctrl/Cmd+0 to reset zoom
+  if ((e.ctrlKey || e.metaKey) && e.key === "0") {
+    resetZoom();
+    e.preventDefault();
+    return;
+  }
+
   switch (e.key) {
     case "Escape":
       if (currentDisplayMode === "fullscreen") {
@@ -463,15 +475,29 @@ document.addEventListener("keydown", (e) => {
   }
 });
 
-// Horizontal scroll/swipe to change pages
+// Horizontal scroll/swipe to change pages (or pan when zoomed)
 let horizontalScrollAccumulator = 0;
 const SCROLL_THRESHOLD = 50;
 
 canvasContainerEl.addEventListener("wheel", (event) => {
   const e = event as WheelEvent;
+  const container = canvasContainerEl as HTMLElement;
+
   // Only intercept horizontal scroll, let vertical scroll through
   if (Math.abs(e.deltaX) <= Math.abs(e.deltaY)) return;
 
+  // Check if we can pan horizontally (content wider than container)
+  const canScrollLeft = container.scrollLeft > 0;
+  const canScrollRight = container.scrollLeft < container.scrollWidth - container.clientWidth - 1;
+
+  // If zoomed in and can pan in scroll direction, let natural scrolling happen
+  if ((e.deltaX < 0 && canScrollLeft) || (e.deltaX > 0 && canScrollRight)) {
+    // Don't prevent default - let the container scroll naturally
+    horizontalScrollAccumulator = 0;
+    return;
+  }
+
+  // At edge or not zoomed - handle page navigation
   e.preventDefault();
   horizontalScrollAccumulator += e.deltaX;
   if (horizontalScrollAccumulator > SCROLL_THRESHOLD) {
