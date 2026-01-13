@@ -122,11 +122,20 @@ function showViewer() {
 }
 
 function updateControls() {
-  // Make title a link if we have a source URL
+  // Make title clickable if we have a source URL
+  titleEl.textContent = pdfTitle;
   if (pdfSourceUrl) {
-    titleEl.innerHTML = `<a href="${pdfSourceUrl}" target="_blank" rel="noopener noreferrer" style="color: inherit; text-decoration: underline;">${escapeHtml(pdfTitle)}</a>`;
+    titleEl.style.textDecoration = "underline";
+    titleEl.style.cursor = "pointer";
+    titleEl.onclick = () => {
+      if (pdfSourceUrl) {
+        app.openLink({ url: pdfSourceUrl });
+      }
+    };
   } else {
-    titleEl.textContent = pdfTitle;
+    titleEl.style.textDecoration = "none";
+    titleEl.style.cursor = "default";
+    titleEl.onclick = null;
   }
   pageInputEl.value = String(currentPage);
   pageInputEl.max = String(totalPages);
@@ -136,11 +145,6 @@ function updateControls() {
   zoomLevelEl.textContent = `${Math.round(scale * 100)}%`;
 }
 
-function escapeHtml(text: string): string {
-  const div = document.createElement("div");
-  div.textContent = text;
-  return div.innerHTML;
-}
 
 // Extract text from current page and update model context
 async function updatePageContext() {
