@@ -253,6 +253,10 @@ Default: Opens "Practices for Governing Agentic AI Systems" paper.`,
           .min(1)
           .default(1)
           .describe("Initial page to display (1-based)"),
+        maxChunkBytes: z
+          .number()
+          .default(500 * 1024) // 500KB
+          .describe("Maximum bytes per chunk when reading text (default: 500KB)"),
       },
       outputSchema: z.object({
         pdfId: z.string(),
@@ -260,10 +264,11 @@ Default: Opens "Practices for Governing Agentic AI Systems" paper.`,
         title: z.string(),
         pageCount: z.number(),
         initialPage: z.number(),
+        maxChunkBytes: z.number(),
       }),
       _meta: { ui: { resourceUri: RESOURCE_URI } },
     },
-    async ({ pdfId, url, page }): Promise<CallToolResult> => {
+    async ({ pdfId, url, page, maxChunkBytes }): Promise<CallToolResult> => {
       if (!pdfIndex) {
         throw new Error("PDF index not initialized");
       }
@@ -309,6 +314,7 @@ Default: Opens "Practices for Governing Agentic AI Systems" paper.`,
         title: entry.displayName,
         pageCount: entry.metadata.pageCount,
         initialPage: Math.min(page ?? 1, entry.metadata.pageCount),
+        maxChunkBytes: maxChunkBytes ?? 500 * 1024,
       };
 
       return {
