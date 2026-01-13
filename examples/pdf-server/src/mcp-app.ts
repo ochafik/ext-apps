@@ -66,10 +66,7 @@ const progressTextEl = document.getElementById("progress-text")!;
 // Track current display mode
 let currentDisplayMode: "inline" | "fullscreen" = "inline";
 
-// Layout constants (must match CSS)
-const TOOLBAR_HEIGHT = 48;
-const CANVAS_PADDING = 16; // 1rem on each side
-const HEIGHT_BUFFER = 4; // Extra pixels to prevent sub-pixel scrolling
+// Layout constants are no longer used - we calculate dynamically from actual element dimensions
 
 /**
  * Request the host to resize the app to fit the current PDF page.
@@ -85,11 +82,36 @@ function requestFitToContent() {
     return; // No content yet
   }
 
-  // Total height = toolbar + top padding + canvas + bottom padding + buffer
-  const totalHeight =
-    TOOLBAR_HEIGHT + CANVAS_PADDING * 2 + canvasHeight + HEIGHT_BUFFER;
+  // Get actual element dimensions
+  const canvasContainerEl = document.querySelector(
+    ".canvas-container",
+  ) as HTMLElement;
+  const pageWrapperEl = document.querySelector(".page-wrapper") as HTMLElement;
+  const toolbarEl = document.querySelector(".toolbar") as HTMLElement;
 
-  log.info("Requesting height:", totalHeight, "(canvas:", canvasHeight, ")");
+  if (!canvasContainerEl || !toolbarEl || !pageWrapperEl) {
+    return;
+  }
+
+  // Get computed styles
+  const containerStyle = getComputedStyle(canvasContainerEl);
+  const paddingTop = parseFloat(containerStyle.paddingTop);
+  const paddingBottom = parseFloat(containerStyle.paddingBottom);
+
+  // Calculate required height:
+  // toolbar + padding-top + page-wrapper height + padding-bottom
+  const toolbarHeight = toolbarEl.offsetHeight;
+  const pageWrapperHeight = pageWrapperEl.offsetHeight;
+  const totalHeight = toolbarHeight + paddingTop + pageWrapperHeight + paddingBottom;
+
+  log.info("Requesting height:", totalHeight, {
+    toolbarHeight,
+    paddingTop,
+    pageWrapperHeight,
+    paddingBottom,
+    canvasHeight,
+  });
+
   app.sendSizeChanged({ height: totalHeight });
 }
 
