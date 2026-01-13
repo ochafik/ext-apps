@@ -94,14 +94,13 @@ interface PersistedCameraState {
 
 /**
  * Get localStorage key for persisting view state
- * Uses toolInfo.id (tool invocation ID) - localStorage is scoped per conversation per server,
- * so each tool call remembers its own view state within the conversation.
+ * Uses toolInfo.id (tool invocation ID) if available, otherwise falls back to "default".
+ * localStorage is scoped per origin, so each tool call can remember its view state.
  */
-function getViewStorageKey(): string | null {
+function getViewStorageKey(): string {
   const context = app.getHostContext();
-  const toolId = context?.toolInfo?.id;
-  if (!toolId) return null;
-  return `cesium-view:${toolId}`;
+  const toolId = context?.toolInfo?.id || "default";
+  return `map:${toolId}`;
 }
 
 /**
@@ -142,11 +141,6 @@ function schedulePersistViewState(cesiumViewer: any): void {
  */
 function persistViewState(cesiumViewer: any): void {
   const key = getViewStorageKey();
-  if (!key) {
-    log.info("No storage key available, skipping view persistence");
-    return;
-  }
-
   const state = getCameraState(cesiumViewer);
   if (!state) return;
 
@@ -168,7 +162,6 @@ function persistViewState(cesiumViewer: any): void {
  */
 function loadPersistedViewState(): PersistedCameraState | null {
   const key = getViewStorageKey();
-  if (!key) return null;
 
   try {
     const stored = localStorage.getItem(key);
@@ -184,6 +177,7 @@ function loadPersistedViewState(): PersistedCameraState | null {
       log.warn("Invalid persisted view state, ignoring");
       return null;
     }
+    log.info("Loaded persisted view state from", key);
     return state;
   } catch (e) {
     log.warn("Failed to load persisted view state:", e);
@@ -818,6 +812,14 @@ const app = new App(
   { autoResize: false },
 );
 
+// Default bounding box (USA) for home button fallback
+const DEFAULT_BOUNDING_BOX: BoundingBox = {
+  west: -130,
+  south: 20,
+  east: -60,
+  north: 55,
+};
+
 /**
  * Show home button and set up click handler
  */
@@ -827,10 +829,10 @@ function setupHomeButton(cesiumViewer: any): void {
 
   btn.style.display = "flex";
   btn.addEventListener("click", () => {
-    if (initialBoundingBox && cesiumViewer) {
-      log.info("Flying to initial view:", initialBoundingBox);
-      flyToBoundingBox(cesiumViewer, initialBoundingBox);
-    }
+    // Use initial bbox from tool input, or default to USA view
+    const targetBbox = initialBoundingBox || DEFAULT_BOUNDING_BOX;
+    log.info("Flying to home view:", targetBbox);
+    flyToBoundingBox(cesiumViewer, targetBbox);
   });
 }
 
@@ -1017,10 +1019,9 @@ app.ontoolinput = async (params) => {
       // Mark that we received explicit tool input (overrides persisted state)
       hasReceivedToolInput = true;
 
-      // Store initial bbox for home button
+      // Store initial bbox for home button (first tool input becomes the "home" view)
       if (!initialBoundingBox) {
         initialBoundingBox = bbox;
-        setupHomeButton(viewer);
       }
 
       log.info("Positioning camera to bbox:", bbox);
@@ -1153,6 +1154,9 @@ async function init() {
     if (fullscreenBtn) {
       fullscreenBtn.addEventListener("click", toggleFullscreen);
     }
+
+    // Set up home button
+    setupHomeButton(viewer);
 
     // Set up keyboard shortcuts for fullscreen (Escape to exit, Ctrl/Cmd+Enter to toggle)
     document.addEventListener("keydown", handleFullscreenKeyboard);
