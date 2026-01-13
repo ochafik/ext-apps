@@ -172,22 +172,37 @@ async function updatePageContext() {
   }
 }
 
+// Render state - prevents concurrent renders
+let isRendering = false;
+let pendingPage: number | null = null;
+
 // Render current page with text layer for selection
 async function renderPage() {
   if (!pdfDocument) return;
 
-  // Cancel any in-progress render to avoid "canvas in use" errors
-  if (currentRenderTask) {
-    currentRenderTask.cancel();
-    currentRenderTask = null;
+  // If already rendering, queue this page for later
+  if (isRendering) {
+    pendingPage = currentPage;
+    // Cancel current render to speed up
+    if (currentRenderTask) {
+      currentRenderTask.cancel();
+    }
+    return;
   }
 
+  isRendering = true;
+  pendingPage = null;
+
   try {
-    const page = await pdfDocument.getPage(currentPage);
+    const pageToRender = currentPage;
+    const page = await pdfDocument.getPage(pageToRender);
     const viewport = page.getViewport({ scale });
 
-    // Set canvas dimensions
+    // Get fresh context and clear canvas
     const ctx = canvasEl.getContext("2d")!;
+    ctx.clearRect(0, 0, canvasEl.width, canvasEl.height);
+
+    // Set canvas dimensions
     canvasEl.width = viewport.width;
     canvasEl.height = viewport.height;
     canvasEl.style.width = `${viewport.width}px`;
@@ -205,8 +220,27 @@ async function renderPage() {
       viewport,
     });
     currentRenderTask = renderTask;
-    await renderTask.promise;
-    currentRenderTask = null;
+
+    try {
+      await renderTask.promise;
+    } catch (renderErr) {
+      // Ignore RenderingCancelledException - it's expected when we cancel
+      if (
+        renderErr instanceof Error &&
+        renderErr.name === "RenderingCancelledException"
+      ) {
+        log.info("Render cancelled");
+        return;
+      }
+      throw renderErr;
+    } finally {
+      currentRenderTask = null;
+    }
+
+    // Only continue if this is still the page we want
+    if (pageToRender !== currentPage) {
+      return;
+    }
 
     // Render text layer for selection
     const textContent = await page.getTextContent();
@@ -223,13 +257,19 @@ async function renderPage() {
     // Request host to resize app to fit content (inline mode only)
     requestFitToContent();
   } catch (err) {
-    // Ignore RenderingCancelledException - it's expected when we cancel a render
-    if (err instanceof Error && err.name === "RenderingCancelledException") {
-      log.info("Render cancelled (new render started)");
-      return;
-    }
     log.error("Error rendering page:", err);
     showError(`Failed to render page ${currentPage}`);
+  } finally {
+    isRendering = false;
+
+    // If there's a pending page, render it now
+    if (pendingPage !== null && pendingPage !== currentPage) {
+      currentPage = pendingPage;
+      renderPage();
+    } else if (pendingPage === currentPage) {
+      // Re-render the same page (e.g., after zoom change during render)
+      renderPage();
+    }
   }
 }
 
