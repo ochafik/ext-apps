@@ -33,6 +33,7 @@ let scale = 1.0;
 let pdfTitle = "";
 let pdfSourceUrl: string | undefined;
 let pdfId = "";
+let currentRenderTask: { cancel: () => void } | null = null;
 
 // DOM Elements
 const mainEl = document.querySelector(".main") as HTMLElement;
@@ -175,6 +176,12 @@ async function updatePageContext() {
 async function renderPage() {
   if (!pdfDocument) return;
 
+  // Cancel any in-progress render to avoid "canvas in use" errors
+  if (currentRenderTask) {
+    currentRenderTask.cancel();
+    currentRenderTask = null;
+  }
+
   try {
     const page = await pdfDocument.getPage(currentPage);
     const viewport = page.getViewport({ scale });
@@ -191,12 +198,15 @@ async function renderPage() {
     textLayerEl.style.width = `${viewport.width}px`;
     textLayerEl.style.height = `${viewport.height}px`;
 
-    // Render canvas
+    // Render canvas - track the task so we can cancel it
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (page.render as any)({
+    const renderTask = (page.render as any)({
       canvasContext: ctx,
       viewport,
-    }).promise;
+    });
+    currentRenderTask = renderTask;
+    await renderTask.promise;
+    currentRenderTask = null;
 
     // Render text layer for selection
     const textContent = await page.getTextContent();
