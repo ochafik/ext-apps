@@ -41,6 +41,7 @@ const loadingTextEl = document.getElementById("loading-text")!;
 const errorEl = document.getElementById("error")!;
 const errorMessageEl = document.getElementById("error-message")!;
 const viewerEl = document.getElementById("viewer")!;
+const canvasContainerEl = document.querySelector(".canvas-container")!;
 const canvasEl = document.getElementById("pdf-canvas") as HTMLCanvasElement;
 const textLayerEl = document.getElementById("text-layer")!;
 const titleEl = document.getElementById("pdf-title")!;
@@ -64,6 +65,7 @@ let currentDisplayMode: "inline" | "fullscreen" = "inline";
 // Layout constants (must match CSS)
 const TOOLBAR_HEIGHT = 48;
 const CANVAS_PADDING = 16; // 1rem on each side
+const HEIGHT_BUFFER = 2; // Extra pixels to prevent sub-pixel scrolling
 
 /**
  * Request the host to resize the app to fit the current PDF page.
@@ -79,8 +81,9 @@ function requestFitToContent() {
     return; // No content yet
   }
 
-  // Total height = toolbar + top padding + canvas + bottom padding
-  const totalHeight = TOOLBAR_HEIGHT + CANVAS_PADDING * 2 + canvasHeight;
+  // Total height = toolbar + top padding + canvas + bottom padding + buffer
+  const totalHeight =
+    TOOLBAR_HEIGHT + CANVAS_PADDING * 2 + canvasHeight + HEIGHT_BUFFER;
 
   log.info("Requesting height:", totalHeight, "(canvas:", canvasHeight, ")");
   app.sendSizeChanged({ height: totalHeight });
@@ -322,6 +325,33 @@ document.addEventListener("keydown", (e) => {
       break;
   }
 });
+
+// Horizontal scroll/swipe to change pages
+let horizontalScrollAccumulator = 0;
+const SCROLL_THRESHOLD = 50; // pixels of horizontal scroll to trigger page change
+
+canvasContainerEl.addEventListener(
+  "wheel",
+  (event) => {
+    const e = event as WheelEvent;
+    // Only handle horizontal scroll (touchpad swipe or shift+scroll)
+    if (Math.abs(e.deltaX) <= Math.abs(e.deltaY)) {
+      return; // Vertical scroll - let it scroll normally
+    }
+
+    e.preventDefault();
+    horizontalScrollAccumulator += e.deltaX;
+
+    if (horizontalScrollAccumulator > SCROLL_THRESHOLD) {
+      nextPage();
+      horizontalScrollAccumulator = 0;
+    } else if (horizontalScrollAccumulator < -SCROLL_THRESHOLD) {
+      prevPage();
+      horizontalScrollAccumulator = 0;
+    }
+  },
+  { passive: false },
+);
 
 // Parse tool result
 function parseToolResult(result: CallToolResult): {
