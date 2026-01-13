@@ -1,107 +1,128 @@
 # PDF Server
 
-An MCP server that indexes and serves PDF files from local directories and HTTP URLs, with an interactive viewer UI.
+A didactic MCP server example demonstrating key MCP Apps SDK patterns.
 
-## Features
+## What This Example Demonstrates
 
-- **Local PDF indexing**: Recursively scans directories for PDF files
-- **HTTP PDF loading**: Fetches PDFs from any HTTP(s) URL with Range request support
-- **Interactive viewer**: Single-page display with zoom, navigation, text selection
-- **Chunked text extraction**: Paginated text loading for large documents
-- **Auto-resize**: Viewer adjusts height to fit content without scrolling
+### 1. Chunked Data Through Size-Limited Tool Calls
 
-## Protocol Features Demonstrated
+Large PDFs can't be sent in a single response. This example shows how to implement elegant chunked loading:
 
-This example showcases several MCP Apps SDK features:
-
-| Feature                     | Usage                                                               |
-| --------------------------- | ------------------------------------------------------------------- |
-| **App Tool with UI**        | `view_pdf` opens an interactive PDF viewer                          |
-| **App-only Tools**          | `read_pdf_text`, `read_pdf_bytes` hidden from model, used by viewer |
-| **structuredContent**       | Tool results include typed data for the UI                          |
-| **sendSizeChanged**         | Viewer requests height changes to fit content                       |
-| **requestDisplayMode**      | Fullscreen toggle support                                           |
-| **Model Context Updates**   | Current page text and selection sent to model context               |
-| **Host Style Variables**    | Themed UI using CSS custom properties                               |
-
-## CLI Usage
-
-```bash
-# Serve PDFs from a local folder
-bun examples/pdf-server/server.ts ./papers/
-
-# Serve a specific PDF file
-bun examples/pdf-server/server.ts ./thesis.pdf
-
-# Serve from multiple sources
-bun examples/pdf-server/server.ts ./docs/ ./presentations/
-
-# Fetch and serve a PDF from any HTTP URL
-bun examples/pdf-server/server.ts https://example.com/document.pdf
-
-# Mix local files and HTTP URLs
-bun examples/pdf-server/server.ts ./papers/ https://arxiv.org/pdf/2401.00001.pdf
-
-# Run in stdio mode for MCP clients
-bun examples/pdf-server/server.ts --stdio ./docs/
+**Server side** (`pdf-loader.ts`):
+```typescript
+// Returns chunks with pagination metadata
+async function loadPdfBytesChunk(entry, offset, byteCount) {
+  return {
+    bytes: base64Chunk,
+    offset,
+    byteCount,
+    totalBytes,
+    hasMore: offset + byteCount < totalBytes,
+  };
+}
 ```
 
-**Default behavior**: When run without arguments, it loads a sample PDF from arXiv.
+**Client side** (`mcp-app.ts`):
+```typescript
+// Load in chunks with progress
+while (hasMore) {
+  const chunk = await app.callServerTool("read_pdf_bytes", { pdfId, offset });
+  chunks.push(base64ToBytes(chunk.bytes));
+  offset += chunk.byteCount;
+  hasMore = chunk.hasMore;
+  updateProgress(offset, chunk.totalBytes);
+}
+```
+
+### 2. Model Context Updates
+
+The viewer keeps the model informed about what the user is seeing:
+
+```typescript
+app.updateModelContext({
+  structuredContent: {
+    title: pdfTitle,
+    currentPage,
+    totalPages,
+    pageText: pageText.slice(0, 5000),
+    selection: selectedText ? { text, start, end } : undefined,
+  },
+});
+```
+
+This enables the model to answer questions about the current page or selected text.
+
+### 3. Display Modes: Fullscreen vs Inline
+
+- **Inline mode**: App requests height changes to fit content
+- **Fullscreen mode**: App fills the screen with internal scrolling
+
+```typescript
+// Request fullscreen
+app.requestDisplayMode({ mode: "fullscreen" });
+
+// Listen for mode changes
+app.ondisplaymodechange = (mode) => {
+  if (mode === "fullscreen") enableScrolling();
+  else disableScrolling();
+};
+```
+
+### 4. External Links (openLink)
+
+The viewer demonstrates opening external links (e.g., to the original arxiv page):
+
+```typescript
+titleEl.onclick = () => app.openLink(sourceUrl);
+```
+
+## Usage
+
+```bash
+# Default: loads a sample arxiv paper
+bun examples/pdf-server/server.ts
+
+# Load specific PDFs (any URL works for initial args)
+bun examples/pdf-server/server.ts https://arxiv.org/pdf/2401.00001.pdf
+
+# stdio mode for MCP clients
+bun examples/pdf-server/server.ts --stdio
+```
+
+**Note**: For security, dynamic URLs (via `view_pdf` tool) are restricted to arxiv.org.
 
 ## Tools
 
-### `view_pdf`
-
-Opens an interactive PDF viewer with navigation controls.
-
-**Input:**
-
-- `pdfId` (optional): ID from `list_pdfs`
-- `url` (optional): HTTP(s) URL to a PDF file
-- `page` (optional): Starting page number (default: 1)
-
-### `list_pdfs`
-
-Lists all indexed PDFs with metadata.
-
-**Input:**
-
-- `folder` (optional): Filter by folder path
-
-### `read_pdf_text` (app-only)
-
-Extracts text from a PDF with chunked pagination. Hidden from the model, used internally by the viewer.
-
-**Input:**
-
-- `pdfId`: PDF identifier
-- `startPage` (optional): Page to start from (1-based)
-- `maxBytes` (optional): Maximum bytes per chunk
-
-
-## Viewer Controls
-
-- **Navigation**: Arrow buttons, keyboard arrows, Page Up/Down
-- **Page input**: Type page number directly
-- **Zoom**: +/- buttons, keyboard +/-
-- **Fullscreen**: Toggle button, Escape to exit
-- **Download**: Download the PDF file
-- **Horizontal scroll**: Swipe left/right to change pages
-- **Text selection**: Select and copy text from the PDF
+| Tool | Visibility | Purpose |
+|------|------------|---------|
+| `list_pdfs` | Model | List indexed PDFs |
+| `view_pdf` | Model + UI | Open interactive viewer |
+| `read_pdf_text` | App only | Chunked text extraction |
+| `read_pdf_bytes` | App only | Chunked binary loading |
 
 ## Architecture
 
 ```
-server.ts           # MCP server with tools and resources
+server.ts           # MCP server (233 lines)
 ├── src/
-│   ├── types.ts        # Zod schemas for inputs/outputs
-│   ├── pdf-indexer.ts  # Directory scanning, index building
-│   ├── pdf-loader.ts   # pdfjs-dist wrapper, text extraction, HTTP Range requests
-│   └── mcp-app.ts      # Interactive viewer UI (vanilla JS)
+│   ├── types.ts        # Zod schemas (75 lines)
+│   ├── pdf-indexer.ts  # URL-based indexing (44 lines)
+│   ├── pdf-loader.ts   # Chunked loading (171 lines)
+│   └── mcp-app.ts      # Interactive viewer UI
 ```
+
+## Key Patterns Shown
+
+| Pattern | Implementation |
+|---------|---------------|
+| App-only tools | `_meta: { ui: { visibility: ["app"] } }` |
+| Chunked responses | `hasMore` + `offset` pagination |
+| Model context | `app.updateModelContext()` |
+| Display modes | `app.requestDisplayMode()` |
+| External links | `app.openLink()` |
+| Size negotiation | `app.sendSizeChanged()` |
 
 ## Dependencies
 
-- `pdfjs-dist`: PDF rendering and text extraction
+- `pdfjs-dist`: PDF rendering
 - `@modelcontextprotocol/ext-apps`: MCP Apps SDK
-- `@modelcontextprotocol/sdk`: MCP SDK

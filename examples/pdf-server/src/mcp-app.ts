@@ -172,12 +172,12 @@ async function updatePageContext() {
       .replace(/\s+/g, " ")
       .trim();
 
-    // Check for text selection
+    // Check for text selection (normalize same way as pageText)
     let selection: { text: string; start: number; end: number } | undefined;
     const sel = window.getSelection();
     if (sel && sel.rangeCount > 0) {
-      const selectedText = sel.toString().trim();
-      if (selectedText) {
+      const selectedText = sel.toString().replace(/\s+/g, " ").trim();
+      if (selectedText && selectedText.length > 2) {
         const start = pageText.indexOf(selectedText);
         if (start >= 0) {
           selection = { text: selectedText, start, end: start + selectedText.length };
@@ -513,17 +513,15 @@ canvasContainerEl.addEventListener(
 // Parse tool result
 function parseToolResult(result: CallToolResult): {
   pdfId: string;
-  pdfUri: string;
   title: string;
-  sourceUrl?: string;
+  sourceUrl: string;
   pageCount: number;
   initialPage: number;
 } | null {
   return result.structuredContent as {
     pdfId: string;
-    pdfUri: string;
     title: string;
-    sourceUrl?: string;
+    sourceUrl: string;
     pageCount: number;
     initialPage: number;
   } | null;

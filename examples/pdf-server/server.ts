@@ -1,12 +1,15 @@
 /**
- * PDF MCP Server
+ * PDF MCP Server - Didactic Example
  *
- * An MCP server that indexes and serves PDF files from local directories and HTTP URLs.
+ * Demonstrates:
+ * - Chunked data through size-limited tool responses
+ * - Model context updates (current page text + selection)
+ * - Display modes: fullscreen with scrolling vs inline with resize
+ * - External link opening (openLink)
  *
  * Usage:
- *   bun server.ts ./papers/ ./thesis.pdf                    # Local files
- *   bun server.ts https://example.com/doc.pdf               # HTTP URL
- *   bun server.ts --stdio ./docs/                           # stdio mode for MCP clients
+ *   bun server.ts https://arxiv.org/pdf/2303.18223.pdf
+ *   bun server.ts --stdio https://example.com/doc.pdf
  */
 import {
   registerAppResource,
@@ -15,104 +18,65 @@ import {
 } from "@modelcontextprotocol/ext-apps/server";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import type {
-  CallToolResult,
-  ReadResourceResult,
-} from "@modelcontextprotocol/sdk/types.js";
+import type { CallToolResult, ReadResourceResult } from "@modelcontextprotocol/sdk/types.js";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { z } from "zod";
-import {
-  buildPdfIndex,
-  findEntryById,
-  isHttpUrl,
-  createHttpEntry,
-} from "./src/pdf-indexer.js";
-import {
-  loadPdfTextChunk,
-  loadPdfBytesChunk,
-  populatePdfMetadata,
-} from "./src/pdf-loader.js";
+
+import { buildPdfIndex, findEntryById, createEntry, isArxivUrl } from "./src/pdf-indexer.js";
+import { loadPdfTextChunk, loadPdfBytesChunk, populatePdfMetadata } from "./src/pdf-loader.js";
 import {
   ReadPdfTextInputSchema,
   ReadPdfBytesInputSchema,
   PdfTextChunkSchema,
   PdfBytesChunkSchema,
-  MAX_TOOL_RESPONSE_BYTES,
-  DEFAULT_BINARY_CHUNK_SIZE,
+  MAX_CHUNK_BYTES,
   type PdfIndex,
-  type ReadPdfTextInput,
-  type ReadPdfBytesInput,
 } from "./src/types.js";
 import { startServer } from "./server-utils.js";
 
 const DIST_DIR = path.join(import.meta.dirname, "dist");
 const RESOURCE_URI = "ui://pdf-viewer/mcp-app.html";
+const DEFAULT_PDF = "https://arxiv.org/pdf/2303.18223.pdf";
 
-// Default demo paper: "A Survey of Large Language Models" from arXiv (75 pages, ~2.5MB)
-const DEFAULT_PDF_URL = "https://arxiv.org/pdf/2303.18223.pdf";
-
-// Global index - populated at startup
 let pdfIndex: PdfIndex | null = null;
 
-/**
- * Creates a new MCP server instance with PDF tools and resources registered.
- */
 export function createServer(): McpServer {
-  const server = new McpServer({
-    name: "PDF Server",
-    version: "1.0.0",
+  const server = new McpServer({ name: "PDF Server", version: "1.0.0" });
+
+  // ============================================================================
+  // Tool: list_pdfs - List all indexed PDFs
+  // ============================================================================
+  server.tool("list_pdfs", "List indexed PDFs", {}, async (): Promise<CallToolResult> => {
+    if (!pdfIndex) throw new Error("Not initialized");
+    return {
+      content: [{ type: "text", text: JSON.stringify(pdfIndex.entries, null, 2) }],
+      structuredContent: { entries: pdfIndex.entries },
+    };
   });
 
-  // Tool: list_pdfs
-  server.tool(
-    "list_pdfs",
-    "List all indexed PDFs with their metadata",
-    {},
-    async (): Promise<CallToolResult> => {
-      if (!pdfIndex) {
-        throw new Error("PDF index not initialized");
-      }
-      return {
-        content: [{ type: "text", text: JSON.stringify(pdfIndex.entries, null, 2) }],
-        structuredContent: { entries: pdfIndex.entries, totalCount: pdfIndex.entries.length },
-      };
-    },
-  );
-
-  // Tool: read_pdf_text (app-only - used by view_pdf UI for chunked loading)
+  // ============================================================================
+  // Tool: read_pdf_text - Chunked text extraction (app-only)
+  // Demonstrates: Size-limited responses with pagination
+  // ============================================================================
   registerAppTool(
     server,
     "read_pdf_text",
     {
       title: "Read PDF Text",
-      description:
-        "Extract text from a PDF with chunked pagination for large documents",
+      description: "Extract text in chunks (demonstrates size-limited responses)",
       inputSchema: ReadPdfTextInputSchema.shape,
       outputSchema: PdfTextChunkSchema,
       _meta: { ui: { visibility: ["app"] } },
     },
     async (args: unknown): Promise<CallToolResult> => {
-      if (!pdfIndex) {
-        throw new Error("PDF index not initialized");
-      }
-      const input = ReadPdfTextInputSchema.parse(args) as ReadPdfTextInput;
-      const entry = findEntryById(pdfIndex, input.pdfId);
-      if (!entry) {
-        throw new Error(`PDF not found: ${input.pdfId}`);
-      }
+      if (!pdfIndex) throw new Error("Not initialized");
+      const { pdfId, startPage, maxBytes } = ReadPdfTextInputSchema.parse(args);
+      const entry = findEntryById(pdfIndex, pdfId);
+      if (!entry) throw new Error(`PDF not found: ${pdfId}`);
 
-      // Use safe byte limit to avoid exceeding MCP response limits
-      const maxBytes = Math.min(
-        input.maxBytes ?? MAX_TOOL_RESPONSE_BYTES,
-        MAX_TOOL_RESPONSE_BYTES,
-      );
-      const chunk = await loadPdfTextChunk(entry, input.startPage ?? 1, maxBytes);
-
-      console.error(
-        `[read_pdf_text] pages ${chunk.startPage}-${chunk.endPage}/${chunk.totalPages}, ` +
-          `${(chunk.textSizeBytes / 1024).toFixed(1)}KB, hasMore=${chunk.hasMore}`,
-      );
+      const chunk = await loadPdfTextChunk(entry, startPage, Math.min(maxBytes, MAX_CHUNK_BYTES));
+      console.error(`[read_pdf_text] pages ${chunk.startPage}-${chunk.endPage}/${chunk.totalPages}`);
 
       return {
         content: [{ type: "text", text: chunk.text }],
@@ -121,34 +85,27 @@ export function createServer(): McpServer {
     },
   );
 
-  // Tool: read_pdf_bytes (app-only - chunked binary loading for large PDFs)
+  // ============================================================================
+  // Tool: read_pdf_bytes - Chunked binary loading (app-only)
+  // Demonstrates: Streaming with HTTP Range requests
+  // ============================================================================
   registerAppTool(
     server,
     "read_pdf_bytes",
     {
       title: "Read PDF Bytes",
-      description:
-        "Load PDF binary data in chunks. First call fetches and caches the PDF, " +
-        "subsequent calls serve from cache. Use offset/byteCount for pagination.",
+      description: "Load binary data in chunks (uses HTTP Range requests when available)",
       inputSchema: ReadPdfBytesInputSchema.shape,
       outputSchema: PdfBytesChunkSchema,
       _meta: { ui: { visibility: ["app"] } },
     },
     async (args: unknown): Promise<CallToolResult> => {
-      if (!pdfIndex) {
-        throw new Error("PDF index not initialized");
-      }
-      const input = ReadPdfBytesInputSchema.parse(args) as ReadPdfBytesInput;
-      const entry = findEntryById(pdfIndex, input.pdfId);
-      if (!entry) {
-        throw new Error(`PDF not found: ${input.pdfId}`);
-      }
+      if (!pdfIndex) throw new Error("Not initialized");
+      const { pdfId, offset, byteCount } = ReadPdfBytesInputSchema.parse(args);
+      const entry = findEntryById(pdfIndex, pdfId);
+      if (!entry) throw new Error(`PDF not found: ${pdfId}`);
 
-      const chunk = await loadPdfBytesChunk(
-        entry,
-        input.offset ?? 0,
-        input.byteCount ?? DEFAULT_BINARY_CHUNK_SIZE,
-      );
+      const chunk = await loadPdfBytesChunk(entry, offset, byteCount);
 
       return {
         content: [{ type: "text", text: `${chunk.byteCount} bytes at ${chunk.offset}/${chunk.totalBytes}` }],
@@ -157,177 +114,116 @@ export function createServer(): McpServer {
     },
   );
 
-  // Tool: view_pdf (with UI)
+  // ============================================================================
+  // Tool: view_pdf - Interactive viewer with UI
+  // Demonstrates: App tools with UI, display modes, model context updates
+  // ============================================================================
   registerAppTool(
     server,
     "view_pdf",
     {
       title: "View PDF",
-      description: `Open an interactive PDF viewer with navigation controls.
+      description: `Interactive PDF viewer. Demonstrates:
+- Display modes: fullscreen (scrolling) vs inline (resize)
+- Model context updates (page text + selection)
+- External links (openLink)
 
-Can view PDFs from:
-- Indexed PDFs (use pdfId from list_pdfs)
-- Any HTTP(s) URL to a PDF`,
+Accepts arxiv.org URLs or IDs from list_pdfs.`,
       inputSchema: {
-        pdfId: z
-          .string()
-          .optional()
-          .describe(
-            "PDF identifier from the index (e.g., 'local:abc123' or 'http:abc123')",
-          ),
-        url: z
-          .string()
-          .default(DEFAULT_PDF_URL)
-          .describe("HTTP(s) URL to a PDF file"),
-        page: z
-          .number()
-          .min(1)
-          .default(1)
-          .describe("Initial page to display (1-based)"),
-        maxChunkBytes: z
-          .number()
-          .default(500 * 1024) // 500KB
-          .describe(
-            "Maximum bytes per chunk when reading text (default: 500KB)",
-          ),
+        pdfId: z.string().optional().describe("PDF ID from list_pdfs"),
+        url: z.string().default(DEFAULT_PDF).describe("arxiv.org PDF URL"),
+        page: z.number().min(1).default(1).describe("Initial page"),
       },
       outputSchema: z.object({
         pdfId: z.string(),
-        pdfUri: z.string(),
         title: z.string(),
-        sourceUrl: z.string().optional(),
+        sourceUrl: z.string(),
         pageCount: z.number(),
         initialPage: z.number(),
-        maxChunkBytes: z.number(),
       }),
       _meta: { ui: { resourceUri: RESOURCE_URI } },
     },
-    async ({ pdfId, url, page, maxChunkBytes }): Promise<CallToolResult> => {
-      if (!pdfIndex) {
-        throw new Error("PDF index not initialized");
-      }
+    async ({ pdfId, url, page }): Promise<CallToolResult> => {
+      if (!pdfIndex) throw new Error("Not initialized");
 
       let entry;
-
       if (pdfId) {
-        // Look up by ID (takes precedence over url)
         entry = findEntryById(pdfIndex, pdfId);
-        if (!entry) {
-          throw new Error(
-            `PDF not found: ${pdfId}. Use list_pdfs to see available PDFs.`,
-          );
-        }
+        if (!entry) throw new Error(`PDF not found: ${pdfId}`);
       } else {
-        // Use URL (has default from schema)
-        if (!isHttpUrl(url)) {
-          throw new Error(`URL must be HTTP(s). Got: ${url}`);
+        // Dynamic URLs: only arxiv.org allowed for security
+        if (!isArxivUrl(url)) {
+          throw new Error(`Only arxiv.org URLs allowed dynamically. Got: ${url}`);
         }
 
-        // Check if already indexed
-        const existingEntry = pdfIndex.entries.find(
-          (e) => e.sourcePath === url,
-        );
-        if (existingEntry) {
-          entry = existingEntry;
-        } else {
-          // Create and index on-the-fly
-          const newEntry = await createHttpEntry(url);
-          await populatePdfMetadata(newEntry);
-          pdfIndex.entries.push(newEntry);
-          pdfIndex.totalPdfs++;
-          pdfIndex.totalPages += newEntry.metadata.pageCount;
-          pdfIndex.totalSizeBytes += newEntry.metadata.fileSizeBytes;
-          entry = newEntry;
+        entry = pdfIndex.entries.find((e) => e.url === url);
+        if (!entry) {
+          entry = createEntry(url);
+          await populatePdfMetadata(entry);
+          pdfIndex.entries.push(entry);
         }
       }
-
-      // Include source URL for HTTP sources - allows linking to original
-      const sourceUrl = entry.sourcePath.startsWith("http")
-        ? entry.sourcePath
-        : undefined;
 
       const result = {
         pdfId: entry.id,
-        pdfUri: `pdfs://content/${encodeURIComponent(entry.id)}`,
         title: entry.displayName,
-        sourceUrl,
+        sourceUrl: entry.url,
         pageCount: entry.metadata.pageCount,
-        initialPage: Math.min(page ?? 1, entry.metadata.pageCount),
-        maxChunkBytes: maxChunkBytes ?? 500 * 1024,
+        initialPage: Math.min(page, entry.metadata.pageCount),
       };
 
       return {
-        content: [
-          {
-            type: "text",
-            text: `Opening PDF viewer for "${entry.displayName}" (${entry.metadata.pageCount} pages)`,
-          },
-        ],
+        content: [{ type: "text", text: `Viewing "${entry.displayName}" (${entry.metadata.pageCount} pages)` }],
         structuredContent: result,
       };
     },
   );
 
-  // Register the MCP App resource (the UI)
+  // ============================================================================
+  // Resource: UI HTML
+  // ============================================================================
   registerAppResource(
     server,
     RESOURCE_URI,
     RESOURCE_URI,
     { mimeType: RESOURCE_MIME_TYPE },
     async (): Promise<ReadResourceResult> => {
-      const html = await fs.readFile(
-        path.join(DIST_DIR, "mcp-app.html"),
-        "utf-8",
-      );
-      return {
-        contents: [
-          { uri: RESOURCE_URI, mimeType: RESOURCE_MIME_TYPE, text: html },
-        ],
-      };
+      const html = await fs.readFile(path.join(DIST_DIR, "mcp-app.html"), "utf-8");
+      return { contents: [{ uri: RESOURCE_URI, mimeType: RESOURCE_MIME_TYPE, text: html }] };
     },
   );
 
   return server;
 }
 
-/**
- * Parse CLI arguments.
- */
-function parseArgs(): { sources: string[]; stdio: boolean } {
+// ============================================================================
+// CLI
+// ============================================================================
+
+function parseArgs(): { urls: string[]; stdio: boolean } {
   const args = process.argv.slice(2);
-  const sources: string[] = [];
+  const urls: string[] = [];
   let stdio = false;
 
   for (const arg of args) {
-    if (arg === "--stdio") {
-      stdio = true;
-    } else if (!arg.startsWith("-")) {
-      sources.push(arg);
-    }
+    if (arg === "--stdio") stdio = true;
+    else if (!arg.startsWith("-")) urls.push(arg);
   }
 
-  return { sources, stdio };
+  return { urls: urls.length > 0 ? urls : [DEFAULT_PDF], stdio };
 }
 
 async function main() {
-  const { sources, stdio } = parseArgs();
+  const { urls, stdio } = parseArgs();
 
-  // Use default paper if no sources provided
-  const effectiveSources = sources.length > 0 ? sources : [DEFAULT_PDF_URL];
-  if (sources.length === 0) {
-    console.error(`[pdf-server] No sources provided, using default`);
-  }
-
-  // Build the PDF index
-  console.error("[pdf-server] Building index...");
-  pdfIndex = await buildPdfIndex(effectiveSources);
-  console.error(`[pdf-server] Ready: ${pdfIndex.totalPdfs} PDFs indexed`);
+  console.error(`[pdf-server] Initializing with ${urls.length} PDF(s)...`);
+  pdfIndex = await buildPdfIndex(urls);
+  console.error(`[pdf-server] Ready`);
 
   if (stdio) {
     await createServer().connect(new StdioServerTransport());
   } else {
-    const port = parseInt(process.env.PORT ?? "3110", 10);
-    await startServer(createServer, { port, name: "PDF Server" });
+    await startServer(createServer, { port: 3110, name: "PDF Server" });
   }
 }
 

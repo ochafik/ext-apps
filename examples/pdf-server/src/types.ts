@@ -1,29 +1,10 @@
 /**
- * PDF Server Type Definitions
- *
- * Zod schemas and TypeScript types for the PDF loading MCP server.
+ * PDF Server Types - Simplified for didactic purposes
  */
 import { z } from "zod";
 
 // ============================================================================
-// Constants
-// ============================================================================
-
-/** Default maximum chunk size in bytes (5MB) */
-export const DEFAULT_CHUNK_SIZE_BYTES = 5 * 1024 * 1024;
-
-/** Safe limit for tool response to stay under 1MB limit (~900KB) */
-export const MAX_TOOL_RESPONSE_BYTES = 900 * 1024;
-
-// ============================================================================
-// Source Type
-// ============================================================================
-
-export const PdfSourceTypeSchema = z.enum(["local", "http"]);
-export type PdfSourceType = z.infer<typeof PdfSourceTypeSchema>;
-
-// ============================================================================
-// PDF Metadata
+// Core Types
 // ============================================================================
 
 export const PdfMetadataSchema = z.object({
@@ -34,114 +15,61 @@ export const PdfMetadataSchema = z.object({
 });
 export type PdfMetadata = z.infer<typeof PdfMetadataSchema>;
 
-// ============================================================================
-// PDF Entry
-// ============================================================================
-
 export const PdfEntrySchema = z.object({
-  /** Unique identifier: "local:<hash>" or "http:<url-hash>" */
   id: z.string(),
-  /** Source type discriminator */
-  sourceType: PdfSourceTypeSchema,
-  /** Original file path or HTTP URL */
-  sourcePath: z.string(),
-  /** Human-readable display name */
+  url: z.string(),
   displayName: z.string(),
-  /** PDF metadata extracted from the file */
   metadata: PdfMetadataSchema,
 });
 export type PdfEntry = z.infer<typeof PdfEntrySchema>;
 
-// ============================================================================
-// PDF Index
-// ============================================================================
-
 export const PdfIndexSchema = z.object({
-  /** ISO timestamp when index was generated */
-  generatedAt: z.string(),
-  /** List of all PDF entries */
   entries: z.array(PdfEntrySchema),
-  /** Total number of PDFs indexed */
-  totalPdfs: z.number(),
-  /** Total number of pages across all PDFs */
-  totalPages: z.number(),
-  /** Total size of all PDFs in bytes */
-  totalSizeBytes: z.number(),
 });
 export type PdfIndex = z.infer<typeof PdfIndexSchema>;
 
 // ============================================================================
-// PDF Text Chunk (for paginated loading)
+// Chunked Loading (demonstrates size-limited tool responses)
 // ============================================================================
 
+/** Max bytes per response chunk */
+export const MAX_CHUNK_BYTES = 500 * 1024; // 500KB
+
 export const PdfTextChunkSchema = z.object({
-  /** PDF identifier */
   pdfId: z.string(),
-  /** Start page number (1-based) */
-  startPage: z.number().min(1),
-  /** End page number (1-based, inclusive) */
-  endPage: z.number().min(1),
-  /** Total number of pages in the PDF */
+  startPage: z.number(),
+  endPage: z.number(),
   totalPages: z.number(),
-  /** Extracted text content */
   text: z.string(),
-  /** Size of the text in bytes */
-  textSizeBytes: z.number(),
-  /** Whether there are more pages to load */
   hasMore: z.boolean(),
-  /** Next page to start from (if hasMore is true) */
   nextStartPage: z.number().optional(),
 });
 export type PdfTextChunk = z.infer<typeof PdfTextChunkSchema>;
 
-// ============================================================================
-// Tool Input/Output Schemas
-// ============================================================================
-
-export const ReadPdfTextInputSchema = z.object({
-  pdfId: z.string().describe("PDF identifier from the index"),
-  startPage: z.number().min(1).default(1).describe("Start page (1-based)"),
-  maxBytes: z
-    .number()
-    .default(DEFAULT_CHUNK_SIZE_BYTES)
-    .describe("Maximum bytes to return in this chunk"),
-});
-export type ReadPdfTextInput = z.infer<typeof ReadPdfTextInputSchema>;
-
-// ============================================================================
-// PDF Binary Chunk (for chunked binary loading)
-// ============================================================================
-
-/** Default chunk size for binary loading (500KB - safe for base64 in responses) */
-export const DEFAULT_BINARY_CHUNK_SIZE = 500 * 1024;
-
-export const ReadPdfBytesInputSchema = z.object({
-  pdfId: z.string().describe("PDF identifier from the index"),
-  offset: z
-    .number()
-    .min(0)
-    .default(0)
-    .describe("Byte offset to start reading from"),
-  byteCount: z
-    .number()
-    .min(1)
-    .optional()
-    .describe("Number of bytes to read (defaults to chunk size)"),
-});
-export type ReadPdfBytesInput = z.infer<typeof ReadPdfBytesInputSchema>;
-
 export const PdfBytesChunkSchema = z.object({
-  /** PDF identifier */
   pdfId: z.string(),
-  /** Base64-encoded binary chunk */
-  bytes: z.string(),
-  /** Byte offset this chunk starts at */
+  bytes: z.string(), // base64
   offset: z.number(),
-  /** Number of bytes in this chunk */
   byteCount: z.number(),
-  /** Total size of the PDF in bytes */
   totalBytes: z.number(),
-  /** Whether there are more bytes to load */
   hasMore: z.boolean(),
 });
 export type PdfBytesChunk = z.infer<typeof PdfBytesChunkSchema>;
+
+// ============================================================================
+// Tool Inputs
+// ============================================================================
+
+export const ReadPdfTextInputSchema = z.object({
+  pdfId: z.string().describe("PDF identifier"),
+  startPage: z.number().min(1).default(1).describe("Start page (1-based)"),
+  maxBytes: z.number().default(MAX_CHUNK_BYTES).describe("Max bytes to return"),
+});
+export type ReadPdfTextInput = z.infer<typeof ReadPdfTextInputSchema>;
+
+export const ReadPdfBytesInputSchema = z.object({
+  pdfId: z.string().describe("PDF identifier"),
+  offset: z.number().min(0).default(0).describe("Byte offset"),
+  byteCount: z.number().default(MAX_CHUNK_BYTES).describe("Bytes to read"),
+});
+export type ReadPdfBytesInput = z.infer<typeof ReadPdfBytesInputSchema>;
