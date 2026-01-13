@@ -64,6 +64,9 @@ type MapStyle = "carto" | "osm";
 // Current map style (set from tool input, defaults to 'carto')
 let currentMapStyle: MapStyle = "carto";
 
+// Initial bounding box from tool input (for home button)
+let initialBoundingBox: BoundingBox | null = null;
+
 // CesiumJS viewer instance
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let viewer: any = null;
@@ -816,6 +819,22 @@ const app = new App(
 );
 
 /**
+ * Show home button and set up click handler
+ */
+function setupHomeButton(cesiumViewer: any): void {
+  const btn = document.getElementById("home-btn");
+  if (!btn) return;
+
+  btn.style.display = "flex";
+  btn.addEventListener("click", () => {
+    if (initialBoundingBox && cesiumViewer) {
+      log.info("Returning to initial view:", initialBoundingBox);
+      setViewToBoundingBox(cesiumViewer, initialBoundingBox);
+    }
+  });
+}
+
+/**
  * Update fullscreen button visibility and icon based on current state
  */
 function updateFullscreenButton(): void {
@@ -977,6 +996,13 @@ app.ontoolinput = async (params) => {
     if (bbox) {
       // Mark that we received explicit tool input (overrides persisted state)
       hasReceivedToolInput = true;
+
+      // Store initial bbox for home button
+      if (!initialBoundingBox) {
+        initialBoundingBox = bbox;
+        setupHomeButton(viewer);
+      }
+
       log.info("Positioning camera to bbox:", bbox);
 
       // Position camera instantly (no animation)
