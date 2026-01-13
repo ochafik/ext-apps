@@ -159,21 +159,20 @@ function updateControls() {
   zoomLevelEl.textContent = `${Math.round(scale * 100)}%`;
 }
 
-// Extract text from current page and update model context
+// Extract text from current page and update model context as markdown
 async function updatePageContext() {
   if (!pdfDocument) return;
 
   try {
     const page = await pdfDocument.getPage(currentPage);
     const textContent = await page.getTextContent();
-    const pageText = (textContent.items as Array<{ str?: string }>)
+    let pageText = (textContent.items as Array<{ str?: string }>)
       .map((item) => item.str || "")
       .join(" ")
       .replace(/\s+/g, " ")
       .trim();
 
-    // Check for text selection
-    let selection: { text: string; start: number; end: number } | undefined;
+    // Check for text selection and find its position
     const sel = window.getSelection();
     if (sel && sel.rangeCount > 0) {
       const rawSelected = sel.toString();
@@ -189,30 +188,31 @@ async function updatePageContext() {
           const noSpacePageText = pageText.replace(/\s+/g, "");
           const noSpaceStart = noSpacePageText.indexOf(noSpaceSelected);
           if (noSpaceStart >= 0) {
-            // Map back to original position (approximate)
             start = Math.floor((noSpaceStart / noSpacePageText.length) * pageText.length);
           }
         }
 
         if (start >= 0) {
-          selection = { text: selectedText, start, end: start + selectedText.length };
-          log.info("Selection detected:", selectedText.slice(0, 30), "at", start);
-        } else {
-          log.info("Selection not matched:", selectedText.slice(0, 30));
+          // Wrap selection in tags
+          const end = start + selectedText.length;
+          pageText =
+            pageText.slice(0, start) +
+            `<pdf-selection>${pageText.slice(start, end)}</pdf-selection>` +
+            pageText.slice(end);
+          log.info("Selection tagged:", selectedText.slice(0, 30));
         }
       }
     }
 
-    app.updateModelContext({
-      structuredContent: {
-        title: pdfTitle,
-        pdfId,
-        currentPage,
-        totalPages,
-        pageText: pageText.slice(0, 5000),
-        selection,
-      },
-    });
+    // Format as markdown with YAML front matter
+    const markdown = `---
+url: ${pdfSourceUrl || pdfId}
+page: ${currentPage}/${totalPages}
+---
+
+${pageText.slice(0, 5000)}`;
+
+    app.updateModelContext({ content: [{ type: "text", text: markdown }] });
   } catch (err) {
     log.error("Error updating context:", err);
   }
