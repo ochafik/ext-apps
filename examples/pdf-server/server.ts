@@ -73,7 +73,13 @@ export function createServer(): McpServer {
     "display_pdf",
     {
       title: "Display PDF",
-      description: "Display an interactive PDF viewer in the chat. The viewer supports zoom, navigation, text selection, and fullscreen mode. Use a URL from list_pdfs, or provide an arxiv.org URL for dynamic loading.",
+      description: `Display an interactive PDF viewer in the chat.
+
+Use this tool when the user asks to view, display, read, or open a PDF. Accepts:
+- URLs from list_pdfs (preloaded PDFs)
+- Any arxiv.org URL (loaded dynamically)
+
+The viewer supports zoom, navigation, text selection, and fullscreen mode.`,
       inputSchema: {
         url: z.string().default(DEFAULT_PDF).describe("PDF URL (arxiv.org for dynamic loading)"),
         page: z.number().min(1).default(1).describe("Initial page"),
