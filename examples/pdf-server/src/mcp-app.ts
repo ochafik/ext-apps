@@ -106,14 +106,6 @@ function requestFitToContent() {
   const totalHeight =
     toolbarHeight + paddingTop + pageWrapperHeight + paddingBottom + BUFFER;
 
-  log.info("Requesting height:", totalHeight, {
-    toolbarHeight,
-    paddingTop,
-    pageWrapperHeight,
-    paddingBottom,
-    canvasHeight,
-  });
-
   app.sendSizeChanged({ height: totalHeight });
 }
 
@@ -498,8 +490,6 @@ async function loadPdfInChunks(pdfIdToLoad: string): Promise<Uint8Array> {
   updateProgress(0, 1);
 
   while (hasMore) {
-    log.info(`Requesting chunk at offset ${offset}...`);
-
     const result = await app.callServerTool({
       name: "read_pdf_bytes",
       arguments: {
@@ -508,8 +498,6 @@ async function loadPdfInChunks(pdfIdToLoad: string): Promise<Uint8Array> {
         byteCount: CHUNK_SIZE,
       },
     });
-
-    log.info("Tool result:", result);
 
     // Check for errors
     if (result.isError) {
@@ -538,9 +526,6 @@ async function loadPdfInChunks(pdfIdToLoad: string): Promise<Uint8Array> {
     offset += chunk.byteCount;
     updateProgress(offset, totalBytes);
 
-    log.info(
-      `Chunk received: ${chunk.byteCount} bytes, offset ${chunk.offset}/${totalBytes}, hasMore=${hasMore}`,
-    );
   }
 
   // Combine all chunks
@@ -551,9 +536,7 @@ async function loadPdfInChunks(pdfIdToLoad: string): Promise<Uint8Array> {
     pos += chunk.length;
   }
 
-  log.info(
-    `PDF fully loaded: ${totalBytes} bytes in ${chunks.length} chunk(s)`,
-  );
+  log.info(`PDF loaded: ${(totalBytes / 1024).toFixed(0)} KB in ${chunks.length} chunks`);
   return fullPdf;
 }
 
