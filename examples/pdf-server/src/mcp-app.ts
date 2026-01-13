@@ -172,12 +172,27 @@ async function updatePageContext() {
       .replace(/\s+/g, " ")
       .trim();
 
+    // Check for text selection
+    let selection: { text: string; start: number; end: number } | undefined;
+    const sel = window.getSelection();
+    if (sel && sel.rangeCount > 0) {
+      const selectedText = sel.toString().trim();
+      if (selectedText) {
+        const start = pageText.indexOf(selectedText);
+        if (start >= 0) {
+          selection = { text: selectedText, start, end: start + selectedText.length };
+        }
+      }
+    }
+
     app.updateModelContext({
       structuredContent: {
+        title: pdfTitle,
         pdfId,
         currentPage,
         totalPages,
         pageText: pageText.slice(0, 5000),
+        selection,
       },
     });
   } catch (err) {
@@ -455,6 +470,15 @@ document.addEventListener("keydown", (e) => {
       e.preventDefault();
       break;
   }
+});
+
+// Update context when text selection changes (debounced)
+let selectionUpdateTimeout: ReturnType<typeof setTimeout> | null = null;
+document.addEventListener("selectionchange", () => {
+  if (selectionUpdateTimeout) clearTimeout(selectionUpdateTimeout);
+  selectionUpdateTimeout = setTimeout(() => {
+    updatePageContext();
+  }, 300);
 });
 
 // Horizontal scroll/swipe to change pages (disabled when zoomed)
