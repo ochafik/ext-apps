@@ -157,3 +157,41 @@ export const ListPdfsOutputSchema = z.object({
   totalCount: z.number(),
 });
 export type ListPdfsOutput = z.infer<typeof ListPdfsOutputSchema>;
+
+// ============================================================================
+// PDF Binary Chunk (for chunked binary loading)
+// ============================================================================
+
+/** Default chunk size for binary loading (500KB - safe for base64 in responses) */
+export const DEFAULT_BINARY_CHUNK_SIZE = 500 * 1024;
+
+export const ReadPdfBytesInputSchema = z.object({
+  pdfId: z.string().describe("PDF identifier from the index"),
+  offset: z
+    .number()
+    .min(0)
+    .default(0)
+    .describe("Byte offset to start reading from"),
+  byteCount: z
+    .number()
+    .min(1)
+    .optional()
+    .describe("Number of bytes to read (defaults to chunk size)"),
+});
+export type ReadPdfBytesInput = z.infer<typeof ReadPdfBytesInputSchema>;
+
+export const PdfBytesChunkSchema = z.object({
+  /** PDF identifier */
+  pdfId: z.string(),
+  /** Base64-encoded binary chunk */
+  bytes: z.string(),
+  /** Byte offset this chunk starts at */
+  offset: z.number(),
+  /** Number of bytes in this chunk */
+  byteCount: z.number(),
+  /** Total size of the PDF in bytes */
+  totalBytes: z.number(),
+  /** Whether there are more bytes to load */
+  hasMore: z.boolean(),
+});
+export type PdfBytesChunk = z.infer<typeof PdfBytesChunkSchema>;

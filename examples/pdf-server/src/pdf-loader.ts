@@ -4,8 +4,14 @@
  * Loads PDFs using pdfjs-dist and extracts text content in chunks.
  */
 import fs from "node:fs/promises";
-import type { PdfEntry, PdfTextChunk } from "./types.js";
-import { DEFAULT_CHUNK_SIZE_BYTES } from "./types.js";
+import type { PdfEntry, PdfTextChunk, PdfBytesChunk } from "./types.js";
+import {
+  DEFAULT_CHUNK_SIZE_BYTES,
+  DEFAULT_BINARY_CHUNK_SIZE,
+} from "./types.js";
+
+// Cache for loaded PDF data (to avoid re-fetching for chunked requests)
+const pdfDataCache = new Map<string, Uint8Array>();
 
 // Dynamic import for pdfjs-dist (ESM module)
 let pdfjsLib: typeof import("pdfjs-dist");
@@ -20,11 +26,19 @@ async function getPdfjs() {
 
 /**
  * Load PDF binary data from a local file or URL.
+ * Uses caching to avoid re-fetching for chunked requests.
  */
 export async function loadPdfData(entry: PdfEntry): Promise<Uint8Array> {
+  // Check cache first
+  const cached = pdfDataCache.get(entry.id);
+  if (cached) {
+    return cached;
+  }
+
+  let data: Uint8Array;
   if (entry.sourceType === "local") {
     const buffer = await fs.readFile(entry.sourcePath);
-    return new Uint8Array(buffer);
+    data = new Uint8Array(buffer);
   } else {
     // Fetch from URL (arxiv)
     console.error(`[pdf-loader] Fetching: ${entry.sourcePath}`);
@@ -35,8 +49,51 @@ export async function loadPdfData(entry: PdfEntry): Promise<Uint8Array> {
       );
     }
     const buffer = await response.arrayBuffer();
-    return new Uint8Array(buffer);
+    data = new Uint8Array(buffer);
   }
+
+  // Cache the data
+  pdfDataCache.set(entry.id, data);
+  return data;
+}
+
+/**
+ * Load a chunk of PDF binary data.
+ *
+ * Returns a chunk with metadata for pagination. The first call (offset=0)
+ * fetches the entire PDF and caches it, subsequent calls serve from cache.
+ */
+export async function loadPdfBytesChunk(
+  entry: PdfEntry,
+  offset: number = 0,
+  byteCount: number = DEFAULT_BINARY_CHUNK_SIZE,
+): Promise<PdfBytesChunk> {
+  const data = await loadPdfData(entry);
+  const totalBytes = data.length;
+
+  // Clamp offset to valid range
+  const actualOffset = Math.min(offset, totalBytes);
+  // Clamp byteCount to remaining bytes
+  const actualByteCount = Math.min(byteCount, totalBytes - actualOffset);
+
+  // Extract the chunk
+  const chunk = data.slice(actualOffset, actualOffset + actualByteCount);
+  const base64 = Buffer.from(chunk).toString("base64");
+
+  const hasMore = actualOffset + actualByteCount < totalBytes;
+
+  console.error(
+    `[pdf-loader] Chunk: offset=${actualOffset}, bytes=${actualByteCount}/${totalBytes}, hasMore=${hasMore}`,
+  );
+
+  return {
+    pdfId: entry.id,
+    bytes: base64,
+    offset: actualOffset,
+    byteCount: actualByteCount,
+    totalBytes,
+    hasMore,
+  };
 }
 
 /**

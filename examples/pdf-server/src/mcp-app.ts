@@ -8,7 +8,6 @@
  */
 import { App, type McpUiHostContext } from "@modelcontextprotocol/ext-apps";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
-import { ReadResourceResultSchema } from "@modelcontextprotocol/sdk/types.js";
 import * as pdfjsLib from "pdfjs-dist";
 import { TextLayer } from "pdfjs-dist";
 import "./global.css";
@@ -59,6 +58,9 @@ const downloadBtn = document.getElementById(
 const fullscreenBtn = document.getElementById(
   "fullscreen-btn",
 ) as HTMLButtonElement;
+const progressContainerEl = document.getElementById("progress-container")!;
+const progressBarEl = document.getElementById("progress-bar")!;
+const progressTextEl = document.getElementById("progress-text")!;
 
 // Track current display mode
 let currentDisplayMode: "inline" | "fullscreen" = "inline";
@@ -384,6 +386,79 @@ function parseToolResult(result: CallToolResult): {
   } | null;
 }
 
+// Chunked binary loading types
+interface PdfBytesChunk {
+  pdfId: string;
+  bytes: string;
+  offset: number;
+  byteCount: number;
+  totalBytes: number;
+  hasMore: boolean;
+}
+
+// Update progress bar
+function updateProgress(loaded: number, total: number) {
+  const percent = Math.round((loaded / total) * 100);
+  progressBarEl.style.width = `${percent}%`;
+  progressTextEl.textContent = `${(loaded / 1024).toFixed(0)} KB / ${(total / 1024).toFixed(0)} KB (${percent}%)`;
+}
+
+// Load PDF in chunks with progress
+async function loadPdfInChunks(pdfIdToLoad: string): Promise<Uint8Array> {
+  const CHUNK_SIZE = 500 * 1024; // 500KB chunks
+  const chunks: Uint8Array[] = [];
+  let offset = 0;
+  let totalBytes = 0;
+  let hasMore = true;
+
+  // Show progress UI
+  progressContainerEl.style.display = "block";
+  updateProgress(0, 1);
+
+  while (hasMore) {
+    log.info(`Requesting chunk at offset ${offset}...`);
+
+    const result = await app.callServerTool({
+      name: "read_pdf_bytes",
+      arguments: {
+        pdfId: pdfIdToLoad,
+        offset,
+        byteCount: CHUNK_SIZE,
+      },
+    });
+
+    const chunk = result.structuredContent as unknown as PdfBytesChunk;
+    totalBytes = chunk.totalBytes;
+    hasMore = chunk.hasMore;
+
+    // Decode base64 chunk
+    const binaryString = atob(chunk.bytes);
+    const bytes = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) {
+      bytes[i] = binaryString.charCodeAt(i);
+    }
+    chunks.push(bytes);
+
+    offset += chunk.byteCount;
+    updateProgress(offset, totalBytes);
+
+    log.info(
+      `Chunk received: ${chunk.byteCount} bytes, offset ${chunk.offset}/${totalBytes}, hasMore=${hasMore}`,
+    );
+  }
+
+  // Combine all chunks
+  const fullPdf = new Uint8Array(totalBytes);
+  let pos = 0;
+  for (const chunk of chunks) {
+    fullPdf.set(chunk, pos);
+    pos += chunk.length;
+  }
+
+  log.info(`PDF fully loaded: ${totalBytes} bytes in ${chunks.length} chunk(s)`);
+  return fullPdf;
+}
+
 // Handle tool result
 app.ontoolresult = async (result) => {
   log.info("Received tool result:", result);
@@ -395,36 +470,21 @@ app.ontoolresult = async (result) => {
   }
 
   pdfId = parsed.pdfId;
-  const { pdfUri, title, sourceUrl, pageCount, initialPage } = parsed;
+  const { title, sourceUrl, pageCount, initialPage } = parsed;
   pdfTitle = title;
   pdfSourceUrl = sourceUrl;
   totalPages = pageCount;
   currentPage = initialPage;
 
-  log.info("PDF URI:", pdfUri, "Title:", title, "Pages:", pageCount);
+  log.info("PDF ID:", pdfId, "Title:", title, "Pages:", pageCount);
 
-  showLoading("Fetching PDF content...");
+  showLoading("Loading PDF in chunks...");
 
   try {
-    const resourceResult = await app.request(
-      { method: "resources/read", params: { uri: pdfUri } },
-      ReadResourceResultSchema,
-    );
+    // Load PDF using chunked binary API
+    pdfBytes = await loadPdfInChunks(pdfId);
 
-    const content = resourceResult.contents[0];
-    if (!content || !("blob" in content)) {
-      throw new Error("Resource response did not contain blob data");
-    }
-
-    log.info("PDF received, blob size:", content.blob.length);
-
-    showLoading("Loading PDF document...");
-
-    const binaryString = atob(content.blob);
-    pdfBytes = new Uint8Array(binaryString.length);
-    for (let i = 0; i < binaryString.length; i++) {
-      pdfBytes[i] = binaryString.charCodeAt(i);
-    }
+    showLoading("Rendering PDF...");
 
     pdfDocument = await pdfjsLib.getDocument({ data: pdfBytes }).promise;
     totalPages = pdfDocument.numPages;

@@ -33,18 +33,23 @@ import {
 import {
   loadPdfData,
   loadPdfTextChunk,
+  loadPdfBytesChunk,
   populatePdfMetadata,
 } from "./src/pdf-loader.js";
 import { isArxivUrl, createArxivEntry } from "./src/arxiv.js";
 import { generateClaudeMd } from "./src/claude-md.js";
 import {
   ReadPdfTextInputSchema,
+  ReadPdfBytesInputSchema,
   ListPdfsInputSchema,
   ListPdfsOutputSchema,
   PdfTextChunkSchema,
+  PdfBytesChunkSchema,
   MAX_TOOL_RESPONSE_BYTES,
+  DEFAULT_BINARY_CHUNK_SIZE,
   type PdfIndex,
   type ReadPdfTextInput,
+  type ReadPdfBytesInput,
   type ListPdfsInput,
 } from "./src/types.js";
 import { startServer } from "./server-utils.js";
@@ -180,8 +185,56 @@ export function createServer(): McpServer {
       );
       const output = PdfTextChunkSchema.parse(chunk);
 
+      // Log chunk info for debugging
+      console.error(
+        `[read_pdf_text] Chunk: pages ${output.startPage}-${output.endPage}/${output.totalPages}, ` +
+          `${(output.textSizeBytes / 1024).toFixed(1)}KB, hasMore=${output.hasMore}`,
+      );
+
       return {
         content: [{ type: "text", text: output.text }],
+        structuredContent: output,
+      };
+    },
+  );
+
+  // Tool: read_pdf_bytes (app-only - chunked binary loading for large PDFs)
+  registerAppTool(
+    server,
+    "read_pdf_bytes",
+    {
+      title: "Read PDF Bytes",
+      description:
+        "Load PDF binary data in chunks. First call fetches and caches the PDF, " +
+        "subsequent calls serve from cache. Use offset/byteCount for pagination.",
+      inputSchema: ReadPdfBytesInputSchema.shape,
+      outputSchema: PdfBytesChunkSchema,
+      _meta: { ui: { visibility: ["app"] } },
+    },
+    async (args: unknown): Promise<CallToolResult> => {
+      if (!pdfIndex) {
+        throw new Error("PDF index not initialized");
+      }
+      const input = ReadPdfBytesInputSchema.parse(args) as ReadPdfBytesInput;
+      const entry = findEntryById(pdfIndex, input.pdfId);
+      if (!entry) {
+        throw new Error(`PDF not found: ${input.pdfId}`);
+      }
+
+      const chunk = await loadPdfBytesChunk(
+        entry,
+        input.offset ?? 0,
+        input.byteCount ?? DEFAULT_BINARY_CHUNK_SIZE,
+      );
+      const output = PdfBytesChunkSchema.parse(chunk);
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: `PDF chunk: ${output.byteCount} bytes at offset ${output.offset}/${output.totalBytes}`,
+          },
+        ],
         structuredContent: output,
       };
     },
@@ -226,7 +279,8 @@ export function createServer(): McpServer {
   );
 
   // Default arxiv paper for demo
-  const DEFAULT_PDF_URL = "https://arxiv.org/pdf/2312.00752.pdf"; // "Mamba: Linear-Time Sequence Modeling with Selective State Spaces"
+  // Large paper for demo: "A Survey of Large Language Models" (75 pages)
+  const DEFAULT_PDF_URL = "https://arxiv.org/pdf/2303.18223.pdf";
 
   // Tool: view_pdf (with UI)
   registerAppTool(
