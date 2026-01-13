@@ -475,39 +475,34 @@ document.addEventListener("keydown", (e) => {
   }
 });
 
-// Horizontal scroll/swipe to change pages (or pan when zoomed)
+// Horizontal scroll/swipe to change pages (disabled when zoomed)
 let horizontalScrollAccumulator = 0;
 const SCROLL_THRESHOLD = 50;
 
-canvasContainerEl.addEventListener("wheel", (event) => {
-  const e = event as WheelEvent;
-  const container = canvasContainerEl as HTMLElement;
+canvasContainerEl.addEventListener(
+  "wheel",
+  (event) => {
+    const e = event as WheelEvent;
 
-  // Only intercept horizontal scroll, let vertical scroll through
-  if (Math.abs(e.deltaX) <= Math.abs(e.deltaY)) return;
+    // Only intercept horizontal scroll, let vertical scroll through
+    if (Math.abs(e.deltaX) <= Math.abs(e.deltaY)) return;
 
-  // Check if we can pan horizontally (content wider than container)
-  const canScrollLeft = container.scrollLeft > 0;
-  const canScrollRight = container.scrollLeft < container.scrollWidth - container.clientWidth - 1;
+    // When zoomed, let natural panning happen (no page changes)
+    if (scale > 1.0) return;
 
-  // If zoomed in and can pan in scroll direction, let natural scrolling happen
-  if ((e.deltaX < 0 && canScrollLeft) || (e.deltaX > 0 && canScrollRight)) {
-    // Don't prevent default - let the container scroll naturally
-    horizontalScrollAccumulator = 0;
-    return;
-  }
-
-  // At edge or not zoomed - handle page navigation
-  e.preventDefault();
-  horizontalScrollAccumulator += e.deltaX;
-  if (horizontalScrollAccumulator > SCROLL_THRESHOLD) {
-    nextPage();
-    horizontalScrollAccumulator = 0;
-  } else if (horizontalScrollAccumulator < -SCROLL_THRESHOLD) {
-    prevPage();
-    horizontalScrollAccumulator = 0;
-  }
-}, { passive: false });
+    // At 100% zoom, handle page navigation
+    e.preventDefault();
+    horizontalScrollAccumulator += e.deltaX;
+    if (horizontalScrollAccumulator > SCROLL_THRESHOLD) {
+      nextPage();
+      horizontalScrollAccumulator = 0;
+    } else if (horizontalScrollAccumulator < -SCROLL_THRESHOLD) {
+      prevPage();
+      horizontalScrollAccumulator = 0;
+    }
+  },
+  { passive: false },
+);
 
 // Parse tool result
 function parseToolResult(result: CallToolResult): {
