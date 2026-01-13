@@ -292,9 +292,9 @@ async function renderPage() {
 // Page persistence
 function getStorageKey(): string | null {
   const ctx = app.getHostContext();
-  const toolId = ctx?.toolInfo?.id;
+  const toolId = ctx?.toolInfo?.id ?? pdfId;
   log.info("getStorageKey: pdfSourceUrl=", pdfSourceUrl, "toolId=", toolId);
-  if (!pdfSourceUrl || toolId === undefined) {
+  if (!pdfSourceUrl || !toolId) {
     log.info("getStorageKey: returning null (missing pdfSourceUrl or toolId)");
     return null;
   }
@@ -465,31 +465,23 @@ document.addEventListener("keydown", (e) => {
 
 // Horizontal scroll/swipe to change pages
 let horizontalScrollAccumulator = 0;
-const SCROLL_THRESHOLD = 50; // pixels of horizontal scroll to trigger page change
+const SCROLL_THRESHOLD = 50;
 
-canvasContainerEl.addEventListener(
-  "wheel",
-  (event) => {
-    const e = event as WheelEvent;
-    // Only handle horizontal scroll (touchpad swipe or shift+scroll)
-    if (Math.abs(e.deltaX) <= Math.abs(e.deltaY)) {
-      return; // Vertical scroll - let it scroll normally
-    }
+canvasContainerEl.addEventListener("wheel", (event) => {
+  const e = event as WheelEvent;
+  // Only intercept horizontal scroll, let vertical scroll through
+  if (Math.abs(e.deltaX) <= Math.abs(e.deltaY)) return;
 
-    // Always prevent default for horizontal scroll to avoid browser back navigation
-    e.preventDefault();
-    horizontalScrollAccumulator += e.deltaX;
-
-    if (horizontalScrollAccumulator > SCROLL_THRESHOLD && currentPage < totalPages) {
-      nextPage();
-      horizontalScrollAccumulator = 0;
-    } else if (horizontalScrollAccumulator < -SCROLL_THRESHOLD && currentPage > 1) {
-      prevPage();
-      horizontalScrollAccumulator = 0;
-    }
-  },
-  { passive: false },
-);
+  e.preventDefault();
+  horizontalScrollAccumulator += e.deltaX;
+  if (horizontalScrollAccumulator > SCROLL_THRESHOLD) {
+    nextPage();
+    horizontalScrollAccumulator = 0;
+  } else if (horizontalScrollAccumulator < -SCROLL_THRESHOLD) {
+    prevPage();
+    horizontalScrollAccumulator = 0;
+  }
+}, { passive: false });
 
 // Parse tool result
 function parseToolResult(result: CallToolResult): {
