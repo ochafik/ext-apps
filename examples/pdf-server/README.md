@@ -14,18 +14,18 @@ An MCP server that indexes and serves PDF files from local directories and arxiv
 
 This example showcases several MCP Apps SDK features:
 
-| Feature | Usage |
-|---------|-------|
-| **App Tool with UI** | `view_pdf` opens an interactive PDF viewer |
-| **App-only Tools** | `read_pdf_text` is hidden from model, used internally by the viewer |
-| **Resources** | `pdfs://index/CLAUDE.md` provides a markdown index of all PDFs |
-| **Resource Templates** | `pdfs://metadata/{pdfId}` and `pdfs://content/{pdfId}` |
-| **Binary Resource Content** | PDF files served as base64 blobs |
-| **structuredContent** | Tool results include typed data for the UI |
-| **sendSizeChanged** | Viewer requests height changes to fit content |
-| **requestDisplayMode** | Fullscreen toggle support |
-| **Model Context Updates** | Current page text sent to model context |
-| **Host Style Variables** | Themed UI using CSS custom properties |
+| Feature                     | Usage                                                               |
+| --------------------------- | ------------------------------------------------------------------- |
+| **App Tool with UI**        | `view_pdf` opens an interactive PDF viewer                          |
+| **App-only Tools**          | `read_pdf_text` is hidden from model, used internally by the viewer |
+| **Resources**               | `pdfs://index/CLAUDE.md` provides a markdown index of all PDFs      |
+| **Resource Templates**      | `pdfs://metadata/{pdfId}` and `pdfs://content/{pdfId}`              |
+| **Binary Resource Content** | PDF files served as base64 blobs                                    |
+| **structuredContent**       | Tool results include typed data for the UI                          |
+| **sendSizeChanged**         | Viewer requests height changes to fit content                       |
+| **requestDisplayMode**      | Fullscreen toggle support                                           |
+| **Model Context Updates**   | Current page text sent to model context                             |
+| **Host Style Variables**    | Themed UI using CSS custom properties                               |
 
 ## CLI Usage
 
@@ -58,6 +58,7 @@ bun examples/pdf-server/server.ts --stdio ./docs/
 Opens an interactive PDF viewer with navigation controls.
 
 **Input:**
+
 - `pdfId` (optional): ID from `list_pdfs`
 - `url` (optional): arxiv URL to load
 - `page` (optional): Starting page number (default: 1)
@@ -67,6 +68,7 @@ Opens an interactive PDF viewer with navigation controls.
 Lists all indexed PDFs with metadata.
 
 **Input:**
+
 - `folder` (optional): Filter by folder path
 
 ### `read_pdf_text` (app-only)
@@ -74,6 +76,7 @@ Lists all indexed PDFs with metadata.
 Extracts text from a PDF with chunked pagination. Hidden from the model, used internally by the viewer.
 
 **Input:**
+
 - `pdfId`: PDF identifier
 - `startPage` (optional): Page to start from (1-based)
 - `maxBytes` (optional): Maximum bytes per chunk

@@ -451,7 +451,9 @@ async function main() {
   // Use default paper if no sources provided
   const effectiveSources = sources.length > 0 ? sources : [DEFAULT_SOURCE];
   if (sources.length === 0) {
-    console.error(`[pdf-server] No sources provided, using default: ${DEFAULT_SOURCE}`);
+    console.error(
+      `[pdf-server] No sources provided, using default: ${DEFAULT_SOURCE}`,
+    );
   }
 
   // Build the PDF index

@@ -4,7 +4,7 @@
  * Interactive PDF viewer with single-page display.
  * - Fixed height (no auto-resize)
  * - Text selection via PDF.js TextLayer
- * - Page navigation, zoom, download
+ * - Page navigation, zoom
  */
 import { App, type McpUiHostContext } from "@modelcontextprotocol/ext-apps";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
@@ -53,9 +53,6 @@ const nextBtn = document.getElementById("next-btn") as HTMLButtonElement;
 const zoomOutBtn = document.getElementById("zoom-out-btn") as HTMLButtonElement;
 const zoomInBtn = document.getElementById("zoom-in-btn") as HTMLButtonElement;
 const zoomLevelEl = document.getElementById("zoom-level")!;
-const downloadBtn = document.getElementById(
-  "download-btn",
-) as HTMLButtonElement;
 const fullscreenBtn = document.getElementById(
   "fullscreen-btn",
 ) as HTMLButtonElement;
@@ -371,20 +368,6 @@ function resetZoom() {
   renderPage();
 }
 
-function downloadPdf() {
-  if (!pdfBytes) return;
-  const buffer = new Uint8Array(pdfBytes).buffer;
-  const blob = new Blob([buffer], { type: "application/pdf" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `${pdfTitle || "document"}.pdf`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-}
-
 async function toggleFullscreen() {
   const ctx = app.getHostContext();
   if (!ctx?.availableDisplayModes?.includes("fullscreen")) {
@@ -416,7 +399,6 @@ prevBtn.addEventListener("click", prevPage);
 nextBtn.addEventListener("click", nextPage);
 zoomOutBtn.addEventListener("click", zoomOut);
 zoomInBtn.addEventListener("click", zoomIn);
-downloadBtn.addEventListener("click", downloadPdf);
 fullscreenBtn.addEventListener("click", toggleFullscreen);
 
 pageInputEl.addEventListener("change", () => {

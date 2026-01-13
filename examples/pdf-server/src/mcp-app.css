@@ -173,7 +173,6 @@
 
 .nav-btn,
 .zoom-btn,
-.download-btn,
 .fullscreen-btn {
   display: flex;
   align-items: center;
@@ -191,7 +190,6 @@
 
 .nav-btn:hover:not(:disabled),
 .zoom-btn:hover:not(:disabled),
-.download-btn:hover,
 .fullscreen-btn:hover {
   background: var(--bg100, #f5f5f5);
   border-color: var(--bg300, #ccc);
