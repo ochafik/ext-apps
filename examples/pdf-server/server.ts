@@ -30,7 +30,11 @@ import {
   findEntryById,
   filterEntriesByFolder,
 } from "./src/pdf-indexer.js";
-import { loadPdfData, loadPdfTextChunk, populatePdfMetadata } from "./src/pdf-loader.js";
+import {
+  loadPdfData,
+  loadPdfTextChunk,
+  populatePdfMetadata,
+} from "./src/pdf-loader.js";
 import { isArxivUrl, createArxivEntry } from "./src/arxiv.js";
 import { generateClaudeMd } from "./src/claude-md.js";
 import {
@@ -148,7 +152,8 @@ export function createServer(): McpServer {
     "read_pdf_text",
     {
       title: "Read PDF Text",
-      description: "Extract text from a PDF with chunked pagination for large documents",
+      description:
+        "Extract text from a PDF with chunked pagination for large documents",
       inputSchema: ReadPdfTextInputSchema.shape,
       outputSchema: PdfTextChunkSchema,
       _meta: { ui: { visibility: ["app"] } },
@@ -256,7 +261,9 @@ Default: Opens "Practices for Governing Agentic AI Systems" paper.`,
         maxChunkBytes: z
           .number()
           .default(500 * 1024) // 500KB
-          .describe("Maximum bytes per chunk when reading text (default: 500KB)"),
+          .describe(
+            "Maximum bytes per chunk when reading text (default: 500KB)",
+          ),
       },
       outputSchema: z.object({
         pdfId: z.string(),
@@ -279,7 +286,9 @@ Default: Opens "Practices for Governing Agentic AI Systems" paper.`,
         // Look up by ID (takes precedence over url)
         entry = findEntryById(pdfIndex, pdfId);
         if (!entry) {
-          throw new Error(`PDF not found: ${pdfId}. Use list_pdfs to see available PDFs.`);
+          throw new Error(
+            `PDF not found: ${pdfId}. Use list_pdfs to see available PDFs.`,
+          );
         }
       } else {
         // Use URL (has default from schema)
@@ -290,7 +299,9 @@ Default: Opens "Practices for Governing Agentic AI Systems" paper.`,
         }
 
         // Check if already indexed
-        const existingEntry = pdfIndex.flatEntries.find(e => e.sourcePath === pdfUrl);
+        const existingEntry = pdfIndex.flatEntries.find(
+          (e) => e.sourcePath === pdfUrl,
+        );
         if (existingEntry) {
           entry = existingEntry;
         } else {
@@ -308,10 +319,16 @@ Default: Opens "Practices for Governing Agentic AI Systems" paper.`,
         }
       }
 
+      // Include source URL for HTTP sources (arxiv) - allows linking to original
+      const sourceUrl = entry.sourcePath.startsWith("http")
+        ? entry.sourcePath
+        : undefined;
+
       const result = {
         pdfId: entry.id,
         pdfUri: `pdfs://content/${encodeURIComponent(entry.id)}`,
         title: entry.displayName,
+        sourceUrl,
         pageCount: entry.metadata.pageCount,
         initialPage: Math.min(page ?? 1, entry.metadata.pageCount),
         maxChunkBytes: maxChunkBytes ?? 500 * 1024,

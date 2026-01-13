@@ -32,6 +32,7 @@ let currentPage = 1;
 let totalPages = 0;
 let scale = 1.0;
 let pdfTitle = "";
+let pdfSourceUrl: string | undefined;
 let pdfId = "";
 
 // DOM Elements
@@ -119,13 +120,24 @@ function showViewer() {
 }
 
 function updateControls() {
-  titleEl.textContent = pdfTitle;
+  // Make title a link if we have a source URL
+  if (pdfSourceUrl) {
+    titleEl.innerHTML = `<a href="${pdfSourceUrl}" target="_blank" rel="noopener noreferrer" style="color: inherit; text-decoration: underline;">${escapeHtml(pdfTitle)}</a>`;
+  } else {
+    titleEl.textContent = pdfTitle;
+  }
   pageInputEl.value = String(currentPage);
   pageInputEl.max = String(totalPages);
   totalPagesEl.textContent = `of ${totalPages}`;
   prevBtn.disabled = currentPage <= 1;
   nextBtn.disabled = currentPage >= totalPages;
   zoomLevelEl.textContent = `${Math.round(scale * 100)}%`;
+}
+
+function escapeHtml(text: string): string {
+  const div = document.createElement("div");
+  div.textContent = text;
+  return div.innerHTML;
 }
 
 // Extract text from current page and update model context
@@ -358,6 +370,7 @@ function parseToolResult(result: CallToolResult): {
   pdfId: string;
   pdfUri: string;
   title: string;
+  sourceUrl?: string;
   pageCount: number;
   initialPage: number;
 } | null {
@@ -365,6 +378,7 @@ function parseToolResult(result: CallToolResult): {
     pdfId: string;
     pdfUri: string;
     title: string;
+    sourceUrl?: string;
     pageCount: number;
     initialPage: number;
   } | null;
@@ -381,8 +395,9 @@ app.ontoolresult = async (result) => {
   }
 
   pdfId = parsed.pdfId;
-  const { pdfUri, title, pageCount, initialPage } = parsed;
+  const { pdfUri, title, sourceUrl, pageCount, initialPage } = parsed;
   pdfTitle = title;
+  pdfSourceUrl = sourceUrl;
   totalPages = pageCount;
   currentPage = initialPage;
 
