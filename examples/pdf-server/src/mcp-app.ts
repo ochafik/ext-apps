@@ -276,7 +276,11 @@ async function updatePageContext() {
     }
 
     // Format content with selection and truncation
-    const content = formatPageContent(pageText, MAX_MODEL_CONTEXT_LENGTH, selection);
+    const content = formatPageContent(
+      pageText,
+      MAX_MODEL_CONTEXT_LENGTH,
+      selection,
+    );
 
     const markdown = `---
 title: ${pdfTitle || ""}
