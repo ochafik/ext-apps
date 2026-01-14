@@ -309,7 +309,10 @@ function logEvent(type: string, payload: unknown): void {
 
   // Send to server log file (async, fire-and-forget)
   // Skip sending debug-log results to avoid noise
-  if (type !== "server-tool-result" || (payload as { name?: string })?.name !== "debug-log") {
+  if (
+    type !== "server-tool-result" ||
+    (payload as { name?: string })?.name !== "debug-log"
+  ) {
     sendToServerLog(type, payload);
   }
 }
