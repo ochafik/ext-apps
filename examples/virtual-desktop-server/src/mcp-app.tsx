@@ -415,6 +415,47 @@ function ViewDesktopInner({
     }
   }, [noVncReady, extractedInfo, connectionState, connect]);
 
+  // Predefined VNC modes available in TigerVNC (cannot create custom modes dynamically)
+  const AVAILABLE_MODES = [
+    { width: 1920, height: 1200 },
+    { width: 1920, height: 1080 },
+    { width: 1680, height: 1050 },
+    { width: 1600, height: 1200 },
+    { width: 1400, height: 1050 },
+    { width: 1360, height: 768 },
+    { width: 1280, height: 1024 },
+    { width: 1280, height: 960 },
+    { width: 1280, height: 800 },
+    { width: 1280, height: 720 },
+    { width: 1024, height: 768 },
+    { width: 800, height: 600 },
+    { width: 640, height: 480 },
+  ];
+
+  // Find the best mode that fits within the container
+  const findBestMode = useCallback(
+    (containerWidth: number, containerHeight: number) => {
+      // Find modes that fit within container (with small margin for borders)
+      const margin = 2;
+      const fittingModes = AVAILABLE_MODES.filter(
+        (m) =>
+          m.width <= containerWidth - margin &&
+          m.height <= containerHeight - margin,
+      );
+
+      if (fittingModes.length > 0) {
+        // Return the largest fitting mode (maximizes desktop real estate)
+        return fittingModes.reduce((best, mode) =>
+          mode.width * mode.height > best.width * best.height ? mode : best,
+        );
+      }
+
+      // No mode fits - return smallest mode (will be scaled down by noVNC)
+      return AVAILABLE_MODES[AVAILABLE_MODES.length - 1];
+    },
+    [],
+  );
+
   // Resize desktop when container size changes
   useEffect(() => {
     if (!app || !extractedInfo || connectionState !== "connected") return;
@@ -428,7 +469,7 @@ function ViewDesktopInner({
     if (!parentContainer) return;
 
     let resizeTimeout: ReturnType<typeof setTimeout> | null = null;
-    let lastSize = { width: 0, height: 0 };
+    let lastMode = { width: 0, height: 0 };
     const RESIZE_DEBOUNCE = 300; // ms
 
     const handleResize = () => {
@@ -444,25 +485,27 @@ function ViewDesktopInner({
 
       log.info(`Container size: ${width}x${height}`);
 
-      // Use the exact container dimensions for the desktop
-      // This ensures the desktop fills the space without letterboxing
-      const newWidth = Math.floor(width);
-      const newHeight = Math.floor(height);
+      // Find the best predefined mode for this container size
+      const bestMode = findBestMode(width, height);
 
-      // Skip if size hasn't changed significantly
-      if (newWidth === lastSize.width && newHeight === lastSize.height) {
+      // Skip if mode hasn't changed
+      if (
+        bestMode.width === lastMode.width &&
+        bestMode.height === lastMode.height
+      ) {
         return;
       }
 
       if (resizeTimeout) clearTimeout(resizeTimeout);
 
       resizeTimeout = setTimeout(async () => {
-        lastSize = { width: newWidth, height: newHeight };
-        log.info(`Resizing desktop to ${newWidth}x${newHeight}`);
+        lastMode = bestMode;
+        log.info(
+          `Resizing desktop to ${bestMode.width}x${bestMode.height} (container: ${width}x${height})`,
+        );
         try {
-          // Create a custom xrandr mode and apply it using a single-line command
-          const modeName = `${newWidth}x${newHeight}_60`;
-          const cmd = `modeline=$(cvt ${newWidth} ${newHeight} 60 2>/dev/null | grep Modeline | cut -d' ' -f3-) && [ -n "$modeline" ] && (xrandr --newmode ${modeName} $modeline 2>/dev/null || true) && (xrandr --addmode VNC-0 ${modeName} 2>/dev/null || true) && xrandr --output VNC-0 --mode ${modeName}`;
+          // Use xrandr to switch to the predefined mode
+          const cmd = `xrandr --output VNC-0 --mode ${bestMode.width}x${bestMode.height}`;
           log.info("Executing resize command:", cmd);
           const result = await app.callServerTool({
             name: "exec",
@@ -490,7 +533,7 @@ function ViewDesktopInner({
       if (resizeTimeout) clearTimeout(resizeTimeout);
       observer.disconnect();
     };
-  }, [app, extractedInfo, connectionState]);
+  }, [app, extractedInfo, connectionState, findBestMode]);
 
   // Cleanup on unmount only
   useEffect(() => {
@@ -526,7 +569,7 @@ function ViewDesktopInner({
       let hash = 0;
       for (let i = 0; i < str.length; i++) {
         const char = str.charCodeAt(i);
-        hash = ((hash << 5) - hash) + char;
+        hash = (hash << 5) - hash + char;
         hash = hash & hash; // Convert to 32-bit integer
       }
       return hash.toString(16);
