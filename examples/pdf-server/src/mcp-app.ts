@@ -108,13 +108,13 @@ function requestFitToContent() {
   const mainBorderBottom = parseFloat(mainStyle.borderBottomWidth);
   const BUFFER = 2; // Minimal buffer for sub-pixel rounding
   const totalHeight =
-    toolbarHeight + paddingTop + pageWrapperHeight + paddingBottom +
-    mainBorderTop + mainBorderBottom + BUFFER;
-
-  log.info("[SIZE] toolbar:", toolbarHeight, "paddingTop:", paddingTop,
-    "pageWrapper:", pageWrapperHeight, "paddingBottom:", paddingBottom,
-    "mainBorder:", mainBorderTop + mainBorderBottom, "buffer:", BUFFER,
-    "=> total:", totalHeight);
+    toolbarHeight +
+    paddingTop +
+    pageWrapperHeight +
+    paddingBottom +
+    mainBorderTop +
+    mainBorderBottom +
+    BUFFER;
 
   app.sendSizeChanged({ height: totalHeight });
 }
