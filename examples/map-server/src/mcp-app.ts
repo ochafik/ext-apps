@@ -411,9 +411,7 @@ function scheduleLocationUpdate(cesiumViewer: any): void {
 
     const { widthKm, heightKm } = getScaleDimensions(extent);
 
-    log.info(
-      `Extent: ${widthKm.toFixed(1)}km × ${heightKm.toFixed(1)}km`
-    );
+    log.info(`Extent: ${widthKm.toFixed(1)}km × ${heightKm.toFixed(1)}km`);
 
     // Get places visible in the extent (samples multiple points for large areas)
     const places = await getVisiblePlaces(extent);
