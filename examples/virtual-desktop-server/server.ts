@@ -29,6 +29,7 @@ import {
   shutdownDesktop,
   checkDocker,
   getPortConfig,
+  waitForVncReady,
   CONTAINER_PREFIX,
   DESKTOP_VARIANTS,
   DEFAULT_VARIANT,
@@ -306,6 +307,20 @@ export function createVirtualDesktopServer(): McpServer {
             {
               type: "text",
               text: `Desktop "${args.name}" does not have a port assigned. This may indicate a configuration issue.`,
+            },
+          ],
+        };
+      }
+
+      // Wait for VNC endpoint to be ready before returning success
+      const vncReady = await waitForVncReady(desktop.port);
+      if (!vncReady) {
+        return {
+          isError: true,
+          content: [
+            {
+              type: "text",
+              text: `Desktop "${args.name}" container is running but VNC endpoint is not responding on port ${desktop.port}. The desktop may still be starting up - try again in a few seconds.`,
             },
           ],
         };

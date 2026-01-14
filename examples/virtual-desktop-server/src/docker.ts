@@ -465,7 +465,10 @@ export async function createDesktop(
       // Still starting, wait and poll again
       await new Promise((resolve) => setTimeout(resolve, pollInterval));
     } catch (error) {
-      if (error instanceof Error && error.message.includes("Container exited")) {
+      if (
+        error instanceof Error &&
+        error.message.includes("Container exited")
+      ) {
         throw error;
       }
       // Inspection failed, container might not exist yet - keep polling
@@ -526,4 +529,39 @@ export async function checkDocker(): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+/**
+ * Wait for the VNC endpoint to be ready.
+ * Polls the HTTP endpoint until it responds or times out.
+ *
+ * @param port - The port to check
+ * @param timeoutMs - Maximum time to wait (default: 15 seconds)
+ * @returns true if endpoint is ready, false if timeout
+ */
+export async function waitForVncReady(
+  port: number,
+  timeoutMs: number = 15000,
+): Promise<boolean> {
+  const startTime = Date.now();
+  const pollInterval = 500;
+
+  while (Date.now() - startTime < timeoutMs) {
+    try {
+      // Try to fetch the noVNC page - if it responds, VNC is ready
+      const response = await fetch(`http://localhost:${port}/`, {
+        method: "HEAD",
+        signal: AbortSignal.timeout(2000),
+      });
+      if (response.ok || response.status === 401) {
+        // 401 is OK - means server is up but may require auth
+        return true;
+      }
+    } catch {
+      // Connection refused or timeout - keep polling
+    }
+    await new Promise((resolve) => setTimeout(resolve, pollInterval));
+  }
+
+  return false;
 }
