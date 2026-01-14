@@ -71,6 +71,8 @@ let persistViewTimer: ReturnType<typeof setTimeout> | null = null;
 // Track whether tool input has been received (to know if we should restore persisted state)
 let hasReceivedToolInput = false;
 
+let widgetUUID: string | undefined = undefined;
+
 /**
  * Persisted camera state for localStorage
  */
@@ -81,18 +83,6 @@ interface PersistedCameraState {
   heading: number; // radians
   pitch: number; // radians
   roll: number; // radians
-}
-
-/**
- * Get localStorage key for persisting view state
- * Uses toolInfo.id (tool invocation ID) - localStorage is scoped per conversation per server,
- * so each tool call remembers its own view state within the conversation.
- */
-function getViewStorageKey(): string | null {
-  const context = app.getHostContext();
-  const toolId = context?.toolInfo?.id;
-  if (!toolId) return null;
-  return `cesium-view:${toolId}`;
 }
 
 /**
@@ -132,7 +122,7 @@ function schedulePersistViewState(cesiumViewer: any): void {
  * Persist current view state to localStorage
  */
 function persistViewState(cesiumViewer: any): void {
-  const key = getViewStorageKey();
+  const key = widgetUUID;
   if (!key) {
     log.info("No storage key available, skipping view persistence");
     return;
@@ -142,12 +132,12 @@ function persistViewState(cesiumViewer: any): void {
   if (!state) return;
 
   try {
-    localStorage.setItem(key, JSON.stringify(state));
+    const value = JSON.stringify(state);
+    localStorage.setItem(key, value);
     log.info(
       "Persisted view state:",
       key,
-      state.latitude.toFixed(2),
-      state.longitude.toFixed(2),
+      value,
     );
   } catch (e) {
     log.warn("Failed to persist view state:", e);
@@ -158,12 +148,15 @@ function persistViewState(cesiumViewer: any): void {
  * Load persisted view state from localStorage
  */
 function loadPersistedViewState(): PersistedCameraState | null {
-  const key = getViewStorageKey();
+  const key = widgetUUID;
   if (!key) return null;
 
   try {
     const stored = localStorage.getItem(key);
-    if (!stored) return null;
+    if (!stored) {
+      console.info("No persisted view state found");
+      return null;
+    }
 
     const state = JSON.parse(stored) as PersistedCameraState;
     // Basic validation
@@ -175,6 +168,7 @@ function loadPersistedViewState(): PersistedCameraState | null {
       log.warn("Invalid persisted view state, ignoring");
       return null;
     }
+    log.info("Loaded persisted view state:", state);
     return state;
   } catch (e) {
     log.warn("Failed to load persisted view state:", e);
@@ -948,7 +942,9 @@ app.ontoolinput = async (params) => {
 // );
 
 // Initialize Cesium and connect to host
-async function init() {
+app.ontoolresult = async (result) => {
+  widgetUUID = result._meta?.widgetUUID ? String(result._meta.widgetUUID) : undefined;
+  
   try {
     log.info("Loading CesiumJS from CDN...");
     await loadCesium();
@@ -961,24 +957,22 @@ async function init() {
 
     // Fallback: if no tool input received within 2 seconds, try restoring
     // persisted view or show default view
-    setTimeout(async () => {
-      const loadingEl = document.getElementById("loading");
-      if (
-        loadingEl &&
-        loadingEl.style.display !== "none" &&
-        !hasReceivedToolInput
-      ) {
-        // No explicit tool input - try to restore persisted view
-        const restored = restorePersistedView(viewer!);
-        if (restored) {
-          log.info("Restored persisted view, waiting for tiles...");
-        } else {
-          log.info("No persisted view, using default view...");
-        }
-        await waitForTilesLoaded(viewer!);
-        hideLoading();
+    const loadingEl = document.getElementById("loading");
+    if (
+      loadingEl &&
+      loadingEl.style.display !== "none" &&
+      !hasReceivedToolInput
+    ) {
+      // No explicit tool input - try to restore persisted view
+      const restored = restorePersistedView(viewer!);
+      if (restored) {
+        log.info("Restored persisted view, waiting for tiles...");
+      } else {
+        log.info("No persisted view, using default view...");
       }
-    }, 2000);
+      await waitForTilesLoaded(viewer!);
+      hideLoading();
+    }
 
     // Connect to host (auto-creates PostMessageTransport)
     await app.connect();
@@ -1019,4 +1013,3 @@ async function init() {
   }
 }
 
-init();
