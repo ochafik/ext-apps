@@ -159,7 +159,7 @@ The viewer supports zoom, navigation, text selection, and fullscreen mode.`,
         content: [
           {
             type: "text",
-            text: `Viewing ${entry.url} (${entry.metadata.pageCount} pages)`,
+            text: `Displaying interactive PDF viewer${entry.metadata.title ? ` for "${entry.metadata.title}"` : ""} (${entry.url}, ${entry.metadata.pageCount} pages)`,
           },
         ],
         structuredContent: result,
