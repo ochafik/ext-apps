@@ -4,7 +4,6 @@ import {
   registerAppTool,
 } from "@modelcontextprotocol/ext-apps/server";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import type {
   CallToolResult,
   ReadResourceResult,
@@ -14,8 +13,6 @@ import os from "node:os";
 import path from "node:path";
 import si from "systeminformation";
 import { z } from "zod";
-import { startServer } from "./server-utils.js";
-
 // Schemas - types are derived from these using z.infer
 const CpuCoreSchema = z.object({
   idle: z.number(),
@@ -56,7 +53,10 @@ const SystemStatsSchema = z.object({
 type CpuCore = z.infer<typeof CpuCoreSchema>;
 type MemoryStats = z.infer<typeof MemoryStatsSchema>;
 type SystemStats = z.infer<typeof SystemStatsSchema>;
-const DIST_DIR = path.join(import.meta.dirname, "dist");
+// Works both from source (server.ts) and compiled (dist/server.js)
+const DIST_DIR = import.meta.filename.endsWith(".ts")
+  ? path.join(import.meta.dirname, "dist")
+  : import.meta.dirname;
 
 // Returns raw CPU timing data per core (client calculates usage from deltas)
 function getCpuSnapshots(): CpuCore[] {
@@ -204,17 +204,3 @@ export function createServer(): McpServer {
 
   return server;
 }
-
-async function main() {
-  if (process.argv.includes("--stdio")) {
-    await createServer().connect(new StdioServerTransport());
-  } else {
-    const port = parseInt(process.env.PORT ?? "3107", 10);
-    await startServer(createServer, { port, name: "System Monitor Server" });
-  }
-}
-
-main().catch((e) => {
-  console.error(e);
-  process.exit(1);
-});

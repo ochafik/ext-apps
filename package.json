@@ -55,7 +55,7 @@
     "test:e2e:update": "playwright test --update-snapshots",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:docker": "docker run --rm -v $(pwd):/work -w /work -it mcr.microsoft.com/playwright:v1.57.0-noble sh -c 'npm i -g bun && npm ci && npx playwright test'",
-    "test:e2e:docker:update": "docker run --rm -v $(pwd):/work -w /work -it mcr.microsoft.com/playwright:v1.57.0-noble sh -c 'npm i -g bun && npm ci && npx playwright test --update-snapshots'",
+    "test:e2e:docker:update": "npm run build:all && docker run --rm -v $(pwd):/work -w /work -it mcr.microsoft.com/playwright:v1.57.0-noble sh -c 'npm i -g bun && npm ci && npx playwright test --update-snapshots'",
     "test:e2e:docker:dind": "docker run --rm -v $(pwd):/work -v /var/run/docker.sock:/var/run/docker.sock -w /work -it mcr.microsoft.com/playwright:v1.57.0-noble sh -c 'apt-get update && apt-get install -y docker.io && npm i -g bun && npm ci && npx playwright test'",
     "test:e2e:docker:dind:update": "docker run --rm -v $(pwd):/work -v /var/run/docker.sock:/var/run/docker.sock -w /work -it mcr.microsoft.com/playwright:v1.57.0-noble sh -c 'apt-get update && apt-get install -y docker.io && npm i -g bun && npm ci && npx playwright test --update-snapshots'",
     "preexamples:build": "npm run build",
@@ -66,7 +66,7 @@
     "prepare": "node scripts/setup-bun.mjs && npm run build && husky",
     "docs": "typedoc",
     "docs:watch": "typedoc --watch",
-    "generate:screenshots": "docker run --rm -v $(pwd):/work -w /work mcr.microsoft.com/playwright:v1.57.0-noble sh -c 'npm i -g bun && npm ci && npx playwright test tests/e2e/generate-grid-screenshots.spec.ts'",
+    "generate:screenshots": "npm run build:all && docker run --rm -v $(pwd):/work -w /work mcr.microsoft.com/playwright:v1.57.0-noble sh -c 'npm i -g bun && npm ci && npx playwright test tests/e2e/generate-grid-screenshots.spec.ts'",
     "prettier": "prettier -u \"**/*.{js,jsx,ts,tsx,mjs,json,md,yml,yaml}\" --check",
     "prettier:fix": "prettier -u \"**/*.{js,jsx,ts,tsx,mjs,json,md,yml,yaml}\" --write",
     "check:versions": "node scripts/check-versions.mjs"
