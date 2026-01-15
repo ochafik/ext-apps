@@ -9,12 +9,10 @@ import {
   registerAppTool,
 } from "@modelcontextprotocol/ext-apps/server";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import type { ReadResourceResult } from "@modelcontextprotocol/sdk/types.js";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { z } from "zod";
-import { startServer } from "./server-utils.js";
 
 const DIST_DIR = path.join(import.meta.dirname, "dist");
 
@@ -135,6 +133,10 @@ animate();
 
 const resourceUri = "ui://threejs/mcp-app.html";
 
+// =============================================================================
+// Server Setup
+// =============================================================================
+
 /**
  * Creates a new MCP server instance with tools and resources registered.
  * Each HTTP session needs its own server instance because McpServer only supports one transport.
@@ -222,17 +224,3 @@ export function createServer(): McpServer {
 
   return server;
 }
-
-async function main() {
-  if (process.argv.includes("--stdio")) {
-    await createServer().connect(new StdioServerTransport());
-  } else {
-    const port = parseInt(process.env.PORT ?? "3108", 10);
-    await startServer(createServer, { port, name: "Three.js Server" });
-  }
-}
-
-main().catch((e) => {
-  console.error(e);
-  process.exit(1);
-});

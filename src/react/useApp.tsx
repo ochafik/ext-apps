@@ -5,15 +5,17 @@ import { App, McpUiAppCapabilities } from "../app";
 export * from "../app";
 
 /**
- * Options for configuring the useApp hook.
+ * Options for configuring the {@link useApp} hook.
  *
  * @see {@link useApp} for the hook that uses these options
- * @see {@link useAutoResize} for manual auto-resize control with custom App options
+ * @see {@link useAutoResize} for manual auto-resize control with custom `App` options
  */
 export interface UseAppOptions {
   /** App identification (name and version) */
   appInfo: Implementation;
-  /** Features and capabilities this app provides */
+  /**
+   * Declares what features this app supports.
+   */
   capabilities: McpUiAppCapabilities;
   /**
    * Enable experimental OpenAI compatibility.
@@ -28,12 +30,12 @@ export interface UseAppOptions {
    */
   experimentalOAICompatibility?: boolean;
   /**
-   * Called after App is created but before connection.
+   * Called after {@link App} is created but before connection.
    *
    * Use this to register request/notification handlers that need to be in place
    * before the initialization handshake completes.
    *
-   * @param app - The newly created App instance
+   * @param app - The newly created `App` instance
    *
    * @example Register a notification handler
    * ```typescript
@@ -53,10 +55,10 @@ export interface UseAppOptions {
 }
 
 /**
- * State returned by the useApp hook.
+ * State returned by the {@link useApp} hook.
  */
 export interface AppState {
-  /** The connected App instance, null during initialization */
+  /** The connected {@link App} instance, null during initialization */
   app: App | null;
   /** Whether initialization completed successfully */
   isConnected: boolean;
@@ -77,6 +79,9 @@ export interface AppState {
  *
  * **Important**: The hook intentionally does NOT re-run when options change
  * to avoid reconnection loops. Options are only used during the initial mount.
+ * Furthermore, the `App` instance is NOT closed on unmount. This avoids cleanup
+ * issues during React Strict Mode's double-mount cycle. If you need to
+ * explicitly close the `App`, call {@link App.close} manually.
  *
  * **Note**: This is part of the optional React integration. The core SDK
  * (App, PostMessageTransport, OpenAITransport) is framework-agnostic and can be

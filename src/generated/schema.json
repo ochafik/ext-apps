@@ -874,7 +874,6 @@
                   "type": "object",
                   "properties": {
                     "fonts": {
-                      "description": "CSS for font loading (@font-face rules or",
                       "type": "string"
                     }
                   },
@@ -1628,7 +1627,6 @@
               "type": "object",
               "properties": {
                 "fonts": {
-                  "description": "CSS for font loading (@font-face rules or",
                   "type": "string"
                 }
               },
@@ -1802,7 +1800,6 @@
       "type": "object",
       "properties": {
         "fonts": {
-          "description": "CSS for font loading (@font-face rules or",
           "type": "string"
         }
       },
@@ -2221,7 +2218,6 @@
           "type": "object",
           "properties": {
             "fonts": {
-              "description": "CSS for font loading (@font-face rules or",
               "type": "string"
             }
           },
@@ -3168,7 +3164,6 @@
                   "type": "object",
                   "properties": {
                     "fonts": {
-                      "description": "CSS for font loading (@font-face rules or",
                       "type": "string"
                     }
                   },
