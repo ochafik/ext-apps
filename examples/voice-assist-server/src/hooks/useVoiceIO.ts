@@ -58,17 +58,11 @@ type SpeechRecognitionConstructor = new () => SpeechRecognitionInstance;
 const SpeechRecognition: SpeechRecognitionConstructor | null =
   typeof window !== "undefined"
     ? // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (window as any).SpeechRecognition ||
-      (window as any).webkitSpeechRecognition
+      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
     : null;
 
 export function useVoiceIO(options: UseVoiceIOOptions): UseVoiceIOReturn {
-  const {
-    onFinalResult,
-    onBargeIn,
-    silenceTimeoutMs = 1500,
-    bargeInDurationMs = 400,
-  } = options;
+  const { onFinalResult, onBargeIn, silenceTimeoutMs = 1500, bargeInDurationMs = 400 } = options;
 
   // State
   const [isListening, setIsListening] = useState(false);
@@ -124,8 +118,7 @@ export function useVoiceIO(options: UseVoiceIOOptions): UseVoiceIOReturn {
     const analyser = analyserRef.current;
     const dataArray = new Uint8Array(analyser.frequencyBinCount);
     analyser.getByteFrequencyData(dataArray);
-    const average =
-      dataArray.reduce((a, b) => a + b, 0) / dataArray.length / 255;
+    const average = dataArray.reduce((a, b) => a + b, 0) / dataArray.length / 255;
 
     setMicLevel(isMicMutedRef.current ? 0 : Math.min(1, average * 3));
 
@@ -146,8 +139,7 @@ export function useVoiceIO(options: UseVoiceIOOptions): UseVoiceIOReturn {
     const analyser = analyserRef.current;
     const dataArray = new Uint8Array(analyser.frequencyBinCount);
     analyser.getByteFrequencyData(dataArray);
-    const average =
-      dataArray.reduce((a, b) => a + b, 0) / dataArray.length / 255;
+    const average = dataArray.reduce((a, b) => a + b, 0) / dataArray.length / 255;
 
     const CALIBRATION_SAMPLES = 15;
     const THRESHOLD_MULTIPLIER = 1.8;
@@ -161,24 +153,24 @@ export function useVoiceIO(options: UseVoiceIOOptions): UseVoiceIOReturn {
         baselineLevelRef.current +=
           (average - baselineLevelRef.current) / calibrationCountRef.current;
       }
+      if (calibrationCountRef.current === CALIBRATION_SAMPLES) {
+        console.log("[VoiceIO] VAD baseline:", baselineLevelRef.current.toFixed(3));
+      }
     } else if (!hasTriggeredBargeInRef.current) {
-      const threshold = Math.max(
-        0.15,
-        baselineLevelRef.current * THRESHOLD_MULTIPLIER,
-      );
+      const threshold = Math.max(0.15, baselineLevelRef.current * THRESHOLD_MULTIPLIER);
 
       if (average > threshold) {
         if (!voiceStartTimeRef.current) {
           voiceStartTimeRef.current = Date.now();
         } else if (Date.now() - voiceStartTimeRef.current > bargeInDurationMs) {
+          console.log("[VoiceIO] Barge-in!");
           hasTriggeredBargeInRef.current = true;
           onBargeInRef.current();
         }
       } else {
         voiceStartTimeRef.current = null;
         baselineLevelRef.current =
-          baselineLevelRef.current * (1 - ADAPTIVE_ALPHA) +
-          average * ADAPTIVE_ALPHA;
+          baselineLevelRef.current * (1 - ADAPTIVE_ALPHA) + average * ADAPTIVE_ALPHA;
       }
     }
 
@@ -195,9 +187,7 @@ export function useVoiceIO(options: UseVoiceIOOptions): UseVoiceIOReturn {
     voiceStartTimeRef.current = null;
 
     if (!analyserRef.current) {
-      const source = audioContextRef.current.createMediaStreamSource(
-        streamRef.current,
-      );
+      const source = audioContextRef.current.createMediaStreamSource(streamRef.current);
       const analyser = audioContextRef.current.createAnalyser();
       analyser.fftSize = 256;
       analyser.smoothingTimeConstant = 0.5;
@@ -205,6 +195,7 @@ export function useVoiceIO(options: UseVoiceIOOptions): UseVoiceIOReturn {
       analyserRef.current = analyser;
     }
 
+    console.log("[VoiceIO] Starting VAD");
     analyzeAudio();
   }, [analyzeAudio]);
 
@@ -219,6 +210,7 @@ export function useVoiceIO(options: UseVoiceIOOptions): UseVoiceIOReturn {
   // Force recalibration
   const recalibrate = useCallback(() => {
     if (modeRef.current === "detecting") {
+      console.log("[VoiceIO] Recalibrating baseline");
       calibrationCountRef.current = 0;
       baselineLevelRef.current = 0;
       hasTriggeredBargeInRef.current = false;
@@ -236,18 +228,22 @@ export function useVoiceIO(options: UseVoiceIOOptions): UseVoiceIOReturn {
     recognition.lang = "en-US";
 
     recognition.onstart = () => {
+      console.log("[VoiceIO] STT started");
       setIsListening(true);
       setError(null);
     };
 
     recognition.onend = () => {
+      console.log("[VoiceIO] STT ended");
       setIsListening(false);
 
-      if (shouldBeActiveRef.current && modeRef.current === "listening") {
+      // Restart if should be listening (but not if mic is muted)
+      if (shouldBeActiveRef.current && modeRef.current === "listening" && !isMicMutedRef.current) {
         setTimeout(() => {
           if (
             shouldBeActiveRef.current &&
             modeRef.current === "listening" &&
+            !isMicMutedRef.current &&
             recognitionRef.current
           ) {
             try {
@@ -269,7 +265,7 @@ export function useVoiceIO(options: UseVoiceIOOptions): UseVoiceIOReturn {
     };
 
     recognition.onresult = (event) => {
-      if (modeRef.current !== "listening") return;
+      if (modeRef.current !== "listening" || isMicMutedRef.current) return;
 
       clearSilenceTimer();
 
@@ -303,9 +299,14 @@ export function useVoiceIO(options: UseVoiceIOOptions): UseVoiceIOReturn {
   // Start STT
   const startSTT = useCallback(() => {
     if (recognitionRef.current) return;
+    if (isMicMutedRef.current) {
+      console.log("[VoiceIO] startSTT blocked: mic is muted");
+      return;
+    }
 
     recognitionRef.current = createRecognition();
     if (recognitionRef.current) {
+      console.log("[VoiceIO] Starting STT");
       try {
         recognitionRef.current.start();
       } catch {
@@ -337,7 +338,14 @@ export function useVoiceIO(options: UseVoiceIOOptions): UseVoiceIOReturn {
       if (!shouldBeActiveRef.current) return;
       if (modeRef.current === mode) return;
 
+      console.log("[VoiceIO] Mode:", modeRef.current, "->", mode);
       modeRef.current = mode;
+
+      // Don't start STT/VAD if mic is muted
+      if (isMicMutedRef.current) {
+        console.log("[VoiceIO] setMode: mic muted, not starting", mode);
+        return;
+      }
 
       if (mode === "listening") {
         stopVAD();
@@ -361,11 +369,7 @@ export function useVoiceIO(options: UseVoiceIOOptions): UseVoiceIOReturn {
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-        },
+        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
       });
       streamRef.current = stream;
 
@@ -383,6 +387,8 @@ export function useVoiceIO(options: UseVoiceIOOptions): UseVoiceIOReturn {
 
       monitorMicLevel();
       startSTT();
+
+      console.log("[VoiceIO] Started");
     } catch (e) {
       const err = e as Error & { name: string };
       if (err.name === "NotAllowedError") {
@@ -395,6 +401,7 @@ export function useVoiceIO(options: UseVoiceIOOptions): UseVoiceIOReturn {
 
   // Stop everything
   const stop = useCallback(() => {
+    console.log("[VoiceIO] Stopping");
     shouldBeActiveRef.current = false;
     modeRef.current = "off";
 
@@ -420,14 +427,37 @@ export function useVoiceIO(options: UseVoiceIOOptions): UseVoiceIOReturn {
     analyserRef.current = null;
   }, [stopSTT, stopVAD]);
 
-  // Mic mute control
-  const setMicMutedFn = useCallback((muted: boolean) => {
-    isMicMutedRef.current = muted;
-    setIsMicMuted(muted);
-    if (muted) {
-      setMicLevel(0);
-    }
-  }, []);
+  // Mic mute control - actually stops/starts STT and VAD, and disables audio tracks
+  const setMicMutedFn = useCallback(
+    (muted: boolean) => {
+      isMicMutedRef.current = muted;
+      setIsMicMuted(muted);
+
+      // Enable/disable audio tracks on the MediaStream
+      if (streamRef.current) {
+        streamRef.current.getAudioTracks().forEach((track) => {
+          track.enabled = !muted;
+        });
+      }
+
+      if (muted) {
+        setMicLevel(0);
+        // Stop both STT and VAD when muting
+        stopSTT();
+        stopVAD();
+        console.log("[VoiceIO] Mic muted - stopped STT and VAD");
+      } else if (shouldBeActiveRef.current) {
+        // Restart based on current mode when unmuting
+        console.log("[VoiceIO] Mic unmuted - restarting", modeRef.current);
+        if (modeRef.current === "listening") {
+          startSTT();
+        } else {
+          startVAD();
+        }
+      }
+    },
+    [stopSTT, stopVAD, startSTT, startVAD],
+  );
 
   // Cleanup on unmount
   useEffect(() => {

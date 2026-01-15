@@ -3,9 +3,10 @@
  *
  * Provides:
  * - A voice-assist tool with a UI resource
- * - Hidden _sampling_create tool for frontend to call LLM sampling
+ * - Hidden _run_tool_loop tool for frontend to run LLM sampling with tools
  * - ripgrep and read tools for the LLM to search/read files
  * - Fallback sampling provider when client doesn't support sampling
+ * - Pocket TTS server subprocess management (local high-quality TTS)
  */
 
 import {
@@ -23,7 +24,7 @@ import type {
 } from "@modelcontextprotocol/sdk/types.js";
 import fs from "node:fs/promises";
 import path from "node:path";
-import { spawn } from "node:child_process";
+import { spawn, type ChildProcess } from "node:child_process";
 import { z } from "zod";
 import { startServer } from "./server-utils.js";
 import { createFallbackSamplingProvider } from "./lib/backfillSampling.js";
@@ -32,6 +33,105 @@ import { runToolLoop } from "./lib/toolLoop.js";
 
 const DIST_DIR = path.join(import.meta.dirname, "dist");
 const WORKING_DIR = process.env.VOICE_ASSIST_CWD || process.cwd();
+const TTS_SERVER_PORT = parseInt(process.env.TTS_SERVER_PORT ?? "8880", 10);
+
+// ============================================================
+// Pocket TTS Server Subprocess Management
+// ============================================================
+
+let ttsServerProcess: ChildProcess | null = null;
+
+/**
+ * Start the Pocket TTS server as a subprocess.
+ * Uses uvx to run the pocket-tts package.
+ */
+async function startTTSServer(): Promise<void> {
+  if (ttsServerProcess) {
+    console.log("[TTS] Server already running");
+    return;
+  }
+
+  console.log(`[TTS] Starting Pocket TTS server on port ${TTS_SERVER_PORT}...`);
+
+  try {
+    // Try to start pocket-tts via uvx
+    ttsServerProcess = spawn(
+      "uvx",
+      [
+        "--default-index",
+        "https://pypi.org/simple",
+        "--from",
+        "git+https://github.com/ochafik/pocket-tts.git@mlx[mlx]",
+        "pocket-tts",
+        "serve",
+        "--port",
+        TTS_SERVER_PORT.toString(),
+      ],
+      {
+        stdio: ["ignore", "pipe", "pipe"],
+        detached: false,
+      },
+    );
+
+    ttsServerProcess.stdout?.on("data", (data: Buffer) => {
+      console.log(`[TTS] ${data.toString().trim()}`);
+    });
+
+    ttsServerProcess.stderr?.on("data", (data: Buffer) => {
+      const msg = data.toString().trim();
+      if (msg) console.error(`[TTS] ${msg}`);
+    });
+
+    ttsServerProcess.on("error", (err) => {
+      console.error("[TTS] Failed to start:", err.message);
+      ttsServerProcess = null;
+    });
+
+    ttsServerProcess.on("exit", (code) => {
+      console.log(`[TTS] Server exited with code ${code}`);
+      ttsServerProcess = null;
+    });
+
+    // Wait a bit for server to start
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+
+    // Health check
+    try {
+      const response = await fetch(`http://localhost:${TTS_SERVER_PORT}/health`, {
+        signal: AbortSignal.timeout(5000),
+      });
+      if (response.ok) {
+        console.log("[TTS] Server started successfully");
+      }
+    } catch {
+      console.log("[TTS] Server may still be starting up...");
+    }
+  } catch (err) {
+    console.error("[TTS] Error starting server:", err);
+  }
+}
+
+/**
+ * Stop the TTS server subprocess.
+ */
+function stopTTSServer(): void {
+  if (ttsServerProcess) {
+    console.log("[TTS] Stopping server...");
+    ttsServerProcess.kill("SIGTERM");
+    ttsServerProcess = null;
+  }
+}
+
+// Clean up TTS server on exit
+process.on("exit", stopTTSServer);
+process.on("SIGINT", () => {
+  stopTTSServer();
+  process.exit(0);
+});
+process.on("SIGTERM", () => {
+  stopTTSServer();
+  process.exit(0);
+});
 
 /**
  * Run ripgrep command and return results
@@ -385,6 +485,13 @@ Provide clear, spoken-language responses.`;
 }
 
 async function main() {
+  // Start TTS server in background (non-blocking)
+  if (!process.env.DISABLE_TTS_SERVER) {
+    startTTSServer().catch((err) => {
+      console.error("[TTS] Failed to start TTS server:", err);
+    });
+  }
+
   if (process.argv.includes("--stdio")) {
     await createServer().connect(new StdioServerTransport());
   } else {
