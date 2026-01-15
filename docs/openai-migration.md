@@ -77,17 +77,17 @@ This guide helps you migrate from the OpenAI Apps SDK (`window.openai.*`) to the
 
 ## State Persistence
 
-| OpenAI                                | MCP Apps                                                              | Notes                                              |
-| ------------------------------------- | --------------------------------------------------------------------- | -------------------------------------------------- |
-| `window.openai.widgetState`           | `app.onwidgetstate = (params) => { params.state }`                    | MCP uses notification callback                     |
-| `window.openai.setWidgetState(state)` | `app.updateModelContext({ modelContent, privateContent, imageIds })`  | MCP uses structured format                         |
+| OpenAI                                | MCP Apps                                                             | Notes                          |
+| ------------------------------------- | -------------------------------------------------------------------- | ------------------------------ |
+| `window.openai.widgetState`           | `app.onwidgetstate = (params) => { params.state }`                   | MCP uses notification callback |
+| `window.openai.setWidgetState(state)` | `app.updateModelContext({ modelContent, privateContent, imageIds })` | MCP uses structured format     |
 
 ## File Operations
 
-| OpenAI                                               | MCP Apps                                          | Notes                          |
-| ---------------------------------------------------- | ------------------------------------------------- | ------------------------------ |
-| `await window.openai.uploadFile(file)`               | `await app.uploadFile(file)`                      | Returns `{ fileId }`           |
-| `await window.openai.getFileDownloadUrl({ fileId })` | `await app.getFileDownloadUrl({ fileId })`        | Returns `{ url }`              |
+| OpenAI                                               | MCP Apps                                   | Notes                |
+| ---------------------------------------------------- | ------------------------------------------ | -------------------- |
+| `await window.openai.uploadFile(file)`               | `await app.uploadFile(file)`               | Returns `{ fileId }` |
+| `await window.openai.getFileDownloadUrl({ fileId })` | `await app.getFileDownloadUrl({ fileId })` | Returns `{ url }`    |
 
 ## Other (Not Yet in MCP Apps)
 

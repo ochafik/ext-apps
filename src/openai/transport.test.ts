@@ -124,11 +124,13 @@ describe("OpenAITransport", () => {
     const mockWindow = globalThis.window as unknown as {
       addEventListener: ReturnType<typeof mock>;
     };
-    mockWindow.addEventListener = mock((event: string, handler: (event: Event) => void) => {
-      if (event === "openai:set_globals") {
-        capturedHandler = handler;
-      }
-    });
+    mockWindow.addEventListener = mock(
+      (event: string, handler: (event: Event) => void) => {
+        if (event === "openai:set_globals") {
+          capturedHandler = handler;
+        }
+      },
+    );
 
     const transport = new OpenAITransport();
     const messages: unknown[] = [];

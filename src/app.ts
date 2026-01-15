@@ -1065,9 +1065,7 @@ export class App extends Protocol<AppRequest, AppNotification, AppResult> {
   async uploadFile(file: File, options?: RequestOptions) {
     // Convert File to base64
     const arrayBuffer = await file.arrayBuffer();
-    const base64 = btoa(
-      String.fromCharCode(...new Uint8Array(arrayBuffer)),
-    );
+    const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
 
     return this.request(
       <McpUiUploadFileRequest>{
