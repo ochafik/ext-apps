@@ -16,6 +16,7 @@ const DYNAMIC_MASKS: Record<string, string[]> = {
   "basic-vue": ["#server-time"], // Server time display
   "cohort-heatmap": ['[class*="heatmapWrapper"]'], // Heatmap grid (random data)
   "customer-segmentation": [".chart-container"], // Scatter plot (random data)
+  "say-server": [".playBtn", ".playOverlayBtn"], // Play buttons may have different states
   shadertoy: ["#canvas"], // WebGL shader canvas (animated)
   "system-monitor": [
     ".chart-container", // CPU chart (highly dynamic)
@@ -36,8 +37,8 @@ const SLOW_SERVERS: Record<string, number> = {
 };
 
 // Servers to skip in CI (require special resources like GPU, large ML models)
-const SKIP_SERVERS = new Set([
-  "say-server", // Requires Pocket TTS model (~500MB), GPU recommended
+const SKIP_SERVERS = new Set<string>([
+  // None currently - say-server widget works without TTS model for screenshots
 ]);
 
 // Server configurations (key is used for screenshot filenames, name is the MCP server name)
