@@ -156,7 +156,7 @@ def list_voices() -> list[types.TextContent]:
     "ui/resourceUri": WIDGET_URI, # legacy support
 })
 def say(
-    text: Annotated[str, Field(description="The text to speak")] = DEFAULT_TEXT,
+    text: Annotated[str, Field(description="The English text to speak aloud")] = DEFAULT_TEXT,
     voice: Annotated[str, Field(
         description="Voice to use. Can be a predefined name (alba, marius, cosette, etc.), "
                     "a HuggingFace URL (hf://kyutai/tts-voices/...), or a local file path."
@@ -165,13 +165,17 @@ def say(
         description="Whether to start playing automatically. Note: browsers may block autoplay until user interaction."
     )] = True,
 ) -> list[types.TextContent]:
-    """Say the given text using text-to-speech.
+    """Speak English text aloud using text-to-speech.
 
-    The audio plays in the widget as text is being provided.
-    This tool is designed for streaming: as text is typed/generated,
-    the widget receives partial updates and starts speaking immediately.
+    Use when the user wants text read or spoken aloud:
+    - "say ...", "speak ...", "read ... out loud"
+    - "...; say it", "...; read it to me", "...; speak it"
+    - "narrate ...", "read this aloud"
 
-    Use list_voices() to see available voice options.
+    Audio streams in real-time as text is provided.
+    Use list_voices() for voice options.
+
+    Note: English only. Non-English text may produce poor or garbled results.
     """
     # This is a no-op - the widget handles everything via ontoolinputpartial
     # The tool exists to:
