@@ -671,6 +671,7 @@ EMBEDDED_WIDGET_HTML = """<!DOCTYPE html>
       const appRef = useRef(null);
       const lastModelContextUpdateRef = useRef(0);
       const audioOperationInProgressRef = useRef(false);
+      const initQueuePromiseRef = useRef(null);
       const pendingModelContextUpdateRef = useRef(null);
 
       // Show overlay when not playing (pause only visible on hover)
@@ -809,19 +810,47 @@ EMBEDDED_WIDGET_HTML = """<!DOCTYPE html>
       }, []);
 
       const initTTSQueue = useCallback(async () => {
+        // Already initialized
+        if (queueIdRef.current) return true;
+        // Wait for in-progress initialization
+        if (initQueuePromiseRef.current) {
+          await initQueuePromiseRef.current;
+          return !!queueIdRef.current;
+        }
         const app = appRef.current;
-        if (queueIdRef.current || !app) return !!queueIdRef.current;
-        try {
-          const result = await app.callServerTool({ name: "create_tts_queue", arguments: { voice: "cosette" } });
-          const data = JSON.parse(result.content[0].text);
-          if (data.error) return false;
-          queueIdRef.current = data.queue_id;
-          sampleRateRef.current = data.sample_rate || 24000;
-          audioContextRef.current = new AudioContext({ sampleRate: sampleRateRef.current });
-          nextPlayTimeRef.current = 0;
-          startPolling();
-          return true;
-        } catch (err) { return false; }
+        if (!app) return false;
+        // Start initialization with promise lock
+        initQueuePromiseRef.current = (async () => {
+          try {
+            // Close any existing audio context from previous session
+            if (audioContextRef.current) {
+              try { await audioContextRef.current.close(); } catch {}
+              audioContextRef.current = null;
+            }
+            if (progressIntervalRef.current) {
+              clearInterval(progressIntervalRef.current);
+              progressIntervalRef.current = null;
+            }
+            // Reset state for new session
+            chunkTimingsRef.current = [];
+            pendingChunksRef.current = [];
+            allAudioReceivedRef.current = false;
+            setCharPosition(0);
+            setStatus("idle");
+            // Create new queue
+            const result = await app.callServerTool({ name: "create_tts_queue", arguments: { voice: "cosette" } });
+            const data = JSON.parse(result.content[0].text);
+            if (data.error) return false;
+            queueIdRef.current = data.queue_id;
+            sampleRateRef.current = data.sample_rate || 24000;
+            audioContextRef.current = new AudioContext({ sampleRate: sampleRateRef.current });
+            nextPlayTimeRef.current = 0;
+            startPolling();
+            return true;
+          } catch (err) { return false; }
+          finally { initQueuePromiseRef.current = null; }
+        })();
+        return initQueuePromiseRef.current;
       }, [startPolling]);
 
       const sendTextToTTS = useCallback(async (text) => {
@@ -948,6 +977,9 @@ EMBEDDED_WIDGET_HTML = """<!DOCTYPE html>
               try { await app.callServerTool({ name: "end_tts_queue", arguments: { queue_id: queueIdRef.current } }); }
               catch (err) {}
             }
+            // Reset for next tool call (but keep audio playing)
+            queueIdRef.current = null;
+            lastTextRef.current = "";
           };
           app.onteardown = async () => {
             if (progressIntervalRef.current) clearInterval(progressIntervalRef.current);
