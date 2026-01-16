@@ -586,9 +586,15 @@ EMBEDDED_WIDGET_HTML = """<!DOCTYPE html>
   }
   </script>
   <style>
+    :root {
+      /* Fallback values if host doesn't provide */
+      --font-sans: system-ui, -apple-system, sans-serif;
+      --color-text-primary: light-dark(#333, #eee);
+      --color-text-secondary: light-dark(#999, #666);
+    }
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: system-ui, -apple-system, sans-serif; }
-    .container { padding: 16px; min-height: 100px; position: relative; }
+    body { font-family: var(--font-sans); }
+    .container { padding: 16px; min-height: 100px; position: relative; outline: none; }
     .textWrapper { position: relative; }
     .textDisplay {
       font-size: 16px; line-height: 1.6; padding: 8px; border-radius: 6px;
@@ -598,17 +604,32 @@ EMBEDDED_WIDGET_HTML = """<!DOCTYPE html>
       max-height: calc(100vh - 100px);
       overflow-y: auto;
     }
-    .spoken { color: #333; }
-    .pending { color: #999; }
+    .spoken { color: var(--color-text-primary); }
+    .pending { color: var(--color-text-secondary); }
+    /* Cursor marker for button positioning */
+    .cursor { display: inline; width: 0; height: 1em; }
+    /* Floating play button - follows cursor position */
+    .floatingPlayBtn {
+      position: absolute; z-index: 10;
+      width: 40px; height: 40px; border-radius: 50%;
+      background: rgba(255, 255, 255, 0.95); border: none; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; font-size: 18px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+      transition: transform 0.1s, opacity 0.2s, left 0.15s ease, top 0.15s ease;
+      transform: translateX(-50%);
+    }
+    .floatingPlayBtn:hover { transform: translateX(-50%) scale(1.1); }
+    .floatingPlayBtn:active { transform: translateX(-50%) scale(0.95); }
+    .floatingPlayBtn.playing { opacity: 0.3; }
+    .floatingPlayBtn.playing:hover { opacity: 1; }
+    .floatingPlayBtn.hidden { opacity: 0; pointer-events: none; }
+    /* Large overlay for initial play (before audio starts) */
     .playOverlay {
       position: absolute; top: 0; left: 0; right: 0; bottom: 0;
       display: flex; align-items: center; justify-content: center;
       border-radius: 6px; pointer-events: none; opacity: 0; transition: opacity 0.2s;
     }
     .playOverlayVisible { opacity: 1; pointer-events: auto; }
-    /* When playing: hidden by default, visible on hover */
-    .playOverlay.playing { pointer-events: auto; }
-    .playOverlay.playing:hover { opacity: 1; }
     .playBtn {
       width: 64px; height: 64px; border-radius: 50%;
       background: rgba(255, 255, 255, 0.95); border: none; cursor: pointer;
@@ -634,10 +655,6 @@ EMBEDDED_WIDGET_HTML = """<!DOCTYPE html>
     .fullscreenBtn .collapseIcon { display: none; }
     .container.fullscreen .fullscreenBtn .expandIcon { display: none; }
     .container.fullscreen .fullscreenBtn .collapseIcon { display: block; }
-    @media (prefers-color-scheme: dark) {
-      .spoken { color: #eee; }
-      .pending { color: #666; }
-    }
   </style>
 </head>
 <body>
@@ -645,7 +662,7 @@ EMBEDDED_WIDGET_HTML = """<!DOCTYPE html>
   <script type="text/babel" data-type="module">
     import React, { useState, useCallback, useEffect, useRef, StrictMode } from 'react';
     import { createRoot } from 'react-dom/client';
-    import { useApp } from '@modelcontextprotocol/ext-apps/react';
+    import { useApp, applyHostStyleVariables, applyHostFonts, applyDocumentTheme } from '@modelcontextprotocol/ext-apps/react';
 
     function SayWidget() {
       const [hostContext, setHostContext] = useState(undefined);
@@ -673,9 +690,12 @@ EMBEDDED_WIDGET_HTML = """<!DOCTYPE html>
       const audioOperationInProgressRef = useRef(false);
       const initQueuePromiseRef = useRef(null);
       const pendingModelContextUpdateRef = useRef(null);
+      const cursorRef = useRef(null);
+      const containerRef = useRef(null);
+      const floatingBtnRef = useRef(null);
 
-      // Show overlay when not playing (pause only visible on hover)
-      const showOverlay = displayText.length > 0 && status !== "playing";
+      // Show large overlay only for initial play (idle state)
+      const showOverlay = displayText.length > 0 && status === "idle";
 
       const roundToWordEnd = useCallback((pos) => {
         const text = lastTextRef.current;
@@ -999,10 +1019,17 @@ EMBEDDED_WIDGET_HTML = """<!DOCTYPE html>
             if (audioContextRef.current) { await audioContextRef.current.close(); audioContextRef.current = null; }
             return {};
           };
-          app.onhostcontextchanged = (params) => setHostContext(prev => ({ ...prev, ...params }));
+          app.onhostcontextchanged = (params) => {
+            setHostContext(prev => ({ ...prev, ...params }));
+            // Apply theming updates
+            if (params.theme) applyDocumentTheme(params.theme);
+            if (params.styles?.variables) applyHostStyleVariables(params.styles.variables);
+            if (params.styles?.css?.fonts) applyHostFonts(params.styles.css.fonts);
+          };
         },
       });
 
+      // Apply initial theming and context
       useEffect(() => {
         if (!app) return;
         const ctx = app.getHostContext();
@@ -1013,7 +1040,37 @@ EMBEDDED_WIDGET_HTML = """<!DOCTYPE html>
         if (ctx?.displayMode) {
           setDisplayMode(ctx.displayMode);
         }
+        // Apply initial theming
+        if (ctx?.theme) applyDocumentTheme(ctx.theme);
+        if (ctx?.styles?.variables) applyHostStyleVariables(ctx.styles.variables);
+        if (ctx?.styles?.css?.fonts) applyHostFonts(ctx.styles.css.fonts);
       }, [app]);
+
+      // Position floating button below cursor
+      useEffect(() => {
+        if (!cursorRef.current || !floatingBtnRef.current || !containerRef.current) return;
+        if (status === "idle" || !displayText) return;
+        const cursorRect = cursorRef.current.getBoundingClientRect();
+        const containerRect = containerRef.current.getBoundingClientRect();
+        floatingBtnRef.current.style.left = `${cursorRect.left - containerRect.left}px`;
+        floatingBtnRef.current.style.top = `${cursorRect.bottom - containerRect.top + 8}px`;
+      }, [charPosition, displayText, status]);
+
+      // Keyboard shortcuts: Space = play/pause, Enter = fullscreen
+      useEffect(() => {
+        const handleKeyDown = (e) => {
+          if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+          if (e.code === 'Space') {
+            e.preventDefault();
+            togglePlayPause();
+          } else if (e.code === 'Enter' && fullscreenAvailable) {
+            e.preventDefault();
+            toggleFullscreen();
+          }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+      }, [togglePlayPause, toggleFullscreen, fullscreenAvailable]);
 
       useEffect(() => {
         if (!app || !displayText || status === "idle") return;
@@ -1047,25 +1104,43 @@ EMBEDDED_WIDGET_HTML = """<!DOCTYPE html>
       const pendingText = displayText.slice(charPosition);
 
       return (
-        <main className={`container` + (displayMode === "fullscreen" ? ` fullscreen` : ``)} style={{
-          paddingTop: hostContext?.safeAreaInsets?.top,
-          paddingRight: hostContext?.safeAreaInsets?.right,
-          paddingBottom: hostContext?.safeAreaInsets?.bottom,
-          paddingLeft: hostContext?.safeAreaInsets?.left,
-        }}>
+        <main
+          ref={containerRef}
+          tabIndex={0}
+          className={`container` + (displayMode === "fullscreen" ? ` fullscreen` : ``)}
+          style={{
+            paddingTop: hostContext?.safeAreaInsets?.top,
+            paddingRight: hostContext?.safeAreaInsets?.right,
+            paddingBottom: hostContext?.safeAreaInsets?.bottom,
+            paddingLeft: hostContext?.safeAreaInsets?.left,
+          }}
+        >
           <div className="textWrapper">
             <div className="textDisplay"
               onDoubleClick={(e) => { e.preventDefault(); restartPlayback(); }}
             >
               <span className="spoken">{spokenText}</span>
+              <span className="cursor" ref={cursorRef} aria-hidden="true"></span>
               <span className="pending">{pendingText}</span>
             </div>
-            <div className={`playOverlay` + (showOverlay ? ` playOverlayVisible` : ``) + (status === "playing" ? ` playing` : ``)} onClick={togglePlayPause}>
+            {/* Large overlay for initial play */}
+            <div className={`playOverlay` + (showOverlay ? ` playOverlayVisible` : ``)} onClick={togglePlayPause}>
               <button className="playBtn" onClick={(e) => { e.stopPropagation(); togglePlayPause(); }}>
-                {status === "finished" ? "🔄" : status === "playing" ? "⏸️" : "▶️"}
+                ▶️
               </button>
             </div>
           </div>
+          {/* Floating button that follows cursor - shown when playing/paused/finished */}
+          {status !== "idle" && displayText && (
+            <button
+              ref={floatingBtnRef}
+              className={`floatingPlayBtn` + (status === "playing" ? ` playing` : ``)}
+              onClick={togglePlayPause}
+              title="Space to play/pause"
+            >
+              {status === "finished" ? "🔄" : status === "playing" ? "⏸️" : "▶️"}
+            </button>
+          )}
           <button className={`fullscreenBtn` + (fullscreenAvailable ? ` available` : ``)} onClick={toggleFullscreen} title="Toggle fullscreen">
             <svg className="expandIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
