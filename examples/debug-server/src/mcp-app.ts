@@ -133,11 +133,11 @@ const toolDelayMsEl = document.getElementById(
 const callDebugToolBtn = document.getElementById("call-debug-tool-btn")!;
 const callDebugRefreshBtn = document.getElementById("call-debug-refresh-btn")!;
 
-// File elements
-const fileInputEl = document.getElementById("file-input") as HTMLInputElement;
-const uploadFileBtn = document.getElementById("upload-file-btn")!;
-const lastFileIdEl = document.getElementById("last-file-id")!;
-const getFileUrlBtn = document.getElementById("get-file-url-btn")!;
+// File elements (commented out until SDK supports uploadFile/getFileDownloadUrl)
+// const fileInputEl = document.getElementById("file-input") as HTMLInputElement;
+// const uploadFileBtn = document.getElementById("upload-file-btn")!;
+// const lastFileIdEl = document.getElementById("last-file-id")!;
+// const getFileUrlBtn = document.getElementById("get-file-url-btn")!;
 
 // ============================================================================
 // Utility Functions
