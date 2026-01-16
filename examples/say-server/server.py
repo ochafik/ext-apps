@@ -108,6 +108,48 @@ tts_queues: dict[str, TTSQueueState] = {}
 
 DEFAULT_TEXT = """Hello! I'm a text-to-speech demonstration. This speech is being generated in real-time as you watch. The words you see highlighted are synchronized with the audio playback, creating a karaoke-style reading experience. You can click to pause or resume, and use the reset button to restart from the beginning. Pretty neat, right?"""
 
+# Predefined voices from pocket-tts (mapped to HuggingFace files)
+# See: https://huggingface.co/kyutai/tts-voices
+PREDEFINED_VOICES = {
+    "alba": "hf://kyutai/tts-voices/alba-mackenna/casual.wav",
+    "marius": "hf://kyutai/tts-voices/alba-mackenna/merchant.wav",
+    "javert": "hf://kyutai/tts-voices/alba-mackenna/announcer.wav",
+    "jean": "hf://kyutai/tts-voices/alba-mackenna/a-moment-by.wav",
+    "fantine": "hf://kyutai/tts-voices/vctk/p225_023_mic1.wav",
+    "cosette": "hf://kyutai/tts-voices/vctk/p226_023_mic1.wav",
+    "eponine": "hf://kyutai/tts-voices/vctk/p227_023_mic1.wav",
+    "azelma": "hf://kyutai/tts-voices/vctk/p228_023_mic1.wav",
+}
+
+DEFAULT_VOICE = "cosette"
+
+
+@mcp.tool()
+def list_voices() -> list[types.TextContent]:
+    """List available TTS voices.
+
+    Returns the predefined voice names that can be used with the say tool.
+    You can also use HuggingFace URLs (hf://kyutai/tts-voices/...) or local file paths.
+    """
+    import json
+    voice_info = {
+        "predefined_voices": list(PREDEFINED_VOICES.keys()),
+        "default_voice": DEFAULT_VOICE,
+        "custom_voice_formats": [
+            "hf://kyutai/tts-voices/<collection>/<file>.wav",
+            "/path/to/local/voice.wav",
+        ],
+        "collections": [
+            "alba-mackenna (CC BY 4.0) - voice-acted characters",
+            "vctk (CC BY 4.0) - VCTK dataset speakers",
+            "cml-tts/fr (CC BY 4.0) - French voices",
+            "voice-donations (CC0) - community voices",
+            "expresso (CC BY-NC 4.0) - expressive voices (non-commercial)",
+            "ears (CC BY-NC 4.0) - emotional voices (non-commercial)",
+        ],
+    }
+    return [types.TextContent(type="text", text=json.dumps(voice_info, indent=2))]
+
 
 @mcp.tool(meta={
     "ui":{"resourceUri": WIDGET_URI},
@@ -115,6 +157,10 @@ DEFAULT_TEXT = """Hello! I'm a text-to-speech demonstration. This speech is bein
 })
 def say(
     text: Annotated[str, Field(description="The text to speak")] = DEFAULT_TEXT,
+    voice: Annotated[str, Field(
+        description="Voice to use. Can be a predefined name (alba, marius, cosette, etc.), "
+                    "a HuggingFace URL (hf://kyutai/tts-voices/...), or a local file path."
+    )] = DEFAULT_VOICE,
     autoPlay: Annotated[bool, Field(
         description="Whether to start playing automatically. Note: browsers may block autoplay until user interaction."
     )] = True,
@@ -124,13 +170,15 @@ def say(
     The audio plays in the widget as text is being provided.
     This tool is designed for streaming: as text is typed/generated,
     the widget receives partial updates and starts speaking immediately.
+
+    Use list_voices() to see available voice options.
     """
     # This is a no-op - the widget handles everything via ontoolinputpartial
     # The tool exists to:
     # 1. Trigger the widget to load
     # 2. Provide the resourceUri metadata
     # 3. Show the final text in the tool result
-    return [types.TextContent(type="text", text="Displayed a widget that does TTS of the provided text. User can play / pause w/ click, and restart w/ double click. A big play button is initially displayed as the content cannot be autoplayed.")]
+    return [types.TextContent(type="text", text=f"Displayed a TTS widget with voice '{voice}'. Click to play/pause, use toolbar to restart or fullscreen.")]
 
 
 # ------------------------------------------------------
@@ -660,6 +708,7 @@ EMBEDDED_WIDGET_HTML = """<!DOCTYPE html>
       const [fullscreenAvailable, setFullscreenAvailable] = useState(false);
       const [autoPlay, setAutoPlay] = useState(true); // Default to autoPlay, can be overridden by tool input
 
+      const voiceRef = useRef("cosette"); // Current voice, updated from tool input
       const queueIdRef = useRef(null);
       const audioContextRef = useRef(null);
       const sampleRateRef = useRef(24000);
@@ -845,7 +894,7 @@ EMBEDDED_WIDGET_HTML = """<!DOCTYPE html>
             setStatus("idle");
             // Create new queue
             console.log('[TTS] creating new queue');
-            const result = await app.callServerTool({ name: "create_tts_queue", arguments: { voice: "cosette" } });
+            const result = await app.callServerTool({ name: "create_tts_queue", arguments: { voice: voiceRef.current } });
             const data = JSON.parse(result.content[0].text);
             if (data.error) { console.log('[TTS] queue creation error:', data.error); return false; }
             queueIdRef.current = data.queue_id;
@@ -906,7 +955,7 @@ EMBEDDED_WIDGET_HTML = """<!DOCTYPE html>
           setDisplayText(textToReplay);
           const app = appRef.current;
           if (!app) return;
-          const result = await app.callServerTool({ name: "create_tts_queue", arguments: { voice: "cosette" } });
+          const result = await app.callServerTool({ name: "create_tts_queue", arguments: { voice: voiceRef.current } });
           const data = JSON.parse(result.content[0].text);
           if (data.error) return;
           queueIdRef.current = data.queue_id;
@@ -991,6 +1040,9 @@ EMBEDDED_WIDGET_HTML = """<!DOCTYPE html>
             console.log('[TTS] ontoolinput called');
             const text = params.arguments?.text;
             if (!text) return;
+            // Read voice setting (defaults to cosette)
+            const voice = params.arguments?.voice || "cosette";
+            voiceRef.current = voice;
             // Read autoPlay setting (defaults to true, but browser may block autoplay)
             const shouldAutoPlay = params.arguments?.autoPlay !== false;
             setAutoPlay(shouldAutoPlay);
