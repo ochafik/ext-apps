@@ -648,9 +648,8 @@ EMBEDDED_WIDGET_HTML = """<!DOCTYPE html>
       const lastModelContextUpdateRef = useRef(0);
       const pendingModelContextUpdateRef = useRef(null);
 
-      // Show overlay when idle (before first play) or finished - don't wait for chunks
-      const showOverlay = displayText.length > 0 &&
-        (status === "idle" || status === "finished");
+      // Show overlay when not playing (idle, paused, or finished)
+      const showOverlay = displayText.length > 0 && status !== "playing";
 
       const roundToWordEnd = useCallback((pos) => {
         const text = lastTextRef.current;
