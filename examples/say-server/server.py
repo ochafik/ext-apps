@@ -177,12 +177,20 @@ def say(
 
     Note: English only. Non-English text may produce poor or garbled results.
     """
+    # Generate a unique ID for this widget instance (used for speak lock coordination)
+    widget_uuid = uuid.uuid4().hex[:12]
+
     # This is a no-op - the widget handles everything via ontoolinputpartial
     # The tool exists to:
     # 1. Trigger the widget to load
     # 2. Provide the resourceUri metadata
     # 3. Show the final text in the tool result
-    return [types.TextContent(type="text", text=f"Displayed a TTS widget with voice '{voice}'. Click to play/pause, use toolbar to restart or fullscreen.")]
+    # 4. Provide widget UUID for multi-player coordination
+    return [types.TextContent(
+        type="text",
+        text=f"Displayed a TTS widget with voice '{voice}'. Click to play/pause, use toolbar to restart or fullscreen.",
+        _meta={"widgetUUID": widget_uuid},
+    )]
 
 
 # ------------------------------------------------------
@@ -713,6 +721,8 @@ EMBEDDED_WIDGET_HTML = """<!DOCTYPE html>
       const [autoPlay, setAutoPlay] = useState(true); // Default to autoPlay, can be overridden by tool input
 
       const voiceRef = useRef("cosette"); // Current voice, updated from tool input
+      const widgetUuidRef = useRef(null); // Widget UUID for speak lock coordination
+      const speakLockIntervalRef = useRef(null); // Polling interval for speak lock
       const queueIdRef = useRef(null);
       const audioContextRef = useRef(null);
       const sampleRateRef = useRef(24000);
@@ -731,6 +741,47 @@ EMBEDDED_WIDGET_HTML = """<!DOCTYPE html>
       const initQueuePromiseRef = useRef(null);
       const pendingModelContextUpdateRef = useRef(null);
 
+      // Speak lock: coordinates multiple TTS widgets so only one plays at a time
+      const SPEAK_LOCK_KEY = "mcp-tts-playing";
+
+      const announcePlayback = useCallback(() => {
+        if (!widgetUuidRef.current) return;
+        localStorage.setItem(SPEAK_LOCK_KEY, JSON.stringify({
+          uuid: widgetUuidRef.current,
+          timestamp: Date.now()
+        }));
+      }, []);
+
+      const clearSpeakLock = useCallback(() => {
+        if (!widgetUuidRef.current) return;
+        try {
+          const current = JSON.parse(localStorage.getItem(SPEAK_LOCK_KEY) || "null");
+          if (current?.uuid === widgetUuidRef.current) {
+            localStorage.removeItem(SPEAK_LOCK_KEY);
+          }
+        } catch {}
+      }, []);
+
+      const startSpeakLockPolling = useCallback((onStolenCallback) => {
+        if (speakLockIntervalRef.current) clearInterval(speakLockIntervalRef.current);
+        speakLockIntervalRef.current = setInterval(() => {
+          try {
+            const current = JSON.parse(localStorage.getItem(SPEAK_LOCK_KEY) || "null");
+            if (current && current.uuid !== widgetUuidRef.current) {
+              // Someone else started playing - yield
+              console.log('[TTS] Another widget started playing, pausing');
+              onStolenCallback();
+            }
+          } catch {}
+        }, 200);
+      }, []);
+
+      const stopSpeakLockPolling = useCallback(() => {
+        if (speakLockIntervalRef.current) {
+          clearInterval(speakLockIntervalRef.current);
+          speakLockIntervalRef.current = null;
+        }
+      }, []);
 
       const roundToWordEnd = useCallback((pos) => {
         const text = lastTextRef.current;
@@ -1061,8 +1112,14 @@ EMBEDDED_WIDGET_HTML = """<!DOCTYPE html>
             if (!queueIdRef.current && !(await initTTSQueue())) return;
             await sendTextToTTS(text);
           };
-          app.ontoolresult = async () => {
+          app.ontoolresult = async (params) => {
             fullTextRef.current = lastTextRef.current;
+            // Read widget UUID from tool result _meta for speak lock coordination
+            const resultUuid = params.content?.[0]?._meta?.widgetUUID;
+            if (resultUuid) {
+              widgetUuidRef.current = resultUuid;
+              console.log('[TTS] Widget UUID:', resultUuid);
+            }
             if (queueIdRef.current) {
               try { await app.callServerTool({ name: "end_tts_queue", arguments: { queue_id: queueIdRef.current } }); }
               catch (err) {}
@@ -1072,6 +1129,8 @@ EMBEDDED_WIDGET_HTML = """<!DOCTYPE html>
           };
           app.onteardown = async () => {
             if (progressIntervalRef.current) clearInterval(progressIntervalRef.current);
+            stopSpeakLockPolling();
+            clearSpeakLock();
             await cancelCurrentQueue();
             if (audioContextRef.current) { await audioContextRef.current.close(); audioContextRef.current = null; }
             return {};
@@ -1097,6 +1156,30 @@ EMBEDDED_WIDGET_HTML = """<!DOCTYPE html>
           setDisplayMode(ctx.displayMode);
         }
       }, [app]);
+
+      // Speak lock: coordinate with other TTS widgets
+      useEffect(() => {
+        if (status === "playing") {
+          // Announce that we're playing
+          announcePlayback();
+          // Poll to detect if another widget starts
+          startSpeakLockPolling(() => {
+            // Another widget took over - pause
+            const ctx = audioContextRef.current;
+            if (ctx && ctx.state === "running") {
+              ctx.suspend();
+              setStatus("paused");
+            }
+          });
+        } else {
+          // Not playing - stop polling and clear lock if we own it
+          stopSpeakLockPolling();
+          if (status === "paused" || status === "finished") {
+            clearSpeakLock();
+          }
+        }
+        return () => stopSpeakLockPolling();
+      }, [status, announcePlayback, startSpeakLockPolling, stopSpeakLockPolling, clearSpeakLock]);
 
       useEffect(() => {
         if (!app || !displayText || status === "idle") return;
