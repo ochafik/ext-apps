@@ -22,10 +22,14 @@ Architecture:
 
 Usage:
   # Start the MCP server
-  python server.py
+  ./examples/say-server/server.py
 
   # Or with stdio transport (for Claude Desktop)
-  python server.py --stdio
+  ./examples/say-server/server.py --stdio
+  
+  # Run directly via uv run:
+  uv run --default-index https://pypi.org/simple https://raw.githubusercontent.com/modelcontextprotocol/ext-apps/refs/heads/ochafik/say-server/examples/say-server/server.py --stdio
+
 """
 from __future__ import annotations
 import asyncio
@@ -606,31 +610,28 @@ EMBEDDED_WIDGET_HTML = """<!DOCTYPE html>
     }
     .spoken { color: var(--color-text-primary); }
     .pending { color: var(--color-text-secondary); }
-    /* Cursor marker for button positioning */
-    .cursor { display: inline; width: 0; height: 1em; }
-    /* Floating play button - follows cursor position */
-    .floatingPlayBtn {
-      position: absolute; z-index: 10;
+    /* Fixed play button at top right */
+    .playBtn {
+      position: absolute; top: 8px; right: 48px; z-index: 10;
       width: 40px; height: 40px; border-radius: 50%;
       background: rgba(255, 255, 255, 0.95); border: none; cursor: pointer;
       display: flex; align-items: center; justify-content: center; font-size: 18px;
       box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-      transition: transform 0.1s, opacity 0.2s, left 0.15s ease, top 0.15s ease;
-      transform: translateX(-50%);
+      transition: transform 0.15s, opacity 0.2s;
     }
-    .floatingPlayBtn:hover { transform: translateX(-50%) scale(1.1); }
-    .floatingPlayBtn:active { transform: translateX(-50%) scale(0.95); }
-    .floatingPlayBtn.playing { opacity: 0.3; }
-    .floatingPlayBtn.playing:hover { opacity: 1; }
-    .floatingPlayBtn.hidden { opacity: 0; pointer-events: none; }
-    /* Large overlay for initial play (before audio starts) */
+    .playBtn:hover { transform: scale(1.1); }
+    .playBtn:active { transform: scale(0.95); }
+    .playBtn.playing { opacity: 0.3; }
+    .playBtn.playing:hover { opacity: 1; }
+    .playBtn.hidden { display: none; }
+    /* Large overlay for initial play only */
     .playOverlay {
       position: absolute; top: 0; left: 0; right: 0; bottom: 0;
       display: flex; align-items: center; justify-content: center;
       border-radius: 6px; pointer-events: none; opacity: 0; transition: opacity 0.2s;
     }
     .playOverlayVisible { opacity: 1; pointer-events: auto; }
-    .playBtn {
+    .playOverlayBtn {
       width: 64px; height: 64px; border-radius: 50%;
       background: rgba(255, 255, 255, 0.95); border: none; cursor: pointer;
       display: flex; align-items: center; justify-content: center; font-size: 28px;
@@ -638,8 +639,8 @@ EMBEDDED_WIDGET_HTML = """<!DOCTYPE html>
                   0 0 0 24px rgba(255,255,255,0.05), 0 4px 12px rgba(0,0,0,0.3);
       transition: transform 0.15s, box-shadow 0.15s;
     }
-    .playBtn:hover { transform: scale(1.08); }
-    .playBtn:active { transform: scale(0.96); }
+    .playOverlayBtn:hover { transform: scale(1.08); }
+    .playOverlayBtn:active { transform: scale(0.96); }
     /* Fullscreen button */
     .fullscreenBtn {
       position: absolute; bottom: 8px; right: 8px;
@@ -690,12 +691,12 @@ EMBEDDED_WIDGET_HTML = """<!DOCTYPE html>
       const audioOperationInProgressRef = useRef(false);
       const initQueuePromiseRef = useRef(null);
       const pendingModelContextUpdateRef = useRef(null);
-      const cursorRef = useRef(null);
       const containerRef = useRef(null);
-      const floatingBtnRef = useRef(null);
 
       // Show large overlay only for initial play (idle state)
       const showOverlay = displayText.length > 0 && status === "idle";
+      // Show small fixed button when playing/paused/finished
+      const showPlayBtn = displayText.length > 0 && status !== "idle";
 
       const roundToWordEnd = useCallback((pos) => {
         const text = lastTextRef.current;
@@ -1046,16 +1047,6 @@ EMBEDDED_WIDGET_HTML = """<!DOCTYPE html>
         if (ctx?.styles?.css?.fonts) applyHostFonts(ctx.styles.css.fonts);
       }, [app]);
 
-      // Position floating button below cursor
-      useEffect(() => {
-        if (!cursorRef.current || !floatingBtnRef.current || !containerRef.current) return;
-        if (status === "idle" || !displayText) return;
-        const cursorRect = cursorRef.current.getBoundingClientRect();
-        const containerRect = containerRef.current.getBoundingClientRect();
-        floatingBtnRef.current.style.left = `${cursorRect.left - containerRect.left}px`;
-        floatingBtnRef.current.style.top = `${cursorRect.bottom - containerRect.top + 8}px`;
-      }, [charPosition, displayText, status]);
-
       // Keyboard shortcuts: Space = play/pause, Enter = fullscreen
       useEffect(() => {
         const handleKeyDown = (e) => {
@@ -1120,21 +1111,19 @@ EMBEDDED_WIDGET_HTML = """<!DOCTYPE html>
               onDoubleClick={(e) => { e.preventDefault(); restartPlayback(); }}
             >
               <span className="spoken">{spokenText}</span>
-              <span className="cursor" ref={cursorRef} aria-hidden="true"></span>
               <span className="pending">{pendingText}</span>
             </div>
             {/* Large overlay for initial play */}
             <div className={`playOverlay` + (showOverlay ? ` playOverlayVisible` : ``)} onClick={togglePlayPause}>
-              <button className="playBtn" onClick={(e) => { e.stopPropagation(); togglePlayPause(); }}>
+              <button className="playOverlayBtn" onClick={(e) => { e.stopPropagation(); togglePlayPause(); }}>
                 ▶️
               </button>
             </div>
           </div>
-          {/* Floating button that follows cursor - shown when playing/paused/finished */}
-          {status !== "idle" && displayText && (
+          {/* Fixed play button at top right - shown when playing/paused/finished */}
+          {showPlayBtn && (
             <button
-              ref={floatingBtnRef}
-              className={`floatingPlayBtn` + (status === "playing" ? ` playing` : ``)}
+              className={`playBtn` + (status === "playing" ? ` playing` : ``)}
               onClick={togglePlayPause}
               title="Space to play/pause"
             >

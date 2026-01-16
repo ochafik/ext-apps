@@ -16,6 +16,7 @@ const DYNAMIC_MASKS: Record<string, string[]> = {
   "basic-vue": ["#server-time"], // Server time display
   "cohort-heatmap": ['[class*="heatmapWrapper"]'], // Heatmap grid (random data)
   "customer-segmentation": [".chart-container"], // Scatter plot (random data)
+  "say-server": [".playBtn"], // Play button state changes
   shadertoy: ["#canvas"], // WebGL shader canvas (animated)
   "system-monitor": [
     ".chart-container", // CPU chart (highly dynamic)
@@ -32,6 +33,7 @@ const DYNAMIC_MASKS: Record<string, string[]> = {
 // Servers that need extra stabilization time (e.g., for tile loading, WebGL init)
 const SLOW_SERVERS: Record<string, number> = {
   "map-server": 5000, // CesiumJS needs time for tiles to load
+  "say-server": 3000, // TTS model loading + initial audio setup
   threejs: 2000, // Three.js WebGL initialization
 };
 
@@ -50,6 +52,7 @@ const SERVERS = [
   { key: "map-server", name: "Map Server" },
   { key: "pdf-server", name: "PDF Server" },
   { key: "qr-server", name: "QR Code Server" },
+  { key: "say-server", name: "Say Demo" },
   { key: "scenario-modeler", name: "SaaS Scenario Modeler" },
   { key: "shadertoy", name: "ShaderToy Server" },
   { key: "sheet-music", name: "Sheet Music Server" },
