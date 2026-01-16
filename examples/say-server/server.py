@@ -628,21 +628,24 @@ EMBEDDED_WIDGET_HTML = """<!DOCTYPE html>
     }
     .playBtn:hover { transform: scale(1.08); }
     .playBtn:active { transform: scale(0.96); }
-    /* Control buttons (bottom right) */
+    /* Control buttons */
     .controlBtn {
-      position: absolute; bottom: 8px;
+      position: absolute;
       width: 32px; height: 32px; border: none; border-radius: 6px;
       background: rgba(0, 0, 0, 0.5); color: white; cursor: pointer;
       display: flex; align-items: center; justify-content: center;
       opacity: 0; transition: opacity 0.2s, background 0.2s; z-index: 10;
+      font-size: 14px;
     }
     .container:hover .controlBtn { opacity: 0.7; }
     .controlBtn:hover { opacity: 1; background: rgba(0, 0, 0, 0.8); }
     .controlBtn svg { width: 16px; height: 16px; }
-    /* Reset button */
-    .resetBtn { right: 48px; }
-    /* Fullscreen button */
-    .fullscreenBtn { right: 8px; display: none; }
+    /* Top left play/pause button */
+    .playPauseTopBtn { top: 8px; left: 8px; }
+    /* Bottom right buttons */
+    .playPauseBtn { bottom: 8px; right: 88px; }
+    .resetBtn { bottom: 8px; right: 48px; }
+    .fullscreenBtn { bottom: 8px; right: 8px; display: none; }
     .fullscreenBtn.available { display: flex; }
     .fullscreenBtn .collapseIcon { display: none; }
     .container.fullscreen .fullscreenBtn .expandIcon { display: none; }
@@ -1096,6 +1099,14 @@ EMBEDDED_WIDGET_HTML = """<!DOCTYPE html>
               </button>
             </div>
           </div>
+          {/* Top left play/pause button */}
+          <button className="controlBtn playPauseTopBtn" onClick={togglePlayPause} title="Play/Pause (Space)">
+            {status === "playing" ? "⏸️" : status === "finished" ? "🔄" : "▶️"}
+          </button>
+          {/* Bottom right control buttons */}
+          <button className="controlBtn playPauseBtn" onClick={togglePlayPause} title="Play/Pause (Space)">
+            {status === "playing" ? "⏸️" : status === "finished" ? "🔄" : "▶️"}
+          </button>
           <button className="controlBtn resetBtn" onClick={restartPlayback} title="Restart (double-click text)">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
