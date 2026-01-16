@@ -960,6 +960,13 @@ EMBEDDED_WIDGET_HTML = """<!DOCTYPE html>
           app.ontoolinputpartial = async (params) => {
             const newText = params.arguments?.text;
             if (!newText) return;
+            // Detect new session: text doesn't continue from where we left off
+            const isNewSession = lastTextRef.current.length > 0 && !newText.startsWith(lastTextRef.current);
+            if (isNewSession) {
+              // Reset for new session
+              queueIdRef.current = null;
+              lastTextRef.current = "";
+            }
             setDisplayText(newText);
             if (!queueIdRef.current && !(await initTTSQueue())) return;
             await sendTextToTTS(newText);
@@ -967,6 +974,12 @@ EMBEDDED_WIDGET_HTML = """<!DOCTYPE html>
           app.ontoolinput = async (params) => {
             const text = params.arguments?.text;
             if (!text) return;
+            // Detect new session: text doesn't continue from where we left off
+            const isNewSession = lastTextRef.current.length > 0 && !text.startsWith(lastTextRef.current);
+            if (isNewSession) {
+              queueIdRef.current = null;
+              lastTextRef.current = "";
+            }
             setDisplayText(text);
             if (!queueIdRef.current && !(await initTTSQueue())) return;
             await sendTextToTTS(text);
@@ -977,9 +990,8 @@ EMBEDDED_WIDGET_HTML = """<!DOCTYPE html>
               try { await app.callServerTool({ name: "end_tts_queue", arguments: { queue_id: queueIdRef.current } }); }
               catch (err) {}
             }
-            // Reset for next tool call (but keep audio playing)
-            queueIdRef.current = null;
-            lastTextRef.current = "";
+            // DON'T reset here - let audio continue playing
+            // New session detection happens in ontoolinputpartial via text comparison
           };
           app.onteardown = async () => {
             if (progressIntervalRef.current) clearInterval(progressIntervalRef.current);
