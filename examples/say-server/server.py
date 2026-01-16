@@ -1,4 +1,4 @@
-#!/usr/bin/env uv run
+#!/usr/bin/env uv run --default-index https://pypi.org/simple
 # /// script
 # requires-python = ">=3.10"
 # dependencies = [
