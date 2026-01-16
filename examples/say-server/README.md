@@ -1,0 +1,115 @@
+# Say Server - Streaming TTS MCP App
+
+A real-time text-to-speech MCP App with karaoke-style text highlighting, powered by [Kyutai's Pocket TTS](https://github.com/kyutai-labs/pocket-tts).
+
+## MCP App Features Demonstrated
+
+This example showcases several MCP App capabilities:
+
+- **Single-file executable**: Python server with embedded React UI - no build step required
+- **Partial tool inputs** (`ontoolinputpartial`): Widget receives streaming text as it's being generated
+- **Hidden tools** (`visibility: ["app"]`): Private tools only accessible to the widget, not the model
+- **CSP metadata**: Resource declares required domains (`esm.sh`) for in-browser transpilation
+
+## Features
+
+- **Streaming TTS**: Audio starts playing as text is being generated
+- **Karaoke highlighting**: Words are highlighted in sync with speech
+- **Interactive controls**: Click to pause/resume, double-click to restart
+- **Low latency**: Uses a polling-based queue for minimal delay
+
+## Prerequisites
+
+- [uv](https://docs.astral.sh/uv/getting-started/installation/) - fast Python package manager
+- A CUDA GPU (recommended) or CPU with sufficient RAM (~2GB for model)
+
+## Quick Start
+
+The server is a single self-contained Python file that can be run directly with `uv`:
+
+```bash
+# Run directly (uv auto-installs dependencies)
+uv run examples/say-server/server.py
+```
+
+The server will be available at `http://localhost:3109/mcp`.
+
+## Running with Docker
+
+Run directly from GitHub using the official `uv` Docker image. Mount your HuggingFace cache to avoid re-downloading the model:
+
+```bash
+docker run --rm -it \
+  -p 3109:3109 \
+  -v ~/.cache/huggingface:/root/.cache/huggingface \
+  -e HF_HOME=/root/.cache/huggingface \
+  ghcr.io/astral-sh/uv:debian \
+  uv run https://raw.githubusercontent.com/modelcontextprotocol/ext-apps/main/examples/say-server/server.py
+```
+
+For GPU support, add `--gpus all` (requires [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html)).
+
+## Usage
+
+### With Claude Desktop
+
+Add to your Claude Desktop config (`~/Library/Application Support/Claude/claude_desktop_config.json`):
+
+```json
+{
+  "mcpServers": {
+    "say": {
+      "command": "uv",
+      "args": ["run", "server.py", "--stdio"],
+      "cwd": "/path/to/examples/say-server"
+    }
+  }
+}
+```
+
+### With MCP Clients
+
+Connect to `http://localhost:3109/mcp` and call the `say` tool:
+
+```json
+{
+  "name": "say",
+  "arguments": {
+    "text": "Hello, world! This is a streaming TTS demo."
+  }
+}
+```
+
+## Available Voices
+
+The default voice is `cosette`. Other voices supported by Pocket TTS include:
+
+- `alba`
+- `brenda`
+- `jessica`
+- And more (see [Pocket TTS documentation](https://github.com/kyutai-labs/pocket-tts))
+
+## Architecture
+
+The entire server is contained in a single `server.py` file:
+
+1. **`say` tool**: Public tool that triggers the widget with text to speak
+2. **Private tools** (`create_tts_queue`, `add_tts_text`, `poll_tts_audio`, etc.): Hidden from the model, only callable by the widget
+3. **Embedded React widget**: Uses [Babel standalone](https://babeljs.io/docs/babel-standalone) for in-browser JSX transpilation - no build step needed
+4. **TTS backend**: Manages per-request audio queues using Pocket TTS
+
+The widget communicates with the server via MCP tool calls:
+- Receives streaming text via `ontoolinputpartial` callback
+- Incrementally sends new text to the server as it arrives (via `add_tts_text`)
+- Polls for generated audio chunks while TTS runs in parallel
+- Plays audio via Web Audio API with synchronized text highlighting
+
+## Credits
+
+This project uses [Pocket TTS](https://github.com/kyutai-labs/pocket-tts) by [Kyutai](https://kyutai.org/) - a fantastic open-source text-to-speech model. Thank you to the Kyutai team for making this technology available!
+
+The server includes modified Pocket TTS code to support streaming text input (text can be fed incrementally while audio generation runs in parallel). A PR contributing this functionality back to the original repo is planned.
+
+## License
+
+MIT
