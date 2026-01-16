@@ -1,6 +1,6 @@
 import { describe, test, expect, beforeEach, afterEach, mock } from "bun:test";
 import { OpenAITransport, isOpenAIEnvironment } from "./transport";
-import type { OpenAIGlobal, WindowWithOpenAI } from "./types";
+import type { OpenAIGlobal } from "./types";
 
 describe("isOpenAIEnvironment", () => {
   const originalWindow = globalThis.window;
@@ -491,6 +491,761 @@ describe("OpenAITransport", () => {
       await new Promise((resolve) => setTimeout(resolve, 0));
 
       expect(messages).toHaveLength(0);
+    });
+  });
+
+  describe("error handling", () => {
+    test("tools/call returns error when callTool throws", async () => {
+      mockOpenAI.callTool = mock(() =>
+        Promise.reject(new Error("Network error")),
+      ) as unknown as OpenAIGlobal["callTool"];
+
+      const transport = new OpenAITransport();
+      let response: unknown;
+      transport.onmessage = (msg) => {
+        response = msg;
+      };
+
+      await transport.send({
+        jsonrpc: "2.0",
+        id: 100,
+        method: "tools/call",
+        params: { name: "failing_tool", arguments: {} },
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(response).toMatchObject({
+        jsonrpc: "2.0",
+        id: 100,
+        error: {
+          code: -32603,
+          message: "Network error",
+        },
+      });
+    });
+
+    test("ui/message returns error when sendFollowUpMessage throws", async () => {
+      mockOpenAI.sendFollowUpMessage = mock(() =>
+        Promise.reject(new Error("Rate limited")),
+      ) as unknown as OpenAIGlobal["sendFollowUpMessage"];
+
+      const transport = new OpenAITransport();
+      let response: unknown;
+      transport.onmessage = (msg) => {
+        response = msg;
+      };
+
+      await transport.send({
+        jsonrpc: "2.0",
+        id: 101,
+        method: "ui/message",
+        params: { role: "user", content: [{ type: "text", text: "Hello" }] },
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(response).toMatchObject({
+        jsonrpc: "2.0",
+        id: 101,
+        error: {
+          code: -32603,
+          message: "Rate limited",
+        },
+      });
+    });
+
+    test("ui/open-link returns error when openExternal throws", async () => {
+      mockOpenAI.openExternal = mock(() =>
+        Promise.reject(new Error("Blocked URL")),
+      ) as unknown as OpenAIGlobal["openExternal"];
+
+      const transport = new OpenAITransport();
+      let response: unknown;
+      transport.onmessage = (msg) => {
+        response = msg;
+      };
+
+      await transport.send({
+        jsonrpc: "2.0",
+        id: 102,
+        method: "ui/open-link",
+        params: { url: "https://blocked.com" },
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(response).toMatchObject({
+        jsonrpc: "2.0",
+        id: 102,
+        error: {
+          code: -32603,
+          message: "Blocked URL",
+        },
+      });
+    });
+
+    test("ui/request-display-mode returns error when requestDisplayMode throws", async () => {
+      mockOpenAI.requestDisplayMode = mock(() =>
+        Promise.reject(new Error("Mode not supported")),
+      ) as unknown as OpenAIGlobal["requestDisplayMode"];
+
+      const transport = new OpenAITransport();
+      let response: unknown;
+      transport.onmessage = (msg) => {
+        response = msg;
+      };
+
+      await transport.send({
+        jsonrpc: "2.0",
+        id: 103,
+        method: "ui/request-display-mode",
+        params: { mode: "fullscreen" },
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(response).toMatchObject({
+        jsonrpc: "2.0",
+        id: 103,
+        error: {
+          code: -32603,
+          message: "Mode not supported",
+        },
+      });
+    });
+
+    test("ui/message returns error when sendFollowUpMessage is not available", async () => {
+      delete mockOpenAI.sendFollowUpMessage;
+
+      const transport = new OpenAITransport();
+      let response: unknown;
+      transport.onmessage = (msg) => {
+        response = msg;
+      };
+
+      await transport.send({
+        jsonrpc: "2.0",
+        id: 104,
+        method: "ui/message",
+        params: { role: "user", content: [{ type: "text", text: "Hello" }] },
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(response).toMatchObject({
+        jsonrpc: "2.0",
+        id: 104,
+        error: {
+          code: -32601,
+          message: expect.stringContaining("not supported"),
+        },
+      });
+    });
+
+    test("ui/open-link returns error when openExternal is not available", async () => {
+      delete mockOpenAI.openExternal;
+
+      const transport = new OpenAITransport();
+      let response: unknown;
+      transport.onmessage = (msg) => {
+        response = msg;
+      };
+
+      await transport.send({
+        jsonrpc: "2.0",
+        id: 105,
+        method: "ui/open-link",
+        params: { url: "https://example.com" },
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(response).toMatchObject({
+        jsonrpc: "2.0",
+        id: 105,
+        error: {
+          code: -32601,
+          message: expect.stringContaining("not supported"),
+        },
+      });
+    });
+
+    test("ui/request-display-mode returns error when requestDisplayMode is not available", async () => {
+      delete mockOpenAI.requestDisplayMode;
+
+      const transport = new OpenAITransport();
+      let response: unknown;
+      transport.onmessage = (msg) => {
+        response = msg;
+      };
+
+      await transport.send({
+        jsonrpc: "2.0",
+        id: 106,
+        method: "ui/request-display-mode",
+        params: { mode: "pip" },
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(response).toMatchObject({
+        jsonrpc: "2.0",
+        id: 106,
+        error: {
+          code: -32601,
+          message: expect.stringContaining("not supported"),
+        },
+      });
+    });
+
+    test("unknown method returns method not found error", async () => {
+      const transport = new OpenAITransport();
+      let response: unknown;
+      transport.onmessage = (msg) => {
+        response = msg;
+      };
+
+      await transport.send({
+        jsonrpc: "2.0",
+        id: 107,
+        method: "unknown/method",
+        params: {},
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(response).toMatchObject({
+        jsonrpc: "2.0",
+        id: 107,
+        error: {
+          code: -32601,
+          message: expect.stringContaining("not supported"),
+        },
+      });
+    });
+
+    test("send throws when transport is closed", async () => {
+      const transport = new OpenAITransport();
+      await transport.close();
+
+      await expect(
+        transport.send({
+          jsonrpc: "2.0",
+          id: 108,
+          method: "ping",
+          params: {},
+        }),
+      ).rejects.toThrow("Transport is closed");
+    });
+
+    test("handles non-Error exceptions gracefully", async () => {
+      mockOpenAI.callTool = mock(() =>
+        Promise.reject("String error"),
+      ) as unknown as OpenAIGlobal["callTool"];
+
+      const transport = new OpenAITransport();
+      let response: unknown;
+      transport.onmessage = (msg) => {
+        response = msg;
+      };
+
+      await transport.send({
+        jsonrpc: "2.0",
+        id: 109,
+        method: "tools/call",
+        params: { name: "test_tool" },
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(response).toMatchObject({
+        jsonrpc: "2.0",
+        id: 109,
+        error: {
+          code: -32603,
+          message: "String error",
+        },
+      });
+    });
+  });
+
+  describe("content format handling", () => {
+    test("handles toolOutput with content array", async () => {
+      mockOpenAI.toolOutput = {
+        content: [
+          { type: "text", text: "Result 1" },
+          { type: "text", text: "Result 2" },
+        ],
+      };
+
+      const transport = new OpenAITransport();
+      const messages: unknown[] = [];
+      transport.onmessage = (msg) => {
+        messages.push(msg);
+      };
+
+      transport.deliverInitialState();
+
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      const toolResultNotification = messages.find(
+        (m: unknown) =>
+          (m as { method?: string }).method === "ui/notifications/tool-result",
+      ) as { params: { content: unknown[] } };
+
+      expect(toolResultNotification.params.content).toHaveLength(2);
+    });
+
+    test("handles toolOutput with structuredContent", async () => {
+      mockOpenAI.toolOutput = {
+        structuredContent: { data: { value: 42 } },
+      };
+
+      const transport = new OpenAITransport();
+      const messages: unknown[] = [];
+      transport.onmessage = (msg) => {
+        messages.push(msg);
+      };
+
+      transport.deliverInitialState();
+
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      const toolResultNotification = messages.find(
+        (m: unknown) =>
+          (m as { method?: string }).method === "ui/notifications/tool-result",
+      ) as { params: { structuredContent: unknown } };
+
+      expect(toolResultNotification.params.structuredContent).toEqual({
+        data: { value: 42 },
+      });
+    });
+
+    test("handles toolOutput as plain object", async () => {
+      mockOpenAI.toolOutput = { result: "plain object" };
+
+      const transport = new OpenAITransport();
+      const messages: unknown[] = [];
+      transport.onmessage = (msg) => {
+        messages.push(msg);
+      };
+
+      transport.deliverInitialState();
+
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      const toolResultNotification = messages.find(
+        (m: unknown) =>
+          (m as { method?: string }).method === "ui/notifications/tool-result",
+      ) as { params: { structuredContent: unknown; content: unknown[] } };
+
+      expect(toolResultNotification.params.structuredContent).toEqual({
+        result: "plain object",
+      });
+      expect(toolResultNotification.params.content[0]).toMatchObject({
+        type: "text",
+      });
+    });
+
+    test("handles toolOutput as array", async () => {
+      mockOpenAI.toolOutput = [
+        { type: "text", text: "Item 1" },
+        { type: "text", text: "Item 2" },
+      ];
+
+      const transport = new OpenAITransport();
+      const messages: unknown[] = [];
+      transport.onmessage = (msg) => {
+        messages.push(msg);
+      };
+
+      transport.deliverInitialState();
+
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      const toolResultNotification = messages.find(
+        (m: unknown) =>
+          (m as { method?: string }).method === "ui/notifications/tool-result",
+      ) as { params: { content: unknown[] } };
+
+      expect(toolResultNotification.params.content).toHaveLength(2);
+    });
+
+    test("handles callTool result with content array", async () => {
+      mockOpenAI.callTool = mock(() =>
+        Promise.resolve({
+          content: [
+            { type: "text", text: "Result", annotations: { foo: "bar" }, _meta: {} },
+          ],
+        }),
+      ) as unknown as OpenAIGlobal["callTool"];
+
+      const transport = new OpenAITransport();
+      let response: unknown;
+      transport.onmessage = (msg) => {
+        response = msg;
+      };
+
+      await transport.send({
+        jsonrpc: "2.0",
+        id: 200,
+        method: "tools/call",
+        params: { name: "test_tool" },
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      const result = (response as { result: { content: unknown[] } }).result;
+      expect(result.content).toHaveLength(1);
+      // Should strip annotations and _meta
+      expect(result.content[0]).toEqual({ type: "text", text: "Result" });
+    });
+
+    test("handles callTool result with structuredContent", async () => {
+      mockOpenAI.callTool = mock(() =>
+        Promise.resolve({
+          structuredContent: { value: 123 },
+        }),
+      ) as unknown as OpenAIGlobal["callTool"];
+
+      const transport = new OpenAITransport();
+      let response: unknown;
+      transport.onmessage = (msg) => {
+        response = msg;
+      };
+
+      await transport.send({
+        jsonrpc: "2.0",
+        id: 201,
+        method: "tools/call",
+        params: { name: "test_tool" },
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      const result = (response as { result: { content: unknown[] } }).result;
+      expect(result.content[0]).toMatchObject({
+        type: "text",
+        text: '{"value":123}',
+      });
+    });
+  });
+
+  describe("widget state", () => {
+    test("ui/update-model-context delegates to window.openai.setWidgetState()", async () => {
+      mockOpenAI.setWidgetState = mock(() => {}) as unknown as OpenAIGlobal["setWidgetState"];
+
+      const transport = new OpenAITransport();
+      let response: unknown;
+      transport.onmessage = (msg) => {
+        response = msg;
+      };
+
+      await transport.send({
+        jsonrpc: "2.0",
+        id: 400,
+        method: "ui/update-model-context",
+        params: {
+          structuredContent: { selectedId: "item-123", count: 5 },
+        },
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(mockOpenAI.setWidgetState).toHaveBeenCalledWith({
+        selectedId: "item-123",
+        count: 5,
+      });
+      expect(response).toMatchObject({
+        jsonrpc: "2.0",
+        id: 400,
+        result: {},
+      });
+    });
+
+    test("ui/update-model-context with content converts to flat state", async () => {
+      mockOpenAI.setWidgetState = mock(() => {}) as unknown as OpenAIGlobal["setWidgetState"];
+
+      const transport = new OpenAITransport();
+      let response: unknown;
+      transport.onmessage = (msg) => {
+        response = msg;
+      };
+
+      await transport.send({
+        jsonrpc: "2.0",
+        id: 401,
+        method: "ui/update-model-context",
+        params: {
+          content: [
+            { type: "text", text: "Line 1" },
+            { type: "text", text: "Line 2" },
+          ],
+        },
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(mockOpenAI.setWidgetState).toHaveBeenCalledWith({
+        content: "Line 1\nLine 2",
+      });
+      expect(response).toMatchObject({
+        jsonrpc: "2.0",
+        id: 401,
+        result: {},
+      });
+    });
+
+    test("ui/update-model-context returns error when setWidgetState unavailable", async () => {
+      delete mockOpenAI.setWidgetState;
+
+      const transport = new OpenAITransport();
+      let response: unknown;
+      transport.onmessage = (msg) => {
+        response = msg;
+      };
+
+      await transport.send({
+        jsonrpc: "2.0",
+        id: 402,
+        method: "ui/update-model-context",
+        params: { structuredContent: { test: true } },
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(response).toMatchObject({
+        jsonrpc: "2.0",
+        id: 402,
+        error: {
+          code: -32601,
+          message: expect.stringContaining("not supported"),
+        },
+      });
+    });
+
+    test("deliverInitialState delivers widget state notification", async () => {
+      mockOpenAI.widgetState = { savedSelection: "abc", viewMode: "grid" };
+
+      const transport = new OpenAITransport();
+      const messages: unknown[] = [];
+      transport.onmessage = (msg) => {
+        messages.push(msg);
+      };
+
+      transport.deliverInitialState();
+
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      const widgetStateNotification = messages.find(
+        (m: unknown) =>
+          (m as { method?: string }).method === "ui/notifications/widget-state",
+      );
+      expect(widgetStateNotification).toMatchObject({
+        jsonrpc: "2.0",
+        method: "ui/notifications/widget-state",
+        params: { state: { savedSelection: "abc", viewMode: "grid" } },
+      });
+    });
+
+    test("deliverInitialState does not deliver widget state when null", async () => {
+      (mockOpenAI as unknown as { widgetState: null }).widgetState = null;
+
+      const transport = new OpenAITransport();
+      const messages: unknown[] = [];
+      transport.onmessage = (msg) => {
+        messages.push(msg);
+      };
+
+      transport.deliverInitialState();
+
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      const widgetStateNotification = messages.find(
+        (m: unknown) =>
+          (m as { method?: string }).method === "ui/notifications/widget-state",
+      );
+      expect(widgetStateNotification).toBeUndefined();
+    });
+
+    test("deliverInitialState does not deliver widget state when undefined", async () => {
+      delete mockOpenAI.widgetState;
+
+      const transport = new OpenAITransport();
+      const messages: unknown[] = [];
+      transport.onmessage = (msg) => {
+        messages.push(msg);
+      };
+
+      transport.deliverInitialState();
+
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      const widgetStateNotification = messages.find(
+        (m: unknown) =>
+          (m as { method?: string }).method === "ui/notifications/widget-state",
+      );
+      expect(widgetStateNotification).toBeUndefined();
+    });
+
+    test("deliverInitialState does not deliver widget state when not an object", async () => {
+      (mockOpenAI as unknown as { widgetState: string }).widgetState = "not-an-object";
+
+      const transport = new OpenAITransport();
+      const messages: unknown[] = [];
+      transport.onmessage = (msg) => {
+        messages.push(msg);
+      };
+
+      transport.deliverInitialState();
+
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      const widgetStateNotification = messages.find(
+        (m: unknown) =>
+          (m as { method?: string }).method === "ui/notifications/widget-state",
+      );
+      expect(widgetStateNotification).toBeUndefined();
+    });
+  });
+
+  describe("host context extraction", () => {
+    test("extracts userAgent as string", async () => {
+      mockOpenAI.userAgent = "Mozilla/5.0 ChatGPT";
+
+      const transport = new OpenAITransport();
+      let response: unknown;
+      transport.onmessage = (msg) => {
+        response = msg;
+      };
+
+      await transport.send({
+        jsonrpc: "2.0",
+        id: 300,
+        method: "ui/initialize",
+        params: {
+          protocolVersion: "2025-11-21",
+          appInfo: { name: "TestApp", version: "1.0.0" },
+          appCapabilities: {},
+        },
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      const result = (response as { result: { hostContext: { userAgent: string } } }).result;
+      expect(result.hostContext.userAgent).toBe("Mozilla/5.0 ChatGPT");
+    });
+
+    test("extracts userAgent as JSON when object", async () => {
+      mockOpenAI.userAgent = { browser: "ChatGPT", version: "1.0" } as unknown as string;
+
+      const transport = new OpenAITransport();
+      let response: unknown;
+      transport.onmessage = (msg) => {
+        response = msg;
+      };
+
+      await transport.send({
+        jsonrpc: "2.0",
+        id: 301,
+        method: "ui/initialize",
+        params: {
+          protocolVersion: "2025-11-21",
+          appInfo: { name: "TestApp", version: "1.0.0" },
+          appCapabilities: {},
+        },
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      const result = (response as { result: { hostContext: { userAgent: string } } }).result;
+      expect(result.hostContext.userAgent).toBe('{"browser":"ChatGPT","version":"1.0"}');
+    });
+
+    test("extracts safeAreaInsets when all values present", async () => {
+      mockOpenAI.safeArea = { top: 10, right: 20, bottom: 30, left: 40 };
+
+      const transport = new OpenAITransport();
+      let response: unknown;
+      transport.onmessage = (msg) => {
+        response = msg;
+      };
+
+      await transport.send({
+        jsonrpc: "2.0",
+        id: 302,
+        method: "ui/initialize",
+        params: {
+          protocolVersion: "2025-11-21",
+          appInfo: { name: "TestApp", version: "1.0.0" },
+          appCapabilities: {},
+        },
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      const result = (response as { result: { hostContext: { safeAreaInsets: unknown } } }).result;
+      expect(result.hostContext.safeAreaInsets).toEqual({
+        top: 10,
+        right: 20,
+        bottom: 30,
+        left: 40,
+      });
+    });
+
+    test("omits safeAreaInsets when values are missing", async () => {
+      mockOpenAI.safeArea = { top: 10, right: 20 } as unknown as typeof mockOpenAI.safeArea;
+
+      const transport = new OpenAITransport();
+      let response: unknown;
+      transport.onmessage = (msg) => {
+        response = msg;
+      };
+
+      await transport.send({
+        jsonrpc: "2.0",
+        id: 303,
+        method: "ui/initialize",
+        params: {
+          protocolVersion: "2025-11-21",
+          appInfo: { name: "TestApp", version: "1.0.0" },
+          appCapabilities: {},
+        },
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      const result = (response as { result: { hostContext: { safeAreaInsets?: unknown } } }).result;
+      expect(result.hostContext.safeAreaInsets).toBeUndefined();
+    });
+
+    test("extracts viewport from maxHeight", async () => {
+      mockOpenAI.maxHeight = 800;
+
+      const transport = new OpenAITransport();
+      let response: unknown;
+      transport.onmessage = (msg) => {
+        response = msg;
+      };
+
+      await transport.send({
+        jsonrpc: "2.0",
+        id: 304,
+        method: "ui/initialize",
+        params: {
+          protocolVersion: "2025-11-21",
+          appInfo: { name: "TestApp", version: "1.0.0" },
+          appCapabilities: {},
+        },
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      const result = (response as { result: { hostContext: { viewport: { width: number; height: number; maxHeight: number } } } }).result;
+      expect(result.hostContext.viewport.maxHeight).toBe(800);
+      expect(result.hostContext.viewport.width).toBe(0);
+      expect(result.hostContext.viewport.height).toBe(0);
     });
   });
 });

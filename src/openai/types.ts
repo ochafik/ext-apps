@@ -149,11 +149,15 @@ export interface OpenAIGlobal {
   sendFollowUpMessage?(options: { prompt: string }): Promise<void>;
 
   // ─────────────────────────────────────────────────────────────────────────
-  // File Operations
+  // File Operations (NOT YET IMPLEMENTED in MCP Apps adapter)
   // ─────────────────────────────────────────────────────────────────────────
 
   /**
    * Upload a user-selected file.
+   *
+   * **⚠️ NOT IMPLEMENTED**: This feature is not yet mapped to MCP Apps.
+   * As a workaround, use native `<input type="file">` elements and handle
+   * file uploads through your MCP server directly.
    *
    * @param file - File to upload
    * @returns Promise resolving to the file ID
@@ -162,6 +166,10 @@ export interface OpenAIGlobal {
 
   /**
    * Retrieve a temporary download URL for a file.
+   *
+   * **⚠️ NOT IMPLEMENTED**: This feature is not yet mapped to MCP Apps.
+   * As a workaround, serve files directly from your MCP server using
+   * standard HTTP endpoints or MCP resources.
    *
    * @param options - File options
    * @param options.fileId - ID of the file to download
@@ -183,6 +191,10 @@ export interface OpenAIGlobal {
 
   /**
    * Spawn a ChatGPT-owned modal.
+   *
+   * **⚠️ NOT IMPLEMENTED**: Modal spawning is not mapped to MCP Apps.
+   * As a workaround, use inline UI components or `openExternal()` to
+   * open external pages for complex interactions.
    */
   requestModal?(options: unknown): Promise<void>;
 
@@ -195,6 +207,10 @@ export interface OpenAIGlobal {
 
   /**
    * Close the widget from the UI.
+   *
+   * **⚠️ NOT IMPLEMENTED**: Widget close requests are not mapped to MCP Apps.
+   * The host application controls the widget lifecycle. For MCP Apps,
+   * consider using display mode changes or messaging the host instead.
    */
   requestClose?(): void;
 

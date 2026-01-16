@@ -66,6 +66,39 @@ function isNotification(
  * - Mapping link opens to window.openai.openExternal()
  * - Reporting size changes via window.openai.notifyIntrinsicHeight()
  *
+ * ## Supported Features
+ *
+ * | MCP Apps API | OpenAI API | Status |
+ * |--------------|------------|--------|
+ * | `app.callServerTool()` | `window.openai.callTool()` | ✅ Supported |
+ * | `app.sendMessage()` | `window.openai.sendFollowUpMessage()` | ✅ Supported |
+ * | `app.openLink()` | `window.openai.openExternal()` | ✅ Supported |
+ * | `app.sendSizeChanged()` | `window.openai.notifyIntrinsicHeight()` | ✅ Supported |
+ * | `app.requestDisplayMode()` | `window.openai.requestDisplayMode()` | ✅ Supported |
+ * | `app.ontoolinput` | `window.openai.toolInput` | ✅ Supported |
+ * | `app.ontoolresult` | `window.openai.toolOutput` | ✅ Supported |
+ * | `app.getHostContext()` | Properties: theme, locale, etc. | ✅ Supported |
+ *
+ * ## Unsupported Features
+ *
+ * The following OpenAI Apps SDK features are **not yet implemented**:
+ *
+ * - **`uploadFile(file)`**: File uploads are not mapped to MCP Apps.
+ *   Use native `<input type="file">` and handle uploads server-side.
+ *
+ * - **`getFileDownloadUrl({ fileId })`**: File download URLs are not available.
+ *   Serve files directly from your MCP server instead.
+ *
+ * - **`requestModal(options)`**: ChatGPT modal spawning is not supported.
+ *   Use inline UI or external links as alternatives.
+ *
+ * - **`requestClose()`**: Widget close requests are not mapped.
+ *   The host controls widget lifecycle.
+ *
+ * - **`setWidgetState(state)`**: Widget state format differs between OpenAI
+ *   (flat object) and MCP Apps (`modelContent`/`privateContent`/`imageIds`).
+ *   Use `app.updateModelContext()` with the MCP format instead.
+ *
  * ## Usage
  *
  * Typically you don't create this transport directly. The App will create
@@ -192,6 +225,15 @@ export class OpenAITransport implements Transport {
           return await this.handleRequestDisplayMode(
             id,
             params as { mode: string },
+          );
+
+        case "ui/update-model-context":
+          return this.handleUpdateModelContext(
+            id,
+            params as {
+              content?: unknown[];
+              structuredContent?: Record<string, unknown>;
+            },
           );
 
         case "ping":
@@ -412,6 +454,54 @@ export class OpenAITransport implements Transport {
   }
 
   /**
+   * Handle ui/update-model-context by delegating to window.openai.setWidgetState().
+   *
+   * Note: MCP Apps uses a structured format (content/structuredContent/imageIds)
+   * while OpenAI uses a flat object. This method converts the MCP format to
+   * a flat object for OpenAI compatibility.
+   */
+  private handleUpdateModelContext(
+    id: RequestId,
+    params: {
+      content?: unknown[];
+      structuredContent?: Record<string, unknown>;
+    },
+  ): JSONRPCSuccessResponse | JSONRPCErrorResponse {
+    if (!this.openai.setWidgetState) {
+      return this.createErrorResponse(
+        id,
+        -32601,
+        "Widget state persistence is not supported in this OpenAI environment",
+      );
+    }
+
+    // Convert MCP format to OpenAI's flat widget state
+    // Priority: structuredContent > content > empty object
+    let state: Record<string, unknown>;
+    if (params.structuredContent) {
+      state = params.structuredContent;
+    } else if (params.content && Array.isArray(params.content)) {
+      // Extract text content and store as a simple state object
+      const textContent = params.content
+        .filter(
+          (c): c is { type: "text"; text: string } =>
+            typeof c === "object" &&
+            c !== null &&
+            (c as { type?: string }).type === "text",
+        )
+        .map((c) => c.text)
+        .join("\n");
+      state = { content: textContent };
+    } else {
+      state = {};
+    }
+
+    this.openai.setWidgetState(state);
+
+    return this.createSuccessResponse(id, {});
+  }
+
+  /**
    * Handle an outgoing notification.
    */
   private handleNotification(notification: JSONRPCNotification): void {
@@ -571,6 +661,21 @@ export class OpenAITransport implements Transport {
             // Include _meta from toolResponseMetadata if available (use undefined not null)
             _meta: this.openai.toolResponseMetadata ?? undefined,
           },
+        } as JSONRPCNotification);
+      });
+    }
+
+    // Deliver widget state if available
+    if (
+      this.openai.widgetState !== undefined &&
+      this.openai.widgetState !== null &&
+      typeof this.openai.widgetState === "object"
+    ) {
+      queueMicrotask(() => {
+        this.onmessage?.({
+          jsonrpc: "2.0",
+          method: "ui/notifications/widget-state",
+          params: { state: this.openai.widgetState as Record<string, unknown> },
         } as JSONRPCNotification);
       });
     }
