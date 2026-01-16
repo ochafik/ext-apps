@@ -22,14 +22,10 @@ Architecture:
 
 Usage:
   # Start the MCP server
-  ./examples/say-server/server.py
+  python server.py
 
   # Or with stdio transport (for Claude Desktop)
-  ./examples/say-server/server.py --stdio
-  
-  # Run directly via uv run:
-  uv run --default-index https://pypi.org/simple https://raw.githubusercontent.com/modelcontextprotocol/ext-apps/refs/heads/ochafik/say-server/examples/say-server/server.py --stdio
-
+  python server.py --stdio
 """
 from __future__ import annotations
 import asyncio
@@ -593,8 +589,8 @@ EMBEDDED_WIDGET_HTML = """<!DOCTYPE html>
     :root {
       /* Fallback values if host doesn't provide */
       --font-sans: system-ui, -apple-system, sans-serif;
-      --color-text-primary: light-dark(#333, #eee);
-      --color-text-secondary: light-dark(#999, #666);
+      --color-text-primary: #333;
+      --color-text-secondary: #999;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: var(--font-sans); }
@@ -610,28 +606,16 @@ EMBEDDED_WIDGET_HTML = """<!DOCTYPE html>
     }
     .spoken { color: var(--color-text-primary); }
     .pending { color: var(--color-text-secondary); }
-    /* Fixed play button at top right */
-    .playBtn {
-      position: absolute; top: 8px; right: 48px; z-index: 10;
-      width: 40px; height: 40px; border-radius: 50%;
-      background: rgba(255, 255, 255, 0.95); border: none; cursor: pointer;
-      display: flex; align-items: center; justify-content: center; font-size: 18px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-      transition: transform 0.15s, opacity 0.2s;
-    }
-    .playBtn:hover { transform: scale(1.1); }
-    .playBtn:active { transform: scale(0.95); }
-    .playBtn.playing { opacity: 0.3; }
-    .playBtn.playing:hover { opacity: 1; }
-    .playBtn.hidden { display: none; }
-    /* Large overlay for initial play only */
     .playOverlay {
       position: absolute; top: 0; left: 0; right: 0; bottom: 0;
       display: flex; align-items: center; justify-content: center;
       border-radius: 6px; pointer-events: none; opacity: 0; transition: opacity 0.2s;
     }
     .playOverlayVisible { opacity: 1; pointer-events: auto; }
-    .playOverlayBtn {
+    /* When playing: hidden by default, visible on hover */
+    .playOverlay.playing { pointer-events: auto; }
+    .playOverlay.playing:hover { opacity: 1; }
+    .playBtn {
       width: 64px; height: 64px; border-radius: 50%;
       background: rgba(255, 255, 255, 0.95); border: none; cursor: pointer;
       display: flex; align-items: center; justify-content: center; font-size: 28px;
@@ -639,8 +623,8 @@ EMBEDDED_WIDGET_HTML = """<!DOCTYPE html>
                   0 0 0 24px rgba(255,255,255,0.05), 0 4px 12px rgba(0,0,0,0.3);
       transition: transform 0.15s, box-shadow 0.15s;
     }
-    .playOverlayBtn:hover { transform: scale(1.08); }
-    .playOverlayBtn:active { transform: scale(0.96); }
+    .playBtn:hover { transform: scale(1.08); }
+    .playBtn:active { transform: scale(0.96); }
     /* Fullscreen button */
     .fullscreenBtn {
       position: absolute; bottom: 8px; right: 8px;
@@ -656,6 +640,12 @@ EMBEDDED_WIDGET_HTML = """<!DOCTYPE html>
     .fullscreenBtn .collapseIcon { display: none; }
     .container.fullscreen .fullscreenBtn .expandIcon { display: none; }
     .container.fullscreen .fullscreenBtn .collapseIcon { display: block; }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --color-text-primary: #eee;
+        --color-text-secondary: #666;
+      }
+    }
   </style>
 </head>
 <body>
@@ -691,12 +681,9 @@ EMBEDDED_WIDGET_HTML = """<!DOCTYPE html>
       const audioOperationInProgressRef = useRef(false);
       const initQueuePromiseRef = useRef(null);
       const pendingModelContextUpdateRef = useRef(null);
-      const containerRef = useRef(null);
 
-      // Show large overlay only for initial play (idle state)
-      const showOverlay = displayText.length > 0 && status === "idle";
-      // Show small fixed button when playing/paused/finished
-      const showPlayBtn = displayText.length > 0 && status !== "idle";
+      // Show overlay when not playing (pause only visible on hover)
+      const showOverlay = displayText.length > 0 && status !== "playing";
 
       const roundToWordEnd = useCallback((pos) => {
         const text = lastTextRef.current;
@@ -1030,7 +1017,6 @@ EMBEDDED_WIDGET_HTML = """<!DOCTYPE html>
         },
       });
 
-      // Apply initial theming and context
       useEffect(() => {
         if (!app) return;
         const ctx = app.getHostContext();
@@ -1095,17 +1081,12 @@ EMBEDDED_WIDGET_HTML = """<!DOCTYPE html>
       const pendingText = displayText.slice(charPosition);
 
       return (
-        <main
-          ref={containerRef}
-          tabIndex={0}
-          className={`container` + (displayMode === "fullscreen" ? ` fullscreen` : ``)}
-          style={{
-            paddingTop: hostContext?.safeAreaInsets?.top,
-            paddingRight: hostContext?.safeAreaInsets?.right,
-            paddingBottom: hostContext?.safeAreaInsets?.bottom,
-            paddingLeft: hostContext?.safeAreaInsets?.left,
-          }}
-        >
+        <main className={`container` + (displayMode === "fullscreen" ? ` fullscreen` : ``)} style={{
+          paddingTop: hostContext?.safeAreaInsets?.top,
+          paddingRight: hostContext?.safeAreaInsets?.right,
+          paddingBottom: hostContext?.safeAreaInsets?.bottom,
+          paddingLeft: hostContext?.safeAreaInsets?.left,
+        }}>
           <div className="textWrapper">
             <div className="textDisplay"
               onDoubleClick={(e) => { e.preventDefault(); restartPlayback(); }}
@@ -1113,23 +1094,12 @@ EMBEDDED_WIDGET_HTML = """<!DOCTYPE html>
               <span className="spoken">{spokenText}</span>
               <span className="pending">{pendingText}</span>
             </div>
-            {/* Large overlay for initial play */}
-            <div className={`playOverlay` + (showOverlay ? ` playOverlayVisible` : ``)} onClick={togglePlayPause}>
-              <button className="playOverlayBtn" onClick={(e) => { e.stopPropagation(); togglePlayPause(); }}>
-                ▶️
+            <div className={`playOverlay` + (showOverlay ? ` playOverlayVisible` : ``) + (status === "playing" ? ` playing` : ``)} onClick={togglePlayPause}>
+              <button className="playBtn" onClick={(e) => { e.stopPropagation(); togglePlayPause(); }}>
+                {status === "finished" ? "🔄" : status === "playing" ? "⏸️" : "▶️"}
               </button>
             </div>
           </div>
-          {/* Fixed play button at top right - shown when playing/paused/finished */}
-          {showPlayBtn && (
-            <button
-              className={`playBtn` + (status === "playing" ? ` playing` : ``)}
-              onClick={togglePlayPause}
-              title="Space to play/pause"
-            >
-              {status === "finished" ? "🔄" : status === "playing" ? "⏸️" : "▶️"}
-            </button>
-          )}
           <button className={`fullscreenBtn` + (fullscreenAvailable ? ` available` : ``)} onClick={toggleFullscreen} title="Toggle fullscreen">
             <svg className="expandIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
