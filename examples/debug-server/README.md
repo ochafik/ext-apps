@@ -8,15 +8,15 @@ A comprehensive testing/debugging tool for the MCP Apps SDK that exercises every
 
 Configurable tool for testing all result variations:
 
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `contentType` | `"text"` \| `"image"` \| `"audio"` \| `"resource"` \| `"resourceLink"` \| `"mixed"` | `"text"` | Content block type to return |
-| `multipleBlocks` | boolean | `false` | Return 3 content blocks |
-| `includeStructuredContent` | boolean | `true` | Include structuredContent in result |
-| `includeMeta` | boolean | `false` | Include _meta in result |
-| `largeInput` | string | - | Large text input (tests tool-input-partial) |
-| `simulateError` | boolean | `false` | Return isError: true |
-| `delayMs` | number | - | Delay before response (ms) |
+| Parameter                  | Type                                                                                | Default  | Description                                 |
+| -------------------------- | ----------------------------------------------------------------------------------- | -------- | ------------------------------------------- |
+| `contentType`              | `"text"` \| `"image"` \| `"audio"` \| `"resource"` \| `"resourceLink"` \| `"mixed"` | `"text"` | Content block type to return                |
+| `multipleBlocks`           | boolean                                                                             | `false`  | Return 3 content blocks                     |
+| `includeStructuredContent` | boolean                                                                             | `true`   | Include structuredContent in result         |
+| `includeMeta`              | boolean                                                                             | `false`  | Include \_meta in result                    |
+| `largeInput`               | string                                                                              | -        | Large text input (tests tool-input-partial) |
+| `simulateError`            | boolean                                                                             | `false`  | Return isError: true                        |
+| `delayMs`                  | number                                                                              | -        | Delay before response (ms)                  |
 
 ### debug-refresh
 
