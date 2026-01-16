@@ -653,7 +653,7 @@ EMBEDDED_WIDGET_HTML = """<!DOCTYPE html>
   <script type="text/babel" data-type="module">
     import React, { useState, useCallback, useEffect, useRef, StrictMode } from 'react';
     import { createRoot } from 'react-dom/client';
-    import { useApp, applyHostStyleVariables, applyHostFonts, applyDocumentTheme } from '@modelcontextprotocol/ext-apps/react';
+    import { useApp } from '@modelcontextprotocol/ext-apps/react';
 
     function SayWidget() {
       const [hostContext, setHostContext] = useState(undefined);
@@ -1007,13 +1007,7 @@ EMBEDDED_WIDGET_HTML = """<!DOCTYPE html>
             if (audioContextRef.current) { await audioContextRef.current.close(); audioContextRef.current = null; }
             return {};
           };
-          app.onhostcontextchanged = (params) => {
-            setHostContext(prev => ({ ...prev, ...params }));
-            // Apply theming updates
-            if (params.theme) applyDocumentTheme(params.theme);
-            if (params.styles?.variables) applyHostStyleVariables(params.styles.variables);
-            if (params.styles?.css?.fonts) applyHostFonts(params.styles.css.fonts);
-          };
+          app.onhostcontextchanged = (params) => setHostContext(prev => ({ ...prev, ...params }));
         },
       });
 
@@ -1027,27 +1021,7 @@ EMBEDDED_WIDGET_HTML = """<!DOCTYPE html>
         if (ctx?.displayMode) {
           setDisplayMode(ctx.displayMode);
         }
-        // Apply initial theming
-        if (ctx?.theme) applyDocumentTheme(ctx.theme);
-        if (ctx?.styles?.variables) applyHostStyleVariables(ctx.styles.variables);
-        if (ctx?.styles?.css?.fonts) applyHostFonts(ctx.styles.css.fonts);
       }, [app]);
-
-      // Keyboard shortcuts: Space = play/pause, Enter = fullscreen
-      useEffect(() => {
-        const handleKeyDown = (e) => {
-          if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
-          if (e.code === 'Space') {
-            e.preventDefault();
-            togglePlayPause();
-          } else if (e.code === 'Enter' && fullscreenAvailable) {
-            e.preventDefault();
-            toggleFullscreen();
-          }
-        };
-        window.addEventListener('keydown', handleKeyDown);
-        return () => window.removeEventListener('keydown', handleKeyDown);
-      }, [togglePlayPause, toggleFullscreen, fullscreenAvailable]);
 
       useEffect(() => {
         if (!app || !displayText || status === "idle") return;
