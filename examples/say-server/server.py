@@ -826,8 +826,9 @@ EMBEDDED_WIDGET_HTML = """<!DOCTYPE html>
       }, []);
 
       const initTTSQueue = useCallback(async () => {
+        console.log('[TTS] initTTSQueue called, queueIdRef:', queueIdRef.current);
         // Already initialized
-        if (queueIdRef.current) return true;
+        if (queueIdRef.current) { console.log('[TTS] already initialized'); return true; }
         // Wait for in-progress initialization
         if (initQueuePromiseRef.current) {
           await initQueuePromiseRef.current;
@@ -854,11 +855,13 @@ EMBEDDED_WIDGET_HTML = """<!DOCTYPE html>
             setCharPosition(0);
             setStatus("idle");
             // Create new queue
+            console.log('[TTS] creating new queue');
             const result = await app.callServerTool({ name: "create_tts_queue", arguments: { voice: "cosette" } });
             const data = JSON.parse(result.content[0].text);
-            if (data.error) return false;
+            if (data.error) { console.log('[TTS] queue creation error:', data.error); return false; }
             queueIdRef.current = data.queue_id;
             sampleRateRef.current = data.sample_rate || 24000;
+            console.log('[TTS] creating new AudioContext');
             audioContextRef.current = new AudioContext({ sampleRate: sampleRateRef.current });
             nextPlayTimeRef.current = 0;
             startPolling();
@@ -895,8 +898,9 @@ EMBEDDED_WIDGET_HTML = """<!DOCTYPE html>
       }, [scheduleAudioChunkInternal]);
 
       const restartPlayback = useCallback(async () => {
+        console.log('[TTS] restartPlayback called');
         // Prevent concurrent audio operations
-        if (audioOperationInProgressRef.current) return;
+        if (audioOperationInProgressRef.current) { console.log('[TTS] restartPlayback blocked'); return; }
         audioOperationInProgressRef.current = true;
         try {
           if (progressIntervalRef.current) { clearInterval(progressIntervalRef.current); progressIntervalRef.current = null; }
@@ -929,25 +933,28 @@ EMBEDDED_WIDGET_HTML = """<!DOCTYPE html>
       }, [cancelCurrentQueue, startPolling]);
 
       const togglePlayPause = useCallback(async () => {
+        console.log('[TTS] togglePlayPause called, status:', status, 'ctx:', audioContextRef.current?.state);
         // Prevent concurrent audio operations
-        if (audioOperationInProgressRef.current) return;
+        if (audioOperationInProgressRef.current) { console.log('[TTS] blocked by audioOpInProgress'); return; }
         let ctx = audioContextRef.current;
         try {
-          if (status === "finished") { await restartPlayback(); return; }
+          if (status === "finished") { console.log('[TTS] finished, calling restartPlayback'); await restartPlayback(); return; }
           // If no context yet, wait for init to complete (up to 3s)
           if (!ctx) {
+            console.log('[TTS] no ctx, waiting for init');
             for (let i = 0; i < 30 && !audioContextRef.current; i++) {
               await new Promise(r => setTimeout(r, 100));
             }
             ctx = audioContextRef.current;
-            if (!ctx) return; // Still no context, give up
+            if (!ctx) { console.log('[TTS] still no ctx, giving up'); return; }
           }
           if (ctx.state === "suspended" || pendingChunksRef.current.length > 0) {
+            console.log('[TTS] resuming via ensureAudioContextResumed');
             await ensureAudioContextResumed(); setStatus("playing"); return;
           }
-          if (status === "paused") { await ctx.resume(); setStatus("playing"); }
-          else if (status === "playing") { await ctx.suspend(); setStatus("paused"); }
-        } catch (err) {}
+          if (status === "paused") { console.log('[TTS] resuming paused'); await ctx.resume(); setStatus("playing"); }
+          else if (status === "playing") { console.log('[TTS] pausing'); await ctx.suspend(); setStatus("paused"); }
+        } catch (err) { console.error('[TTS] togglePlayPause error:', err); }
       }, [status, restartPlayback, ensureAudioContextResumed]);
 
       const toggleFullscreen = useCallback(async () => {
@@ -974,10 +981,12 @@ EMBEDDED_WIDGET_HTML = """<!DOCTYPE html>
         onAppCreated: (app) => {
           appRef.current = app;
           app.ontoolinputpartial = async (params) => {
+            console.log('[TTS] ontoolinputpartial called');
             const newText = params.arguments?.text;
             if (!newText) return;
             // Detect new session: text doesn't continue from where we left off
             const isNewSession = lastTextRef.current.length > 0 && !newText.startsWith(lastTextRef.current);
+            if (isNewSession) console.log('[TTS] new session detected in partial');
             if (isNewSession) {
               // Reset for new session
               queueIdRef.current = null;
@@ -988,6 +997,7 @@ EMBEDDED_WIDGET_HTML = """<!DOCTYPE html>
             await sendTextToTTS(newText);
           };
           app.ontoolinput = async (params) => {
+            console.log('[TTS] ontoolinput called');
             const text = params.arguments?.text;
             if (!text) return;
             // Read autoPlay setting (defaults to true, but browser may block autoplay)
@@ -995,6 +1005,7 @@ EMBEDDED_WIDGET_HTML = """<!DOCTYPE html>
             setAutoPlay(shouldAutoPlay);
             // Detect new session: text doesn't continue from where we left off
             const isNewSession = lastTextRef.current.length > 0 && !text.startsWith(lastTextRef.current);
+            if (isNewSession) console.log('[TTS] new session detected in input');
             if (isNewSession) {
               queueIdRef.current = null;
               lastTextRef.current = "";
