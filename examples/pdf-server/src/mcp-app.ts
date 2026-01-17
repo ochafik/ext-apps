@@ -8,6 +8,7 @@
  */
 import { App, type McpUiHostContext } from "@modelcontextprotocol/ext-apps";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
+import { z } from "zod";
 import * as pdfjsLib from "pdfjs-dist";
 import { TextLayer } from "pdfjs-dist";
 import "./global.css";
@@ -785,6 +786,254 @@ function handleHostContextChanged(ctx: McpUiHostContext) {
 }
 
 app.onhostcontextchanged = handleHostContextChanged;
+
+// Register tools for model interaction
+app.registerTool(
+  "get-document-info",
+  {
+    title: "Get Document Info",
+    description:
+      "Get information about the current PDF document including title, current page, total pages, and zoom level",
+  },
+  async () => {
+    if (!pdfDocument) {
+      return {
+        content: [
+          { type: "text" as const, text: "Error: No document loaded" },
+        ],
+        isError: true,
+      };
+    }
+    const info = {
+      title: pdfTitle || "Untitled",
+      url: pdfUrl,
+      currentPage,
+      totalPages,
+      scale,
+      displayMode: currentDisplayMode,
+    };
+    return {
+      content: [{ type: "text" as const, text: JSON.stringify(info, null, 2) }],
+      structuredContent: info,
+    };
+  },
+);
+
+app.registerTool(
+  "go-to-page",
+  {
+    title: "Go to Page",
+    description: "Navigate to a specific page in the document",
+    inputSchema: z.object({
+      page: z.number().int().positive().describe("Page number (1-indexed)"),
+    }),
+  },
+  async (args) => {
+    if (!pdfDocument) {
+      return {
+        content: [
+          { type: "text" as const, text: "Error: No document loaded" },
+        ],
+        isError: true,
+      };
+    }
+    if (args.page < 1 || args.page > totalPages) {
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: `Error: Page ${args.page} out of range (1-${totalPages})`,
+          },
+        ],
+        isError: true,
+      };
+    }
+    currentPage = args.page;
+    await renderPage();
+    updateControls();
+    return {
+      content: [
+        {
+          type: "text" as const,
+          text: `Navigated to page ${currentPage}/${totalPages}`,
+        },
+      ],
+    };
+  },
+);
+
+app.registerTool(
+  "get-page-text",
+  {
+    title: "Get Page Text",
+    description: "Extract text content from a specific page",
+    inputSchema: z.object({
+      page: z
+        .number()
+        .int()
+        .positive()
+        .optional()
+        .describe("Page number (1-indexed). Defaults to current page."),
+    }),
+  },
+  async (args) => {
+    if (!pdfDocument) {
+      return {
+        content: [
+          { type: "text" as const, text: "Error: No document loaded" },
+        ],
+        isError: true,
+      };
+    }
+    const pageNum = args.page ?? currentPage;
+    if (pageNum < 1 || pageNum > totalPages) {
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: `Error: Page ${pageNum} out of range (1-${totalPages})`,
+          },
+        ],
+        isError: true,
+      };
+    }
+    try {
+      const page = await pdfDocument.getPage(pageNum);
+      const textContent = await page.getTextContent();
+      const pageText = (textContent.items as Array<{ str?: string }>)
+        .map((item) => item.str || "")
+        .join("");
+      return {
+        content: [{ type: "text" as const, text: pageText }],
+        structuredContent: { page: pageNum, text: pageText },
+      };
+    } catch (err) {
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: `Error extracting text: ${err instanceof Error ? err.message : String(err)}`,
+          },
+        ],
+        isError: true,
+      };
+    }
+  },
+);
+
+app.registerTool(
+  "search-text",
+  {
+    title: "Search Text",
+    description: "Search for text in the document and return matching pages",
+    inputSchema: z.object({
+      query: z.string().describe("Text to search for"),
+      maxResults: z
+        .number()
+        .int()
+        .positive()
+        .optional()
+        .describe("Maximum number of results to return (default: 10)"),
+    }),
+  },
+  async (args) => {
+    if (!pdfDocument) {
+      return {
+        content: [
+          { type: "text" as const, text: "Error: No document loaded" },
+        ],
+        isError: true,
+      };
+    }
+    const maxResults = args.maxResults ?? 10;
+    const results: Array<{ page: number; context: string }> = [];
+    const query = args.query.toLowerCase();
+
+    for (let i = 1; i <= totalPages && results.length < maxResults; i++) {
+      try {
+        const page = await pdfDocument.getPage(i);
+        const textContent = await page.getTextContent();
+        const pageText = (textContent.items as Array<{ str?: string }>)
+          .map((item) => item.str || "")
+          .join("");
+
+        const lowerText = pageText.toLowerCase();
+        const index = lowerText.indexOf(query);
+        if (index !== -1) {
+          // Extract context around the match
+          const start = Math.max(0, index - 50);
+          const end = Math.min(pageText.length, index + query.length + 50);
+          const context = pageText.slice(start, end);
+          results.push({ page: i, context: `...${context}...` });
+        }
+      } catch (err) {
+        log.error(`Error searching page ${i}:`, err);
+      }
+    }
+
+    if (results.length === 0) {
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: `No matches found for "${args.query}"`,
+          },
+        ],
+        structuredContent: { query: args.query, results: [] },
+      };
+    }
+
+    const summary = results
+      .map((r) => `Page ${r.page}: ${r.context}`)
+      .join("\n\n");
+    return {
+      content: [
+        {
+          type: "text" as const,
+          text: `Found ${results.length} match(es) for "${args.query}":\n\n${summary}`,
+        },
+      ],
+      structuredContent: { query: args.query, results },
+    };
+  },
+);
+
+app.registerTool(
+  "set-zoom",
+  {
+    title: "Set Zoom",
+    description: "Set the zoom level for the document",
+    inputSchema: z.object({
+      scale: z
+        .number()
+        .min(0.25)
+        .max(4)
+        .describe("Zoom scale (0.25 to 4, where 1 = 100%)"),
+    }),
+  },
+  async (args) => {
+    if (!pdfDocument) {
+      return {
+        content: [
+          { type: "text" as const, text: "Error: No document loaded" },
+        ],
+        isError: true,
+      };
+    }
+    scale = args.scale;
+    await renderPage();
+    zoomLevelEl.textContent = `${Math.round(scale * 100)}%`;
+    requestFitToContent();
+    return {
+      content: [
+        {
+          type: "text" as const,
+          text: `Zoom set to ${Math.round(scale * 100)}%`,
+        },
+      ],
+    };
+  },
+);
 
 // Connect to host
 app.connect().then(() => {
