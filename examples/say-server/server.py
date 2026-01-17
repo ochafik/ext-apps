@@ -98,12 +98,16 @@ class TTSQueueState:
 
     # Tracking
     created_at: float = field(default_factory=time.time)
+    last_activity: float = field(default_factory=time.time)  # Last text or end signal
     lock: asyncio.Lock = field(default_factory=asyncio.Lock)
     task: asyncio.Task | None = None
 
 
 # Active TTS queues
 tts_queues: dict[str, TTSQueueState] = {}
+
+# Queue timeout: if no activity for this long, mark as error
+QUEUE_TIMEOUT_SECONDS = 30
 
 
 # ------------------------------------------------------
@@ -251,15 +255,9 @@ def add_tts_text(queue_id: str, text: str) -> list[types.TextContent]:
     # Queue the text (non-blocking)
     try:
         state.text_queue.put_nowait(text)
+        state.last_activity = time.time()  # Update activity timestamp
     except asyncio.QueueFull:
         return [types.TextContent(type="text", text='{"error": "Queue full"}')]
-
-    # BACKPRESSURE: Return queue depth so widget can throttle:
-    # import json
-    # return [types.TextContent(type="text", text=json.dumps({
-    #     "queued": True,
-    #     "queue_depth": state.text_queue.qsize()
-    # }))]
 
     return [types.TextContent(type="text", text='{"queued": true}')]
 
@@ -278,6 +276,7 @@ def end_tts_queue(queue_id: str) -> list[types.TextContent]:
         return [types.TextContent(type="text", text='{"already_ended": true}')]
 
     state.end_signaled = True
+    state.last_activity = time.time()  # Update activity timestamp
     try:
         state.text_queue.put_nowait(None)  # EOF marker
     except asyncio.QueueFull:
@@ -336,7 +335,8 @@ def poll_tts_audio(queue_id: str) -> list[types.TextContent]:
     new_chunks = state.audio_chunks[state.chunks_delivered:]
     state.chunks_delivered = len(state.audio_chunks)
 
-    done = state.status == "complete" and state.chunks_delivered >= len(state.audio_chunks)
+    # Consider queues with errors as "done" so widget stops polling
+    done = (state.status == "complete" or state.status == "error") and state.chunks_delivered >= len(state.audio_chunks)
 
     response = {
         "chunks": [
@@ -353,7 +353,11 @@ def poll_tts_audio(queue_id: str) -> list[types.TextContent]:
         "status": state.status,
     }
 
-    # Clean up completed queues
+    # Include error message if present
+    if state.error_message:
+        response["error"] = state.error_message
+
+    # Clean up completed or errored queues
     if done:
         # Schedule cleanup after a delay
         async def cleanup():
@@ -552,7 +556,21 @@ async def _run_tts_queue(state: TTSQueueState):
 
     try:
         while True:
-            text_item = await state.text_queue.get()
+            # Wait for text with timeout to detect stale queues
+            try:
+                text_item = await asyncio.wait_for(
+                    state.text_queue.get(),
+                    timeout=5.0  # Check every 5 seconds
+                )
+            except asyncio.TimeoutError:
+                # Check if queue is stale (no activity for too long)
+                if time.time() - state.last_activity > QUEUE_TIMEOUT_SECONDS:
+                    logger.warning(f"TTS queue {state.id} timeout after {QUEUE_TIMEOUT_SECONDS}s of inactivity")
+                    state.status = "error"
+                    state.error_message = f"Queue timeout: no activity for {QUEUE_TIMEOUT_SECONDS}s"
+                    break
+                # Continue waiting - queue might still be active
+                continue
 
             if text_item is None:
                 # EOF - flush remaining text
@@ -905,11 +923,17 @@ EMBEDDED_WIDGET_HTML = """<!DOCTYPE html>
           try {
             const result = await app.callServerTool({ name: "poll_tts_audio", arguments: { queue_id: queueIdRef.current } });
             const data = JSON.parse(result.content[0].text);
-            if (data.error) break;
+            if (data.error) {
+              console.log('[TTS] Queue error:', data.error);
+              break;
+            }
             for (const chunk of data.chunks) await scheduleAudioChunk(chunk);
             if (data.done) { allAudioReceivedRef.current = true; break; }
             await new Promise(r => setTimeout(r, data.chunks.length > 0 ? 30 : 80));
-          } catch (err) { break; }
+          } catch (err) {
+            console.log('[TTS] Polling error:', err);
+            break;
+          }
         }
         isPollingRef.current = false;
       }, [scheduleAudioChunk]);
