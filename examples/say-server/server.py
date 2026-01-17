@@ -922,6 +922,8 @@ EMBEDDED_WIDGET_HTML = """<!DOCTYPE html>
         const app = appRef.current;
         if (isPollingRef.current || !app) return;
         isPollingRef.current = true;
+        // Initial delay to let TTS generate first chunk (reduces unnecessary polls)
+        await new Promise(r => setTimeout(r, 150));
         while (queueIdRef.current) {
           try {
             const result = await app.callServerTool({ name: "poll_tts_audio", arguments: { queue_id: queueIdRef.current } });
