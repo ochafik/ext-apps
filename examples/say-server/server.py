@@ -271,8 +271,10 @@ def end_tts_queue(queue_id: str) -> list[types.TextContent]:
     """
     state = tts_queues.get(queue_id)
     if not state:
+        logger.warning(f"end_tts_queue called for unknown queue: {queue_id}")
         return [types.TextContent(type="text", text='{"error": "Queue not found"}')]
     if state.end_signaled:
+        logger.info(f"end_tts_queue called for already-ended queue: {queue_id}")
         return [types.TextContent(type="text", text='{"already_ended": true}')]
 
     state.end_signaled = True
@@ -282,6 +284,7 @@ def end_tts_queue(queue_id: str) -> list[types.TextContent]:
     except asyncio.QueueFull:
         pass
 
+    logger.info(f"end_tts_queue called for queue: {queue_id}")
     return [types.TextContent(type="text", text='{"ended": true}')]
 
 
@@ -1104,23 +1107,26 @@ EMBEDDED_WIDGET_HTML = """<!DOCTYPE html>
         onAppCreated: (app) => {
           appRef.current = app;
           app.ontoolinputpartial = async (params) => {
-            console.log('[TTS] ontoolinputpartial called');
+            console.log('[TTS] ontoolinputpartial called, queueId:', queueIdRef.current);
             const newText = params.arguments?.text;
             if (!newText) return;
             // Detect new session: text doesn't continue from where we left off
             const isNewSession = lastTextRef.current.length > 0 && !newText.startsWith(lastTextRef.current);
-            if (isNewSession) console.log('[TTS] new session detected in partial');
             if (isNewSession) {
+              console.log('[TTS] new session detected in partial - resetting queue');
               // Reset for new session
               queueIdRef.current = null;
               lastTextRef.current = "";
             }
             setDisplayText(newText);
-            if (!queueIdRef.current && !(await initTTSQueue())) return;
+            if (!queueIdRef.current && !(await initTTSQueue())) {
+              console.log('[TTS] initTTSQueue failed in partial');
+              return;
+            }
             await sendTextToTTS(newText);
           };
           app.ontoolinput = async (params) => {
-            console.log('[TTS] ontoolinput called');
+            console.log('[TTS] ontoolinput called, queueId:', queueIdRef.current);
             const text = params.arguments?.text;
             if (!text) return;
             // Read voice setting (defaults to cosette)
@@ -1131,16 +1137,20 @@ EMBEDDED_WIDGET_HTML = """<!DOCTYPE html>
             setAutoPlay(shouldAutoPlay);
             // Detect new session: text doesn't continue from where we left off
             const isNewSession = lastTextRef.current.length > 0 && !text.startsWith(lastTextRef.current);
-            if (isNewSession) console.log('[TTS] new session detected in input');
             if (isNewSession) {
+              console.log('[TTS] new session detected in input - resetting queue');
               queueIdRef.current = null;
               lastTextRef.current = "";
             }
             setDisplayText(text);
-            if (!queueIdRef.current && !(await initTTSQueue())) return;
+            if (!queueIdRef.current && !(await initTTSQueue())) {
+              console.log('[TTS] initTTSQueue failed in input');
+              return;
+            }
             await sendTextToTTS(text);
           };
           app.ontoolresult = async (params) => {
+            console.log('[TTS] ontoolresult called, queueId:', queueIdRef.current);
             fullTextRef.current = lastTextRef.current;
             // Read widget UUID from tool result _meta for speak lock coordination
             const resultUuid = params.content?.[0]?._meta?.widgetUUID;
@@ -1149,8 +1159,13 @@ EMBEDDED_WIDGET_HTML = """<!DOCTYPE html>
               console.log('[TTS] Widget UUID:', resultUuid);
             }
             if (queueIdRef.current) {
+              console.log('[TTS] Calling end_tts_queue for:', queueIdRef.current);
               try { await app.callServerTool({ name: "end_tts_queue", arguments: { queue_id: queueIdRef.current } }); }
-              catch (err) {}
+              catch (err) {
+                console.log('[TTS] end_tts_queue error:', err);
+              }
+            } else {
+              console.log('[TTS] No queueId to end in ontoolresult');
             }
             // DON'T reset here - let audio continue playing
             // New session detection happens in ontoolinputpartial via text comparison
