@@ -44,6 +44,7 @@ import torch
 import uvicorn
 from mcp.server.fastmcp import FastMCP
 from mcp import types
+from mcp.types import Icon
 from starlette.middleware.cors import CORSMiddleware
 
 from pocket_tts.models.tts_model import TTSModel, prepare_text_prompt
@@ -55,7 +56,13 @@ WIDGET_URI = "ui://say-demo/widget.html"
 HOST = os.environ.get("HOST", "0.0.0.0")
 PORT = int(os.environ.get("PORT", "3109"))
 
-mcp = FastMCP("Say Demo")
+# Speaker icon as SVG data URI
+SPEAKER_ICON = Icon(
+    src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'%3E%3Cpolygon points='11 5 6 9 2 9 2 15 6 15 11 19 11 5'/%3E%3Cpath d='M15.54 8.46a5 5 0 0 1 0 7.07'/%3E%3Cpath d='M19.07 4.93a10 10 0 0 1 0 14.14'/%3E%3C/svg%3E",
+    mimeType="image/svg+xml",
+)
+
+mcp = FastMCP("Say Demo", icons=[SPEAKER_ICON])
 
 # Global TTS model (loaded on startup)
 tts_model: TTSModel | None = None
