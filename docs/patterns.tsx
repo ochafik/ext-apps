@@ -112,17 +112,6 @@ function persistData(app: App) {
 }
 
 /**
- * Example: Lower perceived latency / manage loading time
- */
-function lowerPerceivedLatency(app: App) {
-  //#region lowerPerceivedLatency
-  // TODO: Leverage partial inputs to show widgets as possible.
-  // Beware of partial JSON being partial (but healed),
-  // so some objects may not be complete.
-  //#endregion lowerPerceivedLatency
-}
-
-/**
  * Example: Supporting both iframe & MCP Apps in same binary
  */
 function iframeAndMcpApps() {
@@ -147,6 +136,5 @@ void errorsToModel;
 void hostStylingVanillaJs;
 void hostStylingReact;
 void persistData;
-void lowerPerceivedLatency;
 void iframeAndMcpApps;
 void migrateFromOpenai;

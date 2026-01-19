@@ -60,13 +60,14 @@ Listen for display mode changes via {@link app!App.onhostcontextchanged onhostco
 
 {@includeCode ./patterns.tsx#persistData}
 
-## [TODO] Lower perceived latency / manage loading time
+## Lowering perceived latency
 
-Leverage partial inputs to show widgets as possible.
+Use {@link app!App.ontoolinputpartial ontoolinputpartial} to receive streaming tool arguments as they arrive, allowing you to show a loading preview before the complete input is available.
 
-Beware of partial JSON being partial (but healed), so some of your objects may not be complete (e.g. in a list you may need to skip the last item if your code validates input schemas strictly).
+{@includeCode ../src/app.examples.ts#App_ontoolinputpartial_progressiveRendering}
 
-{@includeCode ./patterns.tsx#lowerPerceivedLatency}
+> [!IMPORTANT]
+> Partial arguments are "healed" JSON — the host closes unclosed brackets/braces to produce valid JSON. This means objects may be incomplete (e.g., the last item in an array may be truncated). Don't rely on partial data for critical operations; use it only for preview UI.
 
 ## [TODO] Supporting both iframe & MCP Apps in same binary
 

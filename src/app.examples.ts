@@ -157,12 +157,33 @@ async function App_ontoolinput_setter(app: App) {
  */
 function App_ontoolinputpartial_progressiveRendering(app: App) {
   //#region App_ontoolinputpartial_progressiveRendering
+  let toolInputs: Record<string, unknown> | null = null;
+  let toolInputsPartial: Record<string, unknown> | null = null;
+
   app.ontoolinputpartial = (params) => {
-    console.log("Partial args:", params.arguments);
-    // Update your UI progressively as arguments stream in
+    toolInputsPartial = params.arguments as Record<string, unknown>;
+    render();
   };
+
+  app.ontoolinput = (params) => {
+    toolInputs = params.arguments as Record<string, unknown>;
+    toolInputsPartial = null;
+    render();
+  };
+
+  function render() {
+    if (toolInputs) {
+      renderFinalUI(toolInputs);
+    } else {
+      renderLoadingUI(toolInputsPartial); // e.g., shimmer with partial preview
+    }
+  }
   //#endregion App_ontoolinputpartial_progressiveRendering
 }
+
+// Stubs for App_ontoolinputpartial_progressiveRendering example
+declare function renderLoadingUI(data: Record<string, unknown> | null): void;
+declare function renderFinalUI(data: Record<string, unknown>): void;
 
 /**
  * Example: Display tool execution results using ontoolresult.

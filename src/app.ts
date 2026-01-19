@@ -287,6 +287,11 @@ export class App extends Protocol<AppRequest, AppNotification, AppResult> {
    * streams partial tool arguments during tool call initialization. This enables
    * progressive rendering of tool arguments before they're complete.
    *
+   * **Important:** Partial arguments are "healed" JSON — the host closes unclosed
+   * brackets/braces to produce valid JSON. This means objects may be incomplete
+   * (e.g., the last item in an array may be truncated). Use partial data only
+   * for preview UI, not for critical operations.
+   *
    * This setter is a convenience wrapper around `setNotificationHandler()` that
    * automatically handles the notification schema and extracts the params for you.
    *
