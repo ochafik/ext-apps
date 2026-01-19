@@ -207,6 +207,20 @@ function App_onhostcontextchanged_respondToTheme(app: App) {
 }
 
 /**
+ * Example: Respond to display mode changes using onhostcontextchanged.
+ */
+function App_onhostcontextchanged_respondToDisplayMode(app: App) {
+  //#region App_onhostcontextchanged_respondToDisplayMode
+  app.onhostcontextchanged = (params) => {
+    if (params.displayMode) {
+      const isFullscreen = params.displayMode === "fullscreen";
+      document.body.classList.toggle("fullscreen", isFullscreen);
+    }
+  };
+  //#endregion App_onhostcontextchanged_respondToDisplayMode
+}
+
+/**
  * Example: Perform cleanup before teardown.
  */
 function App_onteardown_performCleanup(app: App) {
@@ -344,16 +358,17 @@ async function App_openLink_documentation(app: App) {
 }
 
 /**
- * Example: Request fullscreen mode.
+ * Example: Toggle between inline and fullscreen display modes.
  */
-async function App_requestDisplayMode_fullscreen(app: App) {
-  //#region App_requestDisplayMode_fullscreen
-  const context = app.getHostContext();
-  if (context?.availableDisplayModes?.includes("fullscreen")) {
-    const result = await app.requestDisplayMode({ mode: "fullscreen" });
-    console.log("Display mode set to:", result.mode);
+async function App_requestDisplayMode_toggle(app: App) {
+  //#region App_requestDisplayMode_toggle
+  const ctx = app.getHostContext();
+  if (ctx?.availableDisplayModes?.includes("fullscreen")) {
+    const target = ctx.displayMode === "fullscreen" ? "inline" : "fullscreen";
+    const result = await app.requestDisplayMode({ mode: target });
+    console.log("Now in:", result.mode);
   }
-  //#endregion App_requestDisplayMode_fullscreen
+  //#endregion App_requestDisplayMode_toggle
 }
 
 /**

@@ -43,9 +43,15 @@ Use the SDK's style helpers to apply host styling, then reference them in your C
 
 {@includeCode ./patterns.tsx#hostStylingReact}
 
-## [TODO] Support fullscreen / exit fullscreen
+## Entering / Exiting fullscreen
 
-{@includeCode ./patterns.tsx#fullscreen}
+Toggle fullscreen mode by calling {@link app!App.requestDisplayMode requestDisplayMode}:
+
+{@includeCode ../src/app.examples.ts#App_requestDisplayMode_toggle}
+
+Listen for display mode changes via {@link app!App.onhostcontextchanged onhostcontextchanged} to update your UI:
+
+{@includeCode ../src/app.examples.ts#App_onhostcontextchanged_respondToDisplayMode}
 
 ## [TODO] Persist data (incl. widget state)
 

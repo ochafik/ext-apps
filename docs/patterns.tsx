@@ -98,15 +98,6 @@ function hostStylingReact() {
 }
 
 /**
- * Example: Support fullscreen / exit fullscreen
- */
-function fullscreen() {
-  //#region fullscreen
-  // TODO: Implement fullscreen support
-  //#endregion fullscreen
-}
-
-/**
  * Example: Persist data (incl. widget state)
  */
 function persistData(app: App) {
@@ -155,7 +146,6 @@ void authenticatedCalls;
 void errorsToModel;
 void hostStylingVanillaJs;
 void hostStylingReact;
-void fullscreen;
 void persistData;
 void lowerPerceivedLatency;
 void iframeAndMcpApps;

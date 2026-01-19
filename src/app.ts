@@ -729,8 +729,8 @@ export class App extends Protocol<AppRequest, AppNotification, AppResult> {
    * @param options - Request options (timeout, etc.)
    * @returns Result containing the actual display mode that was set
    *
-   * @example Request fullscreen mode
-   * {@includeCode ./app.examples.ts#App_requestDisplayMode_fullscreen}
+   * @example Toggle display mode
+   * {@includeCode ./app.examples.ts#App_requestDisplayMode_toggle}
    *
    * @see {@link McpUiRequestDisplayModeRequest} for request structure
    * @see {@link McpUiHostContext} for checking availableDisplayModes
