@@ -327,10 +327,14 @@ def poll_tts_audio(queue_id: str) -> list[types.TextContent]:
         queue_id: The queue ID from create_tts_queue
     """
     import json
+    import time
 
     state = tts_queues.get(queue_id)
     if not state:
         return [types.TextContent(type="text", text='{"error": "Queue not found"}')]
+
+    # Update last activity to prevent timeout during active polling
+    state.last_activity = time.time()
 
     # Get new chunks (use sync approach since we can't await in tool)
     # The lock is async, so we need to be careful here
