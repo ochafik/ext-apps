@@ -207,7 +207,9 @@ export default function ThreeJSApp({
   const [error, setError] = useState<string | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const animControllerRef = useRef<ReturnType<typeof createAnimationController> | null>(null);
+  const animControllerRef = useRef<ReturnType<
+    typeof createAnimationController
+  > | null>(null);
 
   const height = toolInputs?.height ?? toolInputsPartial?.height ?? 400;
   const code = toolInputs?.code || DEFAULT_THREEJS_CODE;
