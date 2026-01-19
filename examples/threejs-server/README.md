@@ -127,7 +127,11 @@ This is transparent to user code - just use `requestAnimationFrame` normally.
 Supports alpha transparency for seamless host UI integration:
 
 ```javascript
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+const renderer = new THREE.WebGLRenderer({
+  canvas,
+  antialias: true,
+  alpha: true,
+});
 renderer.setClearColor(0x000000, 0); // Fully transparent
 ```
 
