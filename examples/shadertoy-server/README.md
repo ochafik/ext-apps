@@ -142,10 +142,10 @@ _Tool input:_
 
 The `iMouse` uniform provides interactive input, compatible with the official Shadertoy specification:
 
-| Component | When Button Down | After Release | Never Clicked |
-|-----------|-----------------|---------------|---------------|
-| `iMouse.xy` | Current position | Last position | `(0, 0)` |
-| `iMouse.zw` | Click start (positive) | Negated (-x, -y) | `(0, 0)` |
+| Component   | When Button Down       | After Release    | Never Clicked |
+| ----------- | ---------------------- | ---------------- | ------------- |
+| `iMouse.xy` | Current position       | Last position    | `(0, 0)`      |
+| `iMouse.zw` | Click start (positive) | Negated (-x, -y) | `(0, 0)`      |
 
 **Detecting button state:**
 
