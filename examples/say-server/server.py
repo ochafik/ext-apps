@@ -213,7 +213,7 @@ def say(
 # ------------------------------------------------------
 
 @mcp.tool(meta={"ui":{"visibility":["app"]}})
-def create_tts_queue(voice: str = "cosette") -> list[types.TextContent]:
+async def create_tts_queue(voice: str = "cosette") -> list[types.TextContent]:
     """Create a TTS generation queue. Returns queue_id and sample_rate.
 
     Args:
@@ -233,8 +233,7 @@ def create_tts_queue(voice: str = "cosette") -> list[types.TextContent]:
     tts_queues[queue_id] = state
 
     # Start background TTS processing task
-    loop = asyncio.get_event_loop()
-    state.task = loop.create_task(_run_tts_queue(state))
+    state.task = asyncio.create_task(_run_tts_queue(state))
 
     logger.info(f"Created TTS queue {queue_id}")
 
@@ -731,6 +730,45 @@ EMBEDDED_WIDGET_HTML = """<!DOCTYPE html>
     .fullscreenBtn .collapseIcon { display: none; }
     .container.fullscreen .fullscreenBtn .expandIcon { display: none; }
     .container.fullscreen .fullscreenBtn .collapseIcon { display: block; }
+    /* Info button - bottom right */
+    .infoBtn {
+      position: absolute;
+      bottom: 8px; right: 8px;
+      width: 24px; height: 24px;
+      border: none; border-radius: 50%;
+      background: rgba(128, 128, 128, 0.4);
+      color: white; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: bold; font-style: italic; font-family: serif;
+      opacity: 0.5;
+      transition: opacity 0.2s, background 0.2s;
+      z-index: 10;
+    }
+    .container:hover .infoBtn { opacity: 0.8; }
+    .infoBtn:hover { opacity: 1; background: rgba(128, 128, 128, 0.7); }
+    /* Info popup */
+    .infoPopup {
+      position: absolute;
+      bottom: 40px; right: 8px;
+      background: rgba(0, 0, 0, 0.9);
+      color: white;
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 12px;
+      line-height: 1.5;
+      max-width: 280px;
+      z-index: 20;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+    .infoPopup h4 { margin: 0 0 8px 0; font-size: 13px; }
+    .infoPopup a {
+      color: #6cb6ff;
+      text-decoration: none;
+      cursor: pointer;
+    }
+    .infoPopup a:hover { text-decoration: underline; }
+    .infoPopup ul { margin: 0; padding-left: 16px; }
+    .infoPopup li { margin: 4px 0; }
     @media (prefers-color-scheme: dark) {
       :root {
         --color-text-primary: #eee;
@@ -755,6 +793,7 @@ EMBEDDED_WIDGET_HTML = """<!DOCTYPE html>
       const [displayMode, setDisplayMode] = useState("inline");
       const [fullscreenAvailable, setFullscreenAvailable] = useState(false);
       const [autoPlay, setAutoPlay] = useState(true); // Default to autoPlay, can be overridden by tool input
+      const [showInfo, setShowInfo] = useState(false);
 
       const voiceRef = useRef("cosette"); // Current voice, updated from tool input
       const widgetUuidRef = useRef(null); // Widget UUID for speak lock coordination
@@ -1004,7 +1043,12 @@ EMBEDDED_WIDGET_HTML = """<!DOCTYPE html>
             // Create new queue
             console.log('[TTS] creating new queue');
             const result = await app.callServerTool({ name: "create_tts_queue", arguments: { voice: voiceRef.current } });
-            const data = JSON.parse(result.content[0].text);
+            console.log('[TTS] create_tts_queue result:', result);
+            const text = result.content?.[0]?.text;
+            if (!text) { console.error('[TTS] No text in result'); return false; }
+            let data;
+            try { data = JSON.parse(text); }
+            catch (e) { console.error('[TTS] Failed to parse result:', text); return false; }
             if (data.error) { console.log('[TTS] queue creation error:', data.error); return false; }
             queueIdRef.current = data.queue_id;
             sampleRateRef.current = data.sample_rate || 24000;
@@ -1013,7 +1057,7 @@ EMBEDDED_WIDGET_HTML = """<!DOCTYPE html>
             nextPlayTimeRef.current = 0;
             startPolling();
             return true;
-          } catch (err) { return false; }
+          } catch (err) { console.error('[TTS] initTTSQueue error:', err); return false; }
           finally { initQueuePromiseRef.current = null; }
         })();
         return initQueuePromiseRef.current;
@@ -1284,7 +1328,7 @@ EMBEDDED_WIDGET_HTML = """<!DOCTYPE html>
           style={{
             paddingTop: hostContext?.safeAreaInsets?.top,
             paddingRight: hostContext?.safeAreaInsets?.right,
-            paddingBottom: hostContext?.safeAreaInsets?.bottom,
+            paddingBottom: showInfo ? 140 : hostContext?.safeAreaInsets?.bottom,
             paddingLeft: hostContext?.safeAreaInsets?.left,
           }}
           tabIndex={0}
@@ -1303,7 +1347,13 @@ EMBEDDED_WIDGET_HTML = """<!DOCTYPE html>
           {/* Toolbar - top right */}
           <div className="toolbar">
             <button className="controlBtn" onClick={togglePlayPause} title="Play/Pause">
-              {status === "playing" ? "⏸️" : status === "finished" ? "🔄" : "▶️"}
+              {status === "playing" ? (
+                <svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+              ) : status === "finished" ? (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+              ) : (
+                <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg>
+              )}
             </button>
             <button className="controlBtn" onClick={restartPlayback} title="Restart">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -1320,6 +1370,18 @@ EMBEDDED_WIDGET_HTML = """<!DOCTYPE html>
               </svg>
             </button>
           </div>
+          {/* Info button - bottom right */}
+          <button className="infoBtn" onClick={() => setShowInfo(!showInfo)} title="Attribution info">i</button>
+          {showInfo && (
+            <div className="infoPopup">
+              <h4>Powered by Pocket TTS</h4>
+              <ul>
+                <li><a onClick={() => { app.openLink({ url: "https://github.com/kyutai-labs/pocket-tts" }); }}>Pocket TTS Repository</a> (Apache 2.0)</li>
+                <li><a onClick={() => { app.openLink({ url: "https://huggingface.co/kyutai/pocket-tts" }); }}>Pocket TTS Model</a> (CC BY 4.0)</li>
+                <li><a onClick={() => { app.openLink({ url: "https://huggingface.co/kyutai/tts-voices" }); }}>Voice Samples</a> (CC BY 4.0)</li>
+              </ul>
+            </div>
+          )}
         </main>
       );
     }
