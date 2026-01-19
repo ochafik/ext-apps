@@ -68,6 +68,12 @@ To persist widget state across conversation reloads (e.g., current page in a PDF
 
 > **Note:** For model-visible state (informing the LLM about what the user is viewing), use {@link app!App.updateModelContext updateModelContext} instead. Widget state persistence is for UI state that should survive page reloads but doesn't need to be seen by the model.
 
+## Pausing computation-heavy widgets when out of view
+
+Widgets with animations, WebGL rendering, or polling can consume significant CPU/GPU even when scrolled out of view. Use [`IntersectionObserver`](https://developer.mozilla.org/en-US/docs/Web/API/Intersection_Observer_API) to pause expensive operations when the widget isn't visible:
+
+{@includeCode ./patterns.tsx#visibilityBasedPause}
+
 ## Lowering perceived latency
 
 Use {@link app!App.ontoolinputpartial ontoolinputpartial} to receive streaming tool arguments as they arrive, allowing you to show a loading preview before the complete input is available.

@@ -159,6 +159,36 @@ function persistWidgetState(app: App) {
 }
 
 /**
+ * Example: Pausing computation-heavy widgets when out of view
+ */
+function visibilityBasedPause(
+  app: App,
+  container: HTMLElement,
+  animation: { play: () => void; pause: () => void },
+) {
+  //#region visibilityBasedPause
+  // Use IntersectionObserver to pause when widget scrolls out of view
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      if (entry.isIntersecting) {
+        animation.play();
+      } else {
+        animation.pause();
+      }
+    });
+  });
+  observer.observe(container);
+
+  // Clean up when the host tears down the widget
+  app.onteardown = async () => {
+    observer.disconnect();
+    animation.pause();
+    return {};
+  };
+  //#endregion visibilityBasedPause
+}
+
+/**
  * Example: Supporting both iframe & MCP Apps in same binary
  */
 function iframeAndMcpApps() {
@@ -183,5 +213,6 @@ void hostStylingVanillaJs;
 void hostStylingReact;
 void persistWidgetStateServer;
 void persistWidgetState;
+void visibilityBasedPause;
 void iframeAndMcpApps;
 void migrateFromOpenai;
