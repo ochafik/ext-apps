@@ -18,10 +18,14 @@ import { test, expect, type Page, type ConsoleMessage } from "@playwright/test";
 // Optional: filter to a single example via EXAMPLE env var (folder name)
 // Security tests require integration-server, skip if filtering to a different example
 const EXAMPLE_FILTER = process.env.EXAMPLE;
-const SKIP_SECURITY_TESTS = EXAMPLE_FILTER && EXAMPLE_FILTER !== "integration-server";
+const SKIP_SECURITY_TESTS =
+  EXAMPLE_FILTER && EXAMPLE_FILTER !== "integration-server";
 
 // Skip all security tests if filtering to a non-integration example
-test.skip(() => !!SKIP_SECURITY_TESTS, "Skipped: security tests require integration-server");
+test.skip(
+  () => !!SKIP_SECURITY_TESTS,
+  "Skipped: security tests require integration-server",
+);
 
 /**
  * Capture console messages matching a pattern
