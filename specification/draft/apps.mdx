@@ -1412,11 +1412,43 @@ Note: Tools with `visibility: ["app"]` are hidden from the agent but remain call
 
 ### Client\<\>Server Capability Negotiation
 
-Clients and servers negotiate MCP Apps support through the standard MCP extensions capability mechanism (defined in SEP-1724).
+Clients and servers negotiate MCP Apps support using the extension identifier `io.modelcontextprotocol/ui`.
+
+#### Capability Location
+
+The MCP Apps capability can be advertised in either of two locations within `ClientCapabilities`:
+
+1. **`experimental`** (currently preferred): The `experimental` field is part of the current MCP schema and allows arbitrary extension data. Use this for maximum compatibility.
+
+2. **`extensions`** (future): Once SEP-1724 is accepted and deployed, `extensions` will be the canonical location. Servers SHOULD check both locations for forward compatibility.
 
 #### Client (Host) Capabilities
 
-Clients advertise MCP Apps support in the initialize request using the extension identifier `io.modelcontextprotocol/ui`:
+Clients advertise MCP Apps support in the initialize request:
+
+**Using `experimental` (recommended for current deployments):**
+
+```json
+{
+  "method": "initialize",
+  "params": {
+    "protocolVersion": "2024-11-05",
+    "capabilities": {
+      "experimental": {
+        "io.modelcontextprotocol/ui": {
+          "mimeTypes": ["text/html;profile=mcp-app"]
+        }
+      }
+    },
+    "clientInfo": {
+      "name": "claude-desktop",
+      "version": "1.0.0"
+    }
+  }
+}
+```
+
+**Using `extensions` (once SEP-1724 is accepted):**
 
 ```json
 {
@@ -1449,13 +1481,12 @@ Future versions may add additional settings:
 
 #### Server Behavior
 
-Servers SHOULD check client (host would-be) capabilities before registering UI-enabled tools:
+Servers SHOULD check both `experimental` and `extensions` before registering UI-enabled tools. The SDK provides the `hasUiSupport` helper for this:
 
 ```typescript
-const hasUISupport =
-  clientCapabilities?.extensions?.["io.modelcontextprotocol/ui"]?.mimeTypes?.includes("text/html;profile=mcp-app");
+import { hasUiSupport } from "@modelcontextprotocol/ext-apps/server";
 
-if (hasUISupport) {
+if (hasUiSupport(clientCapabilities)) {
   // Register tools with UI templates
   server.registerTool("get_weather", {
     description: "Get weather with interactive dashboard",

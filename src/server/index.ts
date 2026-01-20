@@ -281,3 +281,142 @@ export function registerAppResource(
     readCallback,
   );
 }
+
+/**
+ * Extension identifier for MCP Apps capability negotiation.
+ *
+ * Used as the key in `experimental` or `extensions` to advertise MCP Apps support.
+ */
+export const EXTENSION_ID = "io.modelcontextprotocol/ui";
+
+/**
+ * MCP Apps capability settings advertised by clients.
+ *
+ * @see {@link hasUiSupport} for checking client support
+ */
+export interface McpUiClientCapability {
+  /**
+   * Array of supported MIME types for UI resources.
+   * Must include `"text/html;profile=mcp-app"` for MCP Apps support.
+   */
+  mimeTypes?: string[];
+}
+
+/**
+ * Check if client capabilities indicate MCP Apps support.
+ *
+ * This helper checks both `experimental` and `extensions` fields for the
+ * MCP Apps capability, providing forward compatibility as the MCP specification
+ * evolves. Currently, `experimental` is preferred (it's part of the existing
+ * MCP schema); once SEP-1724 is accepted, `extensions` will be the canonical
+ * location.
+ *
+ * @param clientCapabilities - The client capabilities from the initialize response
+ * @param mimeType - MIME type to check for (defaults to `"text/html;profile=mcp-app"`)
+ * @returns `true` if the client supports MCP Apps with the specified MIME type
+ *
+ * @example Basic usage in server initialization
+ * ```typescript
+ * import { hasUiSupport, registerAppTool } from "@modelcontextprotocol/ext-apps/server";
+ *
+ * server.oninitialized = ({ clientCapabilities }) => {
+ *   if (hasUiSupport(clientCapabilities)) {
+ *     registerAppTool(server, "weather", {
+ *       description: "Get weather with interactive dashboard",
+ *       _meta: { ui: { resourceUri: "ui://weather/dashboard" } },
+ *     }, weatherHandler);
+ *   } else {
+ *     // Register text-only fallback
+ *     server.registerTool("weather", {
+ *       description: "Get weather as text",
+ *     }, textWeatherHandler);
+ *   }
+ * };
+ * ```
+ *
+ * @example Checking for specific MIME type
+ * ```typescript
+ * if (hasUiSupport(clientCapabilities, "application/x-custom-widget")) {
+ *   // Client supports custom widget MIME type
+ * }
+ * ```
+ */
+export function hasUiSupport(
+  clientCapabilities:
+    | {
+        experimental?: Record<string, unknown>;
+        extensions?: Record<string, unknown>;
+      }
+    | null
+    | undefined,
+  mimeType: string = RESOURCE_MIME_TYPE,
+): boolean {
+  if (!clientCapabilities) {
+    return false;
+  }
+
+  // Check experimental field (current MCP schema)
+  const experimentalCap = clientCapabilities.experimental?.[
+    EXTENSION_ID
+  ] as McpUiClientCapability | undefined;
+  if (experimentalCap?.mimeTypes?.includes(mimeType)) {
+    return true;
+  }
+
+  // Check extensions field (future SEP-1724)
+  const extensionsCap = clientCapabilities.extensions?.[
+    EXTENSION_ID
+  ] as McpUiClientCapability | undefined;
+  if (extensionsCap?.mimeTypes?.includes(mimeType)) {
+    return true;
+  }
+
+  return false;
+}
+
+/**
+ * Get MCP Apps capability settings from client capabilities.
+ *
+ * This helper retrieves the capability object from either `experimental` or
+ * `extensions`, preferring `extensions` when both are present (for forward
+ * compatibility with SEP-1724).
+ *
+ * @param clientCapabilities - The client capabilities from the initialize response
+ * @returns The MCP Apps capability settings, or `undefined` if not supported
+ *
+ * @example
+ * ```typescript
+ * import { getUiCapability } from "@modelcontextprotocol/ext-apps/server";
+ *
+ * const uiCap = getUiCapability(clientCapabilities);
+ * if (uiCap?.mimeTypes?.includes("text/html;profile=mcp-app")) {
+ *   // Client supports MCP Apps
+ * }
+ * ```
+ */
+export function getUiCapability(
+  clientCapabilities:
+    | {
+        experimental?: Record<string, unknown>;
+        extensions?: Record<string, unknown>;
+      }
+    | null
+    | undefined,
+): McpUiClientCapability | undefined {
+  if (!clientCapabilities) {
+    return undefined;
+  }
+
+  // Prefer extensions when available (forward compatibility with SEP-1724)
+  const extensionsCap = clientCapabilities.extensions?.[
+    EXTENSION_ID
+  ] as McpUiClientCapability | undefined;
+  if (extensionsCap) {
+    return extensionsCap;
+  }
+
+  // Fall back to experimental (current MCP schema)
+  return clientCapabilities.experimental?.[
+    EXTENSION_ID
+  ] as McpUiClientCapability | undefined;
+}

@@ -4,6 +4,9 @@ import {
   registerAppResource,
   RESOURCE_URI_META_KEY,
   RESOURCE_MIME_TYPE,
+  hasUiSupport,
+  getUiCapability,
+  EXTENSION_ID,
 } from "./index";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 
@@ -316,5 +319,164 @@ describe("registerAppResource", () => {
 
     expect(callback).toHaveBeenCalledTimes(1);
     expect(result).toEqual(expectedResult);
+  });
+});
+
+describe("hasUiSupport", () => {
+  const MIME_TYPE = "text/html;profile=mcp-app";
+
+  it("should return false for null/undefined capabilities", () => {
+    expect(hasUiSupport(null)).toBe(false);
+    expect(hasUiSupport(undefined)).toBe(false);
+  });
+
+  it("should return false for empty capabilities", () => {
+    expect(hasUiSupport({})).toBe(false);
+  });
+
+  it("should detect support in experimental field", () => {
+    const caps = {
+      experimental: {
+        [EXTENSION_ID]: {
+          mimeTypes: [MIME_TYPE],
+        },
+      },
+    };
+    expect(hasUiSupport(caps)).toBe(true);
+  });
+
+  it("should detect support in extensions field", () => {
+    const caps = {
+      extensions: {
+        [EXTENSION_ID]: {
+          mimeTypes: [MIME_TYPE],
+        },
+      },
+    };
+    expect(hasUiSupport(caps)).toBe(true);
+  });
+
+  it("should detect support when both fields are present", () => {
+    const caps = {
+      experimental: {
+        [EXTENSION_ID]: {
+          mimeTypes: [MIME_TYPE],
+        },
+      },
+      extensions: {
+        [EXTENSION_ID]: {
+          mimeTypes: [MIME_TYPE],
+        },
+      },
+    };
+    expect(hasUiSupport(caps)).toBe(true);
+  });
+
+  it("should return false if MIME type is not in the list", () => {
+    const caps = {
+      experimental: {
+        [EXTENSION_ID]: {
+          mimeTypes: ["text/plain"],
+        },
+      },
+    };
+    expect(hasUiSupport(caps)).toBe(false);
+  });
+
+  it("should check for custom MIME type when specified", () => {
+    const caps = {
+      experimental: {
+        [EXTENSION_ID]: {
+          mimeTypes: ["application/x-custom"],
+        },
+      },
+    };
+    expect(hasUiSupport(caps, "application/x-custom")).toBe(true);
+    expect(hasUiSupport(caps, MIME_TYPE)).toBe(false);
+  });
+
+  it("should return false when extension ID is missing", () => {
+    const caps = {
+      experimental: {
+        "some-other-extension": {
+          mimeTypes: [MIME_TYPE],
+        },
+      },
+    };
+    expect(hasUiSupport(caps)).toBe(false);
+  });
+
+  it("should return false when mimeTypes is missing", () => {
+    const caps = {
+      experimental: {
+        [EXTENSION_ID]: {},
+      },
+    };
+    expect(hasUiSupport(caps)).toBe(false);
+  });
+});
+
+describe("getUiCapability", () => {
+  const MIME_TYPE = "text/html;profile=mcp-app";
+
+  it("should return undefined for null/undefined capabilities", () => {
+    expect(getUiCapability(null)).toBeUndefined();
+    expect(getUiCapability(undefined)).toBeUndefined();
+  });
+
+  it("should return undefined for empty capabilities", () => {
+    expect(getUiCapability({})).toBeUndefined();
+  });
+
+  it("should return capability from experimental field", () => {
+    const caps = {
+      experimental: {
+        [EXTENSION_ID]: {
+          mimeTypes: [MIME_TYPE],
+        },
+      },
+    };
+    const result = getUiCapability(caps);
+    expect(result).toEqual({ mimeTypes: [MIME_TYPE] });
+  });
+
+  it("should return capability from extensions field", () => {
+    const caps = {
+      extensions: {
+        [EXTENSION_ID]: {
+          mimeTypes: [MIME_TYPE],
+        },
+      },
+    };
+    const result = getUiCapability(caps);
+    expect(result).toEqual({ mimeTypes: [MIME_TYPE] });
+  });
+
+  it("should prefer extensions over experimental when both are present", () => {
+    const caps = {
+      experimental: {
+        [EXTENSION_ID]: {
+          mimeTypes: ["text/plain"],
+        },
+      },
+      extensions: {
+        [EXTENSION_ID]: {
+          mimeTypes: [MIME_TYPE],
+        },
+      },
+    };
+    const result = getUiCapability(caps);
+    expect(result).toEqual({ mimeTypes: [MIME_TYPE] });
+  });
+
+  it("should return undefined when extension ID is missing", () => {
+    const caps = {
+      experimental: {
+        "some-other-extension": {
+          mimeTypes: [MIME_TYPE],
+        },
+      },
+    };
+    expect(getUiCapability(caps)).toBeUndefined();
   });
 });
