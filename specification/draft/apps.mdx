@@ -1416,17 +1416,19 @@ Clients and servers negotiate MCP Apps support using the extension identifier `i
 
 #### Capability Location
 
-The MCP Apps capability can be advertised in either of two locations within `ClientCapabilities`:
+The MCP Apps capability can be advertised in two locations within `ClientCapabilities`:
 
-1. **`experimental`** (currently preferred): The `experimental` field is part of the current MCP schema and allows arbitrary extension data. Use this for maximum compatibility.
+1. **`experimental`**: The `experimental` field is part of the current MCP schema and allows arbitrary extension data. This is required for compatibility with existing SDKs.
 
-2. **`extensions`** (future): Once SEP-1724 is accepted and deployed, `extensions` will be the canonical location. Servers SHOULD check both locations for forward compatibility.
+2. **`extensions`**: Once SEP-1724 is accepted and deployed, `extensions` will be the canonical location for extension capabilities.
+
+**Clients (hosts) SHOULD advertise in both locations** ("double-tag") to ensure compatibility with all servers during the transition period.
+
+**Servers SHOULD check both locations** when determining client support, preferring `extensions` when present.
 
 #### Client (Host) Capabilities
 
-Clients advertise MCP Apps support in the initialize request:
-
-**Using `experimental` (recommended for current deployments):**
+Clients SHOULD advertise MCP Apps support in both fields:
 
 ```json
 {
@@ -1438,24 +1440,7 @@ Clients advertise MCP Apps support in the initialize request:
         "io.modelcontextprotocol/ui": {
           "mimeTypes": ["text/html;profile=mcp-app"]
         }
-      }
-    },
-    "clientInfo": {
-      "name": "claude-desktop",
-      "version": "1.0.0"
-    }
-  }
-}
-```
-
-**Using `extensions` (once SEP-1724 is accepted):**
-
-```json
-{
-  "method": "initialize",
-  "params": {
-    "protocolVersion": "2024-11-05",
-    "capabilities": {
+      },
       "extensions": {
         "io.modelcontextprotocol/ui": {
           "mimeTypes": ["text/html;profile=mcp-app"]
