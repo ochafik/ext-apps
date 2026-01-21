@@ -110,7 +110,8 @@ TIPS:
 - Use windowWidth and windowHeight for responsive full-size canvas
 - The draw() function runs at ~60fps by default
 - Use noLoop() to stop animation, loop() to restart
-- Use frameRate(n) to change animation speed`;
+- Use frameRate(n) to change animation speed
+- Use clear() instead of background() for transparent canvas (blends with host theme)`;
 
 const DEFAULT_SKETCH = `function setup() {
   createCanvas(windowWidth, windowHeight);
@@ -118,7 +119,7 @@ const DEFAULT_SKETCH = `function setup() {
 }
 
 function draw() {
-  background(0, 0, 20, 10);
+  clear(); // Transparent background - blends with host theme
 
   // Create flowing particles
   for (let i = 0; i < 5; i++) {
@@ -126,10 +127,14 @@ function draw() {
     let y = height/2 + cos(frameCount * 0.03 + i * 0.5) * 100;
     let hue = (frameCount + i * 30) % 360;
 
-    fill(hue, 80, 100, 0.8);
+    fill(hue, 80, 100);
     noStroke();
     ellipse(x, y, 30 + sin(frameCount * 0.1 + i) * 10);
   }
+}
+
+function windowResized() {
+  resizeCanvas(windowWidth, windowHeight);
 }`;
 
 /**
