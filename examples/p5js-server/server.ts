@@ -106,8 +106,18 @@ Interactive drawing:
     box(100);
   }
 
+RESPONSIVE SIZING:
+For sketches that should fill the available space and handle fullscreen:
+  function setup() {
+    createCanvas(windowWidth, windowHeight);
+  }
+  function windowResized() {
+    resizeCanvas(windowWidth, windowHeight);
+  }
+
 TIPS:
 - Use windowWidth and windowHeight for responsive full-size canvas
+- Define windowResized() with resizeCanvas() to handle fullscreen transitions
 - The draw() function runs at ~60fps by default
 - Use noLoop() to stop animation, loop() to restart
 - Use frameRate(n) to change animation speed
