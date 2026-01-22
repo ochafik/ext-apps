@@ -334,45 +334,45 @@ const app = new App(
 
 // Register ALL callbacks BEFORE connecting
 app.ontoolinput = (params) => {
-  logEvent("tool-input", params);
+  logEvent("ontoolinput", params);
 };
 
 app.ontoolinputpartial = (params) => {
-  logEvent("tool-input-partial", params);
+  logEvent("ontoolinputpartial", params);
 };
 
 app.ontoolresult = (result) => {
-  logEvent("tool-result", result);
+  logEvent("ontoolresult", result);
 };
 
 app.ontoolcancelled = (params) => {
-  logEvent("tool-cancelled", params);
+  logEvent("ontoolcancelled", params);
 };
 
 app.onhostcontextchanged = (ctx) => {
-  logEvent("host-context-changed", ctx);
+  logEvent("onhostcontextchanged", ctx);
   handleHostContextChanged(ctx);
 };
 
 app.onteardown = async (params) => {
-  logEvent("teardown", params);
+  logEvent("onteardown", params);
   return {};
 };
 
 app.oncalltool = async (params) => {
-  logEvent("call-tool", params);
+  logEvent("oncalltool", params);
   return {
     content: [{ type: "text", text: "App handled tool call" }],
   };
 };
 
 app.onlisttools = async (params) => {
-  logEvent("list-tools", params);
+  logEvent("onlisttools", params);
   return { tools: [] };
 };
 
 app.onerror = (error) => {
-  logEvent("error", error);
+  logEvent("onerror", error);
 };
 
 // ============================================================================
