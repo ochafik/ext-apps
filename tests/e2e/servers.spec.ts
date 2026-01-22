@@ -18,6 +18,7 @@ const DYNAMIC_MASKS: Record<string, string[]> = {
   "customer-segmentation": [".chart-container"], // Scatter plot (random data)
   "say-server": [".playBtn", ".playOverlayBtn"], // Play buttons may have different states
   shadertoy: ["#canvas"], // WebGL shader canvas (animated)
+  strudel: ["#strudel-container"], // Strudel REPL iframe (dynamic)
   "system-monitor": [
     ".chart-container", // CPU chart (highly dynamic)
     "#status-text", // Current timestamp
@@ -34,6 +35,7 @@ const DYNAMIC_MASKS: Record<string, string[]> = {
 const SLOW_SERVERS: Record<string, number> = {
   "map-server": 5000, // CesiumJS needs time for tiles to load
   threejs: 2000, // Three.js WebGL initialization
+  strudel: 3000, // Strudel loads external embed script
 };
 
 // Servers to skip in CI (require special resources like GPU, large ML models)
@@ -107,6 +109,7 @@ const ALL_SERVERS = [
   },
   { key: "shadertoy", name: "ShaderToy Server", dir: "shadertoy-server" },
   { key: "sheet-music", name: "Sheet Music Server", dir: "sheet-music-server" },
+  { key: "strudel", name: "Strudel Server", dir: "strudel-server" },
   {
     key: "system-monitor",
     name: "System Monitor Server",
