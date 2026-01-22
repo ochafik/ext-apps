@@ -29,7 +29,10 @@ import type {
   AnySchema,
   ZodRawShapeCompat,
 } from "@modelcontextprotocol/sdk/server/zod-compat.js";
-import type { ToolAnnotations } from "@modelcontextprotocol/sdk/types.js";
+import type {
+  ClientCapabilities,
+  ToolAnnotations,
+} from "@modelcontextprotocol/sdk/types.js";
 
 // Re-exports for convenience
 export { RESOURCE_URI_META_KEY, RESOURCE_MIME_TYPE };
@@ -199,9 +202,20 @@ export function registerAppResource(
 /**
  * Extension identifier for MCP Apps capability negotiation.
  *
- * Used as the key in `experimental` or `extensions` to advertise MCP Apps support.
+ * Used as the key in `extensions` to advertise MCP Apps support.
  */
 export const EXTENSION_ID = "io.modelcontextprotocol/ui";
+
+/**
+ * Client capabilities with extensions field.
+ *
+ * This extends the SDK's `ClientCapabilities` type with the `extensions` field
+ * (pending SEP-1724). Once `extensions` is added to the SDK, this type can be
+ * replaced with `ClientCapabilities` directly.
+ */
+export type ClientCapabilitiesWithExtensions = ClientCapabilities & {
+  extensions?: Record<string, unknown>;
+};
 
 /**
  * MCP Apps capability settings advertised by clients.
@@ -217,24 +231,21 @@ export interface McpUiClientCapability {
 }
 
 /**
- * Check if client capabilities indicate MCP Apps support.
+ * Get MCP Apps capability settings from client capabilities.
  *
- * This helper checks both `experimental` and `extensions` fields for the
- * MCP Apps capability, providing forward compatibility as the MCP specification
- * evolves. Currently, `experimental` is preferred (it's part of the existing
- * MCP schema); once SEP-1724 is accepted, `extensions` will be the canonical
- * location.
+ * This helper retrieves the capability object from the `extensions` field
+ * where MCP Apps advertises its support.
  *
  * @param clientCapabilities - The client capabilities from the initialize response
- * @param mimeType - MIME type to check for (defaults to `"text/html;profile=mcp-app"`)
- * @returns `true` if the client supports MCP Apps with the specified MIME type
+ * @returns The MCP Apps capability settings, or `undefined` if not supported
  *
- * @example Basic usage in server initialization
+ * @example Check for MCP Apps support in server initialization
  * ```typescript
- * import { hasUiSupport, registerAppTool } from "@modelcontextprotocol/ext-apps/server";
+ * import { getUiCapability, RESOURCE_MIME_TYPE, registerAppTool } from "@modelcontextprotocol/ext-apps/server";
  *
  * server.oninitialized = ({ clientCapabilities }) => {
- *   if (hasUiSupport(clientCapabilities)) {
+ *   const uiCap = getUiCapability(clientCapabilities);
+ *   if (uiCap?.mimeTypes?.includes(RESOURCE_MIME_TYPE)) {
  *     registerAppTool(server, "weather", {
  *       description: "Get weather with interactive dashboard",
  *       _meta: { ui: { resourceUri: "ui://weather/dashboard" } },
@@ -247,90 +258,15 @@ export interface McpUiClientCapability {
  *   }
  * };
  * ```
- *
- * @example Checking for specific MIME type
- * ```typescript
- * if (hasUiSupport(clientCapabilities, "application/x-custom-widget")) {
- *   // Client supports custom widget MIME type
- * }
- * ```
- */
-export function hasUiSupport(
-  clientCapabilities:
-    | {
-        experimental?: Record<string, unknown>;
-        extensions?: Record<string, unknown>;
-      }
-    | null
-    | undefined,
-  mimeType: string = RESOURCE_MIME_TYPE,
-): boolean {
-  if (!clientCapabilities) {
-    return false;
-  }
-
-  // Check experimental field (current MCP schema)
-  const experimentalCap = clientCapabilities.experimental?.[EXTENSION_ID] as
-    | McpUiClientCapability
-    | undefined;
-  if (experimentalCap?.mimeTypes?.includes(mimeType)) {
-    return true;
-  }
-
-  // Check extensions field (future SEP-1724)
-  const extensionsCap = clientCapabilities.extensions?.[EXTENSION_ID] as
-    | McpUiClientCapability
-    | undefined;
-  if (extensionsCap?.mimeTypes?.includes(mimeType)) {
-    return true;
-  }
-
-  return false;
-}
-
-/**
- * Get MCP Apps capability settings from client capabilities.
- *
- * This helper retrieves the capability object from either `experimental` or
- * `extensions`, preferring `extensions` when both are present (for forward
- * compatibility with SEP-1724).
- *
- * @param clientCapabilities - The client capabilities from the initialize response
- * @returns The MCP Apps capability settings, or `undefined` if not supported
- *
- * @example
- * ```typescript
- * import { getUiCapability } from "@modelcontextprotocol/ext-apps/server";
- *
- * const uiCap = getUiCapability(clientCapabilities);
- * if (uiCap?.mimeTypes?.includes("text/html;profile=mcp-app")) {
- *   // Client supports MCP Apps
- * }
- * ```
  */
 export function getUiCapability(
-  clientCapabilities:
-    | {
-        experimental?: Record<string, unknown>;
-        extensions?: Record<string, unknown>;
-      }
-    | null
-    | undefined,
+  clientCapabilities: ClientCapabilitiesWithExtensions | null | undefined,
 ): McpUiClientCapability | undefined {
   if (!clientCapabilities) {
     return undefined;
   }
 
-  // Prefer extensions when available (forward compatibility with SEP-1724)
-  const extensionsCap = clientCapabilities.extensions?.[EXTENSION_ID] as
-    | McpUiClientCapability
-    | undefined;
-  if (extensionsCap) {
-    return extensionsCap;
-  }
-
-  // Fall back to experimental (current MCP schema)
-  return clientCapabilities.experimental?.[EXTENSION_ID] as
+  return clientCapabilities.extensions?.[EXTENSION_ID] as
     | McpUiClientCapability
     | undefined;
 }
