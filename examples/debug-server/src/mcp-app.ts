@@ -130,7 +130,6 @@ const toolDelayMsEl = document.getElementById(
 const callDebugToolBtn = document.getElementById("call-debug-tool-btn")!;
 const callDebugRefreshBtn = document.getElementById("call-debug-refresh-btn")!;
 
-
 // ============================================================================
 // Utility Functions
 // ============================================================================
@@ -329,7 +328,7 @@ function handleHostContextChanged(ctx: McpUiHostContext): void {
 
 const app = new App(
   { name: "Debug App", version: "1.0.0" },
-  {}, // capabilities
+  { tools: { listChanged: true } }, // Declare tools capability for oncalltool/onlisttools
   { autoResize: false }, // We'll manage auto-resize ourselves for toggle demo
 );
 

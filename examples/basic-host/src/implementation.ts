@@ -271,7 +271,7 @@ export function newAppBridge(
     updateModelContext: { text: {} },
   }, {
     hostContext: {
-      containerDimensions: options?.containerDimensions ?? { maxHeight: 600 },
+      containerDimensions: options?.containerDimensions ?? { maxHeight: 6000 },
       displayMode: options?.displayMode ?? "inline",
       availableDisplayModes: ["inline", "fullscreen"],
     },
