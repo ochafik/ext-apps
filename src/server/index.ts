@@ -207,17 +207,6 @@ export function registerAppResource(
 export const EXTENSION_ID = "io.modelcontextprotocol/ui";
 
 /**
- * Client capabilities with extensions field.
- *
- * This extends the SDK's `ClientCapabilities` type with the `extensions` field
- * (pending SEP-1724). Once `extensions` is added to the SDK, this type can be
- * replaced with `ClientCapabilities` directly.
- */
-export type ClientCapabilitiesWithExtensions = ClientCapabilities & {
-  extensions?: Record<string, unknown>;
-};
-
-/**
  * MCP Apps capability settings advertised by clients.
  *
  * @see {@link getUiCapability} for checking client support
@@ -235,6 +224,10 @@ export interface McpUiClientCapability {
  *
  * This helper retrieves the capability object from the `extensions` field
  * where MCP Apps advertises its support.
+ *
+ * Note: The `clientCapabilities` parameter extends the SDK's `ClientCapabilities`
+ * type with an `extensions` field (pending SEP-1724). Once `extensions` is added
+ * to the SDK, this can use `ClientCapabilities` directly.
  *
  * @param clientCapabilities - The client capabilities from the initialize response
  * @returns The MCP Apps capability settings, or `undefined` if not supported
@@ -260,7 +253,10 @@ export interface McpUiClientCapability {
  * ```
  */
 export function getUiCapability(
-  clientCapabilities: ClientCapabilitiesWithExtensions | null | undefined,
+  clientCapabilities:
+    | (ClientCapabilities & { extensions?: Record<string, unknown> })
+    | null
+    | undefined,
 ): McpUiClientCapability | undefined {
   if (!clientCapabilities) {
     return undefined;
