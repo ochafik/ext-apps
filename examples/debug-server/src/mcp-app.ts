@@ -92,6 +92,9 @@ const updateContextTextBtn = document.getElementById(
 const updateContextStructuredBtn = document.getElementById(
   "update-context-structured-btn",
 )!;
+const updateContextImageBtn = document.getElementById(
+  "update-context-image-btn",
+)!;
 
 const displayInlineBtn = document.getElementById("display-inline-btn")!;
 const displayFullscreenBtn = document.getElementById("display-fullscreen-btn")!;
@@ -471,6 +474,20 @@ updateContextStructuredBtn.addEventListener("click", async () => {
       },
     });
     logEvent("update-context", { type: "structured" });
+  } catch (e) {
+    logEvent("error", e);
+  }
+});
+
+updateContextImageBtn.addEventListener("click", async () => {
+  // 1x1 red PNG for testing
+  const redPng =
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg==";
+  try {
+    await app.updateModelContext({
+      content: [{ type: "image", data: redPng, mimeType: "image/png" }],
+    });
+    logEvent("update-context", { type: "image" });
   } catch (e) {
     logEvent("error", e);
   }
