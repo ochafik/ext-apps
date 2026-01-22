@@ -13,43 +13,10 @@ import "./mcp-app.css";
 
 // ─── Types ───
 interface StrudelInput {
-  code: string;
-  shader: string;
+  strudel_source: string;
+  shader_source: string;
   bpm: number;
 }
-
-// ─── Defaults (matching server.ts) ───
-const DEFAULT_PATTERN = `note("[c eb g <f bb>](3,8,<0 1>)".sub(12))
-.s("<sawtooth>/64")
-.lpf(sine.range(300,2000).slow(16))
-.lpa(0.005)
-.lpd(perlin.range(.02,.2))
-.lps(perlin.range(0,.5).slow(3))
-.lpq(sine.range(2,10).slow(32))
-.release(.5)
-.lpenv(perlin.range(1,8).slow(2))
-.ftype('24db')
-.room(1)
-.juxBy(.5,rev)
-.sometimes(add(note(12)))
-.stack(s("bd*2").bank('RolandTR909'))
-.gain(.5).fast(2)`;
-
-const DEFAULT_SHADER = `void mainImage(out vec4 O, in vec2 U) {
-  vec2 uv = (U - .5 * iResolution.xy) / iResolution.y;
-  float r = length(uv);
-  float beat = exp(-3.0 * fract(iBeat));
-  float ring = smoothstep(0.02, 0.0, abs(r - 0.3 * beat - 0.1 * iBass));
-  float a = atan(uv.y, uv.x);
-  float spiral = sin(a * 5.0 + iTime * 2.0 - r * 10.0 + iBass * 3.0);
-  spiral = smoothstep(0.0, 0.4, spiral * (1.0 - r));
-  vec3 col = vec3(0.0);
-  col += vec3(0.9, 0.2, 0.3) * ring * (1.0 + iBass);
-  col += vec3(0.2, 0.5, 0.9) * spiral * iMid;
-  col += vec3(0.1, 0.9, 0.5) * beat * 0.3;
-  col *= 1.0 - 0.6 * r * r;
-  O = vec4(col, 1.0);
-}`;
 
 interface AudioState {
   playing: boolean;
@@ -80,17 +47,6 @@ interface ShaderUniforms {
 }
 
 // ─── Helpers ───
-function getStrudelInput(value: unknown): StrudelInput {
-  const partial = (typeof value === "object" && value !== null)
-    ? value as Partial<StrudelInput>
-    : {};
-  return {
-    code: partial.code ?? DEFAULT_PATTERN,
-    shader: partial.shader ?? DEFAULT_SHADER,
-    bpm: partial.bpm ?? 120,
-  };
-}
-
 const log = {
   info: console.log.bind(console, "[APP]"),
   warn: console.warn.bind(console, "[APP]"),
@@ -173,14 +129,14 @@ async function copyToClipboard(
 
 // Copy buttons
 copyCodeBtn.addEventListener("click", () => {
-  if (currentInput?.code) {
-    copyToClipboard(currentInput.code, copyCodeBtn);
+  if (currentInput?.strudel_source) {
+    copyToClipboard(currentInput.strudel_source, copyCodeBtn);
   }
 });
 
 copyShaderBtn.addEventListener("click", () => {
-  if (currentInput?.shader) {
-    copyToClipboard(currentInput.shader, copyShaderBtn);
+  if (currentInput?.shader_source) {
+    copyToClipboard(currentInput.shader_source, copyShaderBtn);
   }
 });
 
@@ -614,7 +570,7 @@ playBtn.addEventListener("click", async () => {
     await stopAudio();
     updatePlayButton();
   } else if (currentInput) {
-    await startStrudel(currentInput.code);
+    await startStrudel(currentInput.strudel_source);
     updatePlayButton();
   }
 });
@@ -673,7 +629,7 @@ app.ontoolinputpartial = (params) => {
   // Show code preview during streaming
   codePreview.classList.add("visible");
   playBtn.classList.add("hidden");
-  const code = params.arguments?.code;
+  const code = params.arguments?.strudel_source;
   codePreview.textContent = typeof code === "string" ? code : "";
   codePreview.scrollTop = codePreview.scrollHeight;
 };
@@ -686,20 +642,17 @@ app.ontoolinput = async (params) => {
   playBtn.classList.remove("hidden");
 
   // Apply defaults for missing fields
-  const input = getStrudelInput(params.arguments);
+  const input = params.arguments as any as StrudelInput;
   currentInput = input;
 
   // Update code overlay for hover display
-  codeOverlay.textContent = input.code;
+  codeOverlay.textContent = input.strudel_source;
   codeOverlay.classList.add("has-code");
 
   // Set BPM from input
   audioState.bpm = input.bpm;
 
-  // Build shader
-  const shaderCode = input.shader;
-
-  if (!buildProgram(shaderCode)) {
+  if (!buildProgram(input.shader_source)) {
     log.error("Failed to build shader, using fallback");
     buildProgram(`
       void mainImage(out vec4 O, in vec2 U) {

@@ -17,6 +17,47 @@ const DIST_DIR = import.meta.filename.endsWith(".ts")
   ? path.join(import.meta.dirname, "dist")
   : import.meta.dirname;
 
+const DEFAULT_PATTERN = `note("[c eb g <f bb>](3,8,<0 1>)".sub(12))
+.s("<sawtooth>/64")
+.lpf(sine.range(300,2000).slow(16))
+.lpa(0.005)
+.lpd(perlin.range(.02,.2))
+.lps(perlin.range(0,.5).slow(3))
+.lpq(sine.range(2,10).slow(32))
+.release(.5)
+.lpenv(perlin.range(1,8).slow(2))
+.ftype('24db')
+.room(1)
+.juxBy(.5,rev)
+.sometimes(add(note(12)))
+.stack(s("bd*2").bank('RolandTR909'))
+.gain(.5).fast(2)`;
+
+const DEFAULT_SHADER = `void mainImage(out vec4 O, in vec2 U) {
+  vec2 uv = (U - .5 * iResolution.xy) / iResolution.y;
+
+  // Radial pulse on beat
+  float r = length(uv);
+  float beat = exp(-3.0 * fract(iBeat));
+  float ring = smoothstep(0.02, 0.0, abs(r - 0.3 * beat - 0.1 * iBass));
+
+  // Swirl with bass
+  float a = atan(uv.y, uv.x);
+  float spiral = sin(a * 5.0 + iTime * 2.0 - r * 10.0 + iBass * 3.0);
+  spiral = smoothstep(0.0, 0.4, spiral * (1.0 - r));
+
+  // Color from frequency bands
+  vec3 col = vec3(0.0);
+  col += vec3(0.9, 0.2, 0.3) * ring * (1.0 + iBass);
+  col += vec3(0.2, 0.5, 0.9) * spiral * iMid;
+  col += vec3(0.1, 0.9, 0.5) * beat * 0.3;
+
+  // Vignette
+  col *= 1.0 - 0.6 * r * r;
+
+  O = vec4(col, 1.0);
+}`;
+
 const TOOL_DESCRIPTION = `Creates audio-reactive visualizations with live-coded music using Strudel (a JavaScript port of TidalCycles) and WebGL shaders.
 
 STRUDEL MINI-NOTATION:
@@ -67,47 +108,6 @@ SOUNDS: bd, sd, hh, oh, cp, piano, sawtooth, sine, square
 
 Note: Click play button to start audio (browser security requires user gesture).`;
 
-const DEFAULT_PATTERN = `note("[c eb g <f bb>](3,8,<0 1>)".sub(12))
-.s("<sawtooth>/64")
-.lpf(sine.range(300,2000).slow(16))
-.lpa(0.005)
-.lpd(perlin.range(.02,.2))
-.lps(perlin.range(0,.5).slow(3))
-.lpq(sine.range(2,10).slow(32))
-.release(.5)
-.lpenv(perlin.range(1,8).slow(2))
-.ftype('24db')
-.room(1)
-.juxBy(.5,rev)
-.sometimes(add(note(12)))
-.stack(s("bd*2").bank('RolandTR909'))
-.gain(.5).fast(2)`;
-
-const DEFAULT_SHADER = `void mainImage(out vec4 O, in vec2 U) {
-  vec2 uv = (U - .5 * iResolution.xy) / iResolution.y;
-
-  // Radial pulse on beat
-  float r = length(uv);
-  float beat = exp(-3.0 * fract(iBeat));
-  float ring = smoothstep(0.02, 0.0, abs(r - 0.3 * beat - 0.1 * iBass));
-
-  // Swirl with bass
-  float a = atan(uv.y, uv.x);
-  float spiral = sin(a * 5.0 + iTime * 2.0 - r * 10.0 + iBass * 3.0);
-  spiral = smoothstep(0.0, 0.4, spiral * (1.0 - r));
-
-  // Color from frequency bands
-  vec3 col = vec3(0.0);
-  col += vec3(0.9, 0.2, 0.3) * ring * (1.0 + iBass);
-  col += vec3(0.2, 0.5, 0.9) * spiral * iMid;
-  col += vec3(0.1, 0.9, 0.5) * beat * 0.3;
-
-  // Vignette
-  col *= 1.0 - 0.6 * r * r;
-
-  O = vec4(col, 1.0);
-}`;
-
 /**
  * Creates a new MCP server instance with tools and resources registered.
  */
@@ -127,13 +127,13 @@ export function createServer(): McpServer {
       title: "Strudel Music",
       description: TOOL_DESCRIPTION,
       inputSchema: z.object({
-        code: z
+        strudel_source: z
           .string()
           .default(DEFAULT_PATTERN)
           .describe(
             "Strudel pattern code using mini-notation and pattern functions",
           ),
-        shader: z
+        shader_source: z
           .string()
           .default(DEFAULT_SHADER)
           .describe(
@@ -161,31 +161,30 @@ export function createServer(): McpServer {
     },
   );
 
-  // Register the resource which returns the bundled HTML/JavaScript for the UI
   // CSP configuration for external Strudel dependencies
+  const cspMeta = {
+    ui: {
+      csp: {
+        connectDomains: [
+          "https://cdn.jsdelivr.net",
+          "https://esm.sh",
+          "https://unpkg.com",
+        ],
+        resourceDomains: [
+          "https://cdn.jsdelivr.net",
+          "https://esm.sh",
+          "https://unpkg.com",
+        ],
+      },
+    },
+  };
+
+  // Register the resource which returns the bundled HTML/JavaScript for the UI
   registerAppResource(
     server,
     resourceUri,
     resourceUri,
-    {
-      mimeType: RESOURCE_MIME_TYPE,
-      _meta: {
-        ui: {
-          csp: {
-            connectDomains: [
-              "https://cdn.jsdelivr.net",
-              "https://esm.sh",
-              "https://unpkg.com",
-            ],
-            resourceDomains: [
-              "https://cdn.jsdelivr.net",
-              "https://esm.sh",
-              "https://unpkg.com",
-            ],
-          },
-        },
-      },
-    },
+    { mimeType: RESOURCE_MIME_TYPE },
     async (): Promise<ReadResourceResult> => {
       const html = await fs.readFile(
         path.join(DIST_DIR, "mcp-app.html"),
@@ -194,7 +193,8 @@ export function createServer(): McpServer {
 
       return {
         contents: [
-          { uri: resourceUri, mimeType: RESOURCE_MIME_TYPE, text: html },
+          // _meta must be on the content item, not the resource metadata
+          { uri: resourceUri, mimeType: RESOURCE_MIME_TYPE, text: html, _meta: cspMeta },
         ],
       };
     },

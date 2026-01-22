@@ -2,6 +2,7 @@ html, body {
   margin: 0;
   width: 100%;
   height: 100%;
+  min-height: 400px;
   overflow: hidden;
   background: #0a0a0c;
 }
@@ -23,6 +24,7 @@ html, body {
   left: 0;
   width: 100%;
   height: 100%;
+  min-height: 400px;
   z-index: 10;
   pointer-events: none;
   display: flex;
@@ -66,7 +68,7 @@ html, body {
   transform: scale(0.8);
 }
 
-.ui-overlay:hover .play-btn.playing {
+body:hover .play-btn.playing {
   opacity: 1;
   pointer-events: auto;
   transform: scale(1);
@@ -215,7 +217,7 @@ body:hover .code-toggle-btn {
   pointer-events: auto;
 }
 
-.ui-overlay:hover .toolbar {
+body:hover .toolbar {
   opacity: 0.8;
 }
 
