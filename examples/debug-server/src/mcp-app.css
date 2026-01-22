@@ -84,10 +84,33 @@
 .log-entry {
   padding: 0.25rem 0;
   border-bottom: 1px solid var(--color-border);
+  cursor: pointer;
+}
+
+.log-entry:hover {
+  background: var(--color-bg-hover, rgba(0, 0, 0, 0.03));
 }
 
 .log-entry:last-child {
   border-bottom: none;
+}
+
+.log-entry-header {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.log-toggle {
+  color: #9ca3af;
+  font-size: 0.7rem;
+  width: 1rem;
+  transition: transform 0.15s ease;
+  user-select: none;
+}
+
+.log-entry.expanded .log-toggle {
+  transform: rotate(90deg);
 }
 
 .log-time {
@@ -100,31 +123,43 @@
   margin-right: 0.5rem;
 }
 
-.log-type.tool-input { color: var(--color-primary); }
-.log-type.tool-input-partial { color: #8b5cf6; }
-.log-type.tool-result { color: var(--color-success); }
-.log-type.tool-cancelled { color: var(--color-warning); }
-.log-type.widget-state { color: #0891b2; }
-.log-type.host-context-changed { color: #7c3aed; }
-.log-type.teardown { color: #f97316; }
-.log-type.call-tool { color: #ec4899; }
-.log-type.list-tools { color: #14b8a6; }
-.log-type.error { color: var(--color-error); }
+.log-type.ontoolinput { color: var(--color-primary); }
+.log-type.ontoolinputpartial { color: #8b5cf6; }
+.log-type.ontoolresult { color: var(--color-success); }
+.log-type.ontoolcancelled { color: var(--color-warning); }
+.log-type.onhostcontextchanged { color: #7c3aed; }
+.log-type.onteardown { color: #f97316; }
+.log-type.oncalltool { color: #ec4899; }
+.log-type.onlisttools { color: #14b8a6; }
+.log-type.onerror { color: var(--color-error); }
+.log-type.connected { color: var(--color-success); }
+.log-type.update-context { color: #0891b2; }
 
-.log-payload {
+.log-payload-preview {
   color: #6b7280;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  max-width: 400px;
-  display: inline-block;
-  vertical-align: bottom;
-  cursor: pointer;
+  flex: 1;
+  min-width: 0;
 }
 
-.log-payload:hover {
-  white-space: normal;
+.log-payload-full {
+  display: none;
+  margin: 0.5rem 0 0.25rem 1.25rem;
+  padding: 0.5rem;
+  background: var(--color-bg-subtle, #f3f4f6);
+  border-radius: 4px;
+  font-size: 0.8rem;
+  overflow-x: auto;
+  white-space: pre-wrap;
   word-break: break-all;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.log-entry.expanded .log-payload-full {
+  display: block;
 }
 
 /* Info grid */

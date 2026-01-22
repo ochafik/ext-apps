@@ -164,17 +164,31 @@ function renderEventLog(): void {
       ? state.eventLog
       : state.eventLog.filter((e) => e.type === state.logFilter);
 
+  const fullPayload = (payload: unknown) =>
+    JSON.stringify(payload, null, 2).replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
   eventLogEl.innerHTML = filtered
     .map(
-      (entry) => `
-    <div class="log-entry">
-      <span class="log-time">[${formatTime(entry.time)}]</span>
-      <span class="log-type ${entry.type}">${entry.type}:</span>
-      <span class="log-payload" title="${truncatePayload(entry.payload).replace(/"/g, "&quot;")}">${truncatePayload(entry.payload)}</span>
+      (entry, index) => `
+    <div class="log-entry" data-index="${index}">
+      <div class="log-entry-header">
+        <span class="log-toggle">▶</span>
+        <span class="log-time">[${formatTime(entry.time)}]</span>
+        <span class="log-type ${entry.type}">${entry.type}:</span>
+        <span class="log-payload-preview">${truncatePayload(entry.payload)}</span>
+      </div>
+      <pre class="log-payload-full">${fullPayload(entry.payload)}</pre>
     </div>
   `,
     )
     .join("");
+
+  // Add click handlers for toggling
+  eventLogEl.querySelectorAll(".log-entry").forEach((el) => {
+    el.addEventListener("click", () => {
+      el.classList.toggle("expanded");
+    });
+  });
 
   // Auto-scroll to bottom
   eventLogEl.scrollTop = eventLogEl.scrollHeight;
