@@ -424,7 +424,9 @@ async function startStrudel(code: string): Promise<void> {
     await strudel.initStrudel();
 
     strudelRepl = {
-      stop: async () => { strudel.hush(); },
+      stop: async () => {
+        strudel.hush();
+      },
       evaluate: async (newCode: string) => {
         // Evaluate and play the pattern
         const fn = new Function(...Object.keys(strudel), `return (${newCode})`);
