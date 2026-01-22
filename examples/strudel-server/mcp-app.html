@@ -10,6 +10,32 @@
   <canvas id="glCanvas"></canvas>
 
   <div class="ui-overlay">
+    <!-- Toolbar - top right -->
+    <div class="toolbar">
+      <button id="copyCodeBtn" class="control-btn" title="Copy Strudel code">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="9" y="9" width="13" height="13" rx="2"/>
+          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+        </svg>
+        <span class="btn-label">Code</span>
+      </button>
+      <button id="copyShaderBtn" class="control-btn" title="Copy shader">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="9" y="9" width="13" height="13" rx="2"/>
+          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+        </svg>
+        <span class="btn-label">Shader</span>
+      </button>
+      <button id="fullscreenBtn" class="control-btn fullscreen-btn" title="Toggle fullscreen">
+        <svg class="expand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
+        </svg>
+        <svg class="collapse-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"/>
+        </svg>
+      </button>
+    </div>
+
     <!-- Big centered play button -->
     <button id="playBtn" class="play-btn" title="Click to start audio">
       <svg class="play-icon" viewBox="0 0 24 24" fill="currentColor">
@@ -58,16 +84,6 @@
     <a href="https://strudel.cc" target="_blank" rel="noopener" class="strudel-link" title="Powered by Strudel">
       strudel.cc
     </a>
-
-    <!-- Fullscreen button -->
-    <button id="fullscreenBtn" class="fullscreen-btn" title="Toggle fullscreen">
-      <svg class="expand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
-      </svg>
-      <svg class="collapse-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"/>
-      </svg>
-    </button>
   </div>
 
   <script type="module" src="/src/mcp-app.ts"></script>

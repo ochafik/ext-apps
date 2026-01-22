@@ -98,15 +98,45 @@ const playBtn = document.getElementById("playBtn") as HTMLButtonElement;
 const codePreview = document.getElementById("codePreview") as HTMLPreElement;
 const codeOverlay = document.getElementById("codeOverlay") as HTMLPreElement;
 const codeToggleBtn = document.getElementById("codeToggleBtn") as HTMLButtonElement;
-const fullscreenBtn = document.getElementById(
-  "fullscreenBtn",
-) as HTMLButtonElement;
+const copyCodeBtn = document.getElementById("copyCodeBtn") as HTMLButtonElement;
+const copyShaderBtn = document.getElementById("copyShaderBtn") as HTMLButtonElement;
+const fullscreenBtn = document.getElementById("fullscreenBtn") as HTMLButtonElement;
 const metersBar = document.querySelector(".meters-bar") as HTMLElement;
 
 // Code overlay toggle
 codeToggleBtn.addEventListener("click", () => {
   codeOverlay.classList.toggle("visible");
   codeToggleBtn.classList.toggle("active");
+});
+
+// Copy to clipboard helper
+async function copyToClipboard(text: string, btn: HTMLButtonElement): Promise<void> {
+  try {
+    await navigator.clipboard.writeText(text);
+    btn.classList.add("copied");
+    const label = btn.querySelector(".btn-label");
+    const originalText = label?.textContent;
+    if (label) label.textContent = "Copied!";
+    setTimeout(() => {
+      btn.classList.remove("copied");
+      if (label && originalText) label.textContent = originalText;
+    }, 1500);
+  } catch (err) {
+    log.error("Failed to copy:", err);
+  }
+}
+
+// Copy buttons
+copyCodeBtn.addEventListener("click", () => {
+  if (currentInput?.code) {
+    copyToClipboard(currentInput.code, copyCodeBtn);
+  }
+});
+
+copyShaderBtn.addEventListener("click", () => {
+  if (currentInput?.shader) {
+    copyToClipboard(currentInput.shader, copyShaderBtn);
+  }
 });
 
 // ─── WebGL Setup ───
