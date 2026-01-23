@@ -26,10 +26,25 @@ export const DEFAULT_PDF = "https://arxiv.org/pdf/1706.03762"; // Attention Is A
 export const MAX_CHUNK_BYTES = 512 * 1024; // 512KB max per request
 export const RESOURCE_URI = "ui://pdf-viewer/mcp-app.html";
 
-/** Allowed remote origins (security whitelist) */
+/** Allowed remote origins (security allowlist) */
 export const allowedRemoteOrigins = new Set([
   "https://arxiv.org",
-  "http://arxiv.org",
+  "https://ssrn.com",
+  "https://www.researchsquare.com",
+  "https://www.preprints.org",
+  "https://osf.io",
+  "https://zenodo.org",
+  "https://www.biorxiv.org",
+  "https://www.medrxiv.org",
+  "https://chemrxiv.org",
+  "https://www.eartharxiv.org",
+  "https://psyarxiv.com",
+  "https://osf.io/preprints/socarxiv",
+  "https://engrxiv.org",
+  "https://www.sportarxiv.org",
+  "https://agrirxiv.org",
+  "https://edarxiv.org",
+  "https://hal.science",
 ]);
 
 /** Allowed local file paths (populated from CLI args) */
@@ -212,6 +227,34 @@ export async function readPdfRange(
 
 export function createServer(): McpServer {
   const server = new McpServer({ name: "PDF Server", version: "2.0.0" });
+
+  // Tool: list_pdfs - List available PDFs (local files + allowed origins)
+  server.tool(
+    "list_pdfs",
+    "List available PDFs that can be displayed",
+    {},
+    async (): Promise<CallToolResult> => {
+      const pdfs: Array<{ url: string; type: "local" | "remote" }> = [];
+
+      // Add local files
+      for (const filePath of allowedLocalFiles) {
+        pdfs.push({ url: pathToFileUrl(filePath), type: "local" });
+      }
+
+      // Note: Remote URLs from allowed origins can be loaded dynamically
+      const text = pdfs.length > 0
+        ? `Available PDFs:\n${pdfs.map(p => `- ${p.url} (${p.type})`).join("\n")}\n\nRemote PDFs from ${[...allowedRemoteOrigins].join(", ")} can also be loaded dynamically.`
+        : `No local PDFs configured. Remote PDFs from ${[...allowedRemoteOrigins].join(", ")} can be loaded dynamically.`;
+
+      return {
+        content: [{ type: "text", text }],
+        structuredContent: {
+          localFiles: pdfs.filter(p => p.type === "local").map(p => p.url),
+          allowedOrigins: [...allowedRemoteOrigins],
+        },
+      };
+    },
+  );
 
   // Tool: get_pdf_info - HEAD request to get size
   server.tool(
