@@ -416,8 +416,7 @@ function scheduleLocationUpdate(cesiumViewer: any): void {
     // If the host doesn't support this, the request will silently fail.
     const content = [
       `The map view of ${app.getHostContext()?.toolInfo?.id} is now ${widthKm.toFixed(1)}km wide × ${heightKm.toFixed(1)}km tall `,
-      `and has changed to the following location: `,
-      `[${places.join(", ")}] ` : '',
+      `and has changed to the following location: [${places.join(", ")}] `,
       `lat. / long. of center of map = [${center.lat.toFixed(4)}, ${center.lon.toFixed(4)}]`,
     ].join('\n')
     log.info("Updating model context:", content);
