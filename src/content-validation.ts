@@ -5,7 +5,10 @@ import type { McpUiSupportedContentBlockModalities } from "./types";
  * Maps a ContentBlock `type` to its corresponding modality key
  * in {@link McpUiSupportedContentBlockModalities}.
  */
-const CONTENT_TYPE_TO_MODALITY: Record<string, keyof McpUiSupportedContentBlockModalities | undefined> = {
+const CONTENT_TYPE_TO_MODALITY: Record<
+  string,
+  keyof McpUiSupportedContentBlockModalities | undefined
+> = {
   text: "text",
   image: "image",
   audio: "audio",
@@ -43,7 +46,11 @@ export function validateContentModalities(
 ): ContentValidationResult {
   // Backwards compatibility: if modalities is undefined, skip validation entirely
   if (modalities === undefined) {
-    return { valid: true, unsupportedTypes: [], structuredContentUnsupported: false };
+    return {
+      valid: true,
+      unsupportedTypes: [],
+      structuredContentUnsupported: false,
+    };
   }
 
   const unsupportedTypes = new Set<string>();
@@ -52,7 +59,8 @@ export function validateContentModalities(
   // Check each content block
   if (content) {
     for (const block of content) {
-      const modalityKey = CONTENT_TYPE_TO_MODALITY[(block as { type: string }).type];
+      const modalityKey =
+        CONTENT_TYPE_TO_MODALITY[(block as { type: string }).type];
       if (modalityKey === undefined || !(modalityKey in modalities)) {
         unsupportedTypes.add((block as { type: string }).type);
       }
@@ -85,7 +93,9 @@ export function buildValidationErrorMessage(
 ): string {
   const parts: string[] = [];
   if (result.unsupportedTypes.length > 0) {
-    parts.push(`unsupported content type(s): ${result.unsupportedTypes.join(", ")}`);
+    parts.push(
+      `unsupported content type(s): ${result.unsupportedTypes.join(", ")}`,
+    );
   }
   if (result.structuredContentUnsupported) {
     parts.push("structuredContent is not supported");

@@ -901,9 +901,7 @@ describe("Content block modality validation", () => {
       // Should succeed even with image content since message capability is not declared
       const result = await app.sendMessage({
         role: "user",
-        content: [
-          { type: "image", data: "base64data", mimeType: "image/png" },
-        ],
+        content: [{ type: "image", data: "base64data", mimeType: "image/png" }],
       });
       expect(result).toEqual({});
     });
@@ -1052,9 +1050,7 @@ describe("Content block modality validation", () => {
       await app.connect(appTransport);
 
       const result = await app.updateModelContext({
-        content: [
-          { type: "image", data: "base64data", mimeType: "image/png" },
-        ],
+        content: [{ type: "image", data: "base64data", mimeType: "image/png" }],
         structuredContent: { key: "value" },
       });
       expect(result).toEqual({});

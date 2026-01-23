@@ -147,7 +147,11 @@ describe("validateContentModalities", () => {
 describe("buildValidationErrorMessage", () => {
   it("builds message for unsupported content types", () => {
     const msg = buildValidationErrorMessage(
-      { valid: false, unsupportedTypes: ["image", "audio"], structuredContentUnsupported: false },
+      {
+        valid: false,
+        unsupportedTypes: ["image", "audio"],
+        structuredContentUnsupported: false,
+      },
       "ui/message",
     );
     expect(msg).toBe("ui/message: unsupported content type(s): image, audio");
@@ -155,15 +159,25 @@ describe("buildValidationErrorMessage", () => {
 
   it("builds message for unsupported structuredContent", () => {
     const msg = buildValidationErrorMessage(
-      { valid: false, unsupportedTypes: [], structuredContentUnsupported: true },
+      {
+        valid: false,
+        unsupportedTypes: [],
+        structuredContentUnsupported: true,
+      },
       "ui/update-model-context",
     );
-    expect(msg).toBe("ui/update-model-context: structuredContent is not supported");
+    expect(msg).toBe(
+      "ui/update-model-context: structuredContent is not supported",
+    );
   });
 
   it("builds message with both unsupported types and structuredContent", () => {
     const msg = buildValidationErrorMessage(
-      { valid: false, unsupportedTypes: ["image"], structuredContentUnsupported: true },
+      {
+        valid: false,
+        unsupportedTypes: ["image"],
+        structuredContentUnsupported: true,
+      },
       "ui/update-model-context",
     );
     expect(msg).toBe(
