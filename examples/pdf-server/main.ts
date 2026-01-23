@@ -127,7 +127,9 @@ async function main() {
   }
 
   console.error(`[pdf-server] Ready (${urls.length} URL(s) configured)`);
-  console.error(`[pdf-server] Allowed origins: ${[...allowedRemoteOrigins].join(", ")}`);
+  console.error(
+    `[pdf-server] Allowed origins: ${[...allowedRemoteOrigins].join(", ")}`,
+  );
 
   if (stdio) {
     await createServer().connect(new StdioServerTransport());

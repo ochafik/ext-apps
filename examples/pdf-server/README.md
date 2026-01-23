@@ -35,7 +35,9 @@ On some host platforms, tool calls have size limits, so large PDFs cannot be sen
 
 ```typescript
 // Returns chunks with pagination metadata
-{ bytes, offset, byteCount, totalBytes, hasMore }
+{
+  (bytes, offset, byteCount, totalBytes, hasMore);
+}
 ```
 
 **Client side** (`mcp-app.ts`):
@@ -57,10 +59,12 @@ The viewer keeps the model informed about what the user is seeing:
 
 ```typescript
 app.updateModelContext({
-  content: [{
-    type: "text",
-    text: `PDF viewer | "${title}" | Current Page: ${page}/${total}\n\nPage content:\n${pageText}`
-  }]
+  content: [
+    {
+      type: "text",
+      text: `PDF viewer | "${title}" | Current Page: ${page}/${total}\n\nPage content:\n${pageText}`,
+    },
+  ],
 });
 ```
 
@@ -131,11 +135,11 @@ bun examples/pdf-server/main.ts --stdio ./papers/
 
 ## Tools
 
-| Tool             | Visibility | Purpose                                  |
-| ---------------- | ---------- | ---------------------------------------- |
-| `list_pdfs`      | Model      | List available local files and origins   |
-| `display_pdf`    | Model + UI | Display interactive viewer               |
-| `read_pdf_bytes` | App only   | Stream PDF data in chunks                |
+| Tool             | Visibility | Purpose                                |
+| ---------------- | ---------- | -------------------------------------- |
+| `list_pdfs`      | Model      | List available local files and origins |
+| `display_pdf`    | Model + UI | Display interactive viewer             |
+| `read_pdf_bytes` | App only   | Stream PDF data in chunks              |
 
 ## Architecture
 
@@ -148,14 +152,14 @@ src/
 
 ## Key Patterns Shown
 
-| Pattern           | Implementation                           |
-| ----------------- | ---------------------------------------- |
-| App-only tools    | `_meta: { ui: { visibility: ["app"] } }` |
-| Chunked responses | `hasMore` + `offset` pagination          |
-| Model context     | `app.updateModelContext()`               |
-| Display modes     | `app.requestDisplayMode()`               |
-| External links    | `app.openLink()`                         |
-| View persistence  | `viewUUID` + localStorage                |
+| Pattern           | Implementation                              |
+| ----------------- | ------------------------------------------- |
+| App-only tools    | `_meta: { ui: { visibility: ["app"] } }`    |
+| Chunked responses | `hasMore` + `offset` pagination             |
+| Model context     | `app.updateModelContext()`                  |
+| Display modes     | `app.requestDisplayMode()`                  |
+| External links    | `app.openLink()`                            |
+| View persistence  | `viewUUID` + localStorage                   |
 | Theming           | `applyDocumentTheme()` + CSS `light-dark()` |
 
 ## Dependencies

@@ -6,7 +6,12 @@
  * - Text selection via PDF.js TextLayer
  * - Page navigation, zoom
  */
-import { App, type McpUiHostContext, applyDocumentTheme, applyHostStyleVariables } from "@modelcontextprotocol/ext-apps";
+import {
+  App,
+  type McpUiHostContext,
+  applyDocumentTheme,
+  applyHostStyleVariables,
+} from "@modelcontextprotocol/ext-apps";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import * as pdfjsLib from "pdfjs-dist";
 import { TextLayer } from "pdfjs-dist";
@@ -15,7 +20,7 @@ import "./mcp-app.css";
 
 const MAX_MODEL_CONTEXT_LENGTH = 15000;
 const CHUNK_SIZE = 500 * 1024; // 500KB chunks
-  
+
 // Configure PDF.js worker
 pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
   "pdfjs-dist/build/pdf.worker.mjs",
@@ -707,9 +712,7 @@ app.ontoolresult = async (result) => {
   pdfUrl = parsed.url;
   pdfTitle = parsed.title;
   totalPages = parsed.pageCount;
-  viewUUID = result._meta?.viewUUID
-    ? String(result._meta.viewUUID)
-    : undefined;
+  viewUUID = result._meta?.viewUUID ? String(result._meta.viewUUID) : undefined;
 
   // Restore saved page or use initial page
   const savedPage = loadSavedPage();

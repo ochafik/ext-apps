@@ -418,7 +418,7 @@ function scheduleLocationUpdate(cesiumViewer: any): void {
       `The map view of ${app.getHostContext()?.toolInfo?.id} is now ${widthKm.toFixed(1)}km wide × ${heightKm.toFixed(1)}km tall `,
       `and has changed to the following location: [${places.join(", ")}] `,
       `lat. / long. of center of map = [${center.lat.toFixed(4)}, ${center.lon.toFixed(4)}]`,
-    ].join('\n')
+    ].join("\n");
     log.info("Updating model context:", content);
     app.updateModelContext({
       content: [{ type: "text", text: content }],
@@ -924,9 +924,7 @@ app.ontoolinput = async (params) => {
 
 // Handle tool result - extract viewUUID and restore persisted view if available
 app.ontoolresult = async (result) => {
-  viewUUID = result._meta?.viewUUID
-    ? String(result._meta.viewUUID)
-    : undefined;
+  viewUUID = result._meta?.viewUUID ? String(result._meta.viewUUID) : undefined;
   log.info("Tool result received, viewUUID:", viewUUID);
 
   // Now that we have viewUUID, try to restore persisted view

@@ -19,7 +19,10 @@ import {
   registerAppTool,
   RESOURCE_MIME_TYPE,
 } from "@modelcontextprotocol/ext-apps/server";
-import type { CallToolResult, ReadResourceResult } from "@modelcontextprotocol/sdk/types.js";
+import type {
+  CallToolResult,
+  ReadResourceResult,
+} from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 
 // =============================================================================
@@ -69,7 +72,9 @@ export function isFileUrl(url: string): boolean {
 export function isArxivUrl(url: string): boolean {
   try {
     const parsed = new URL(url);
-    return parsed.hostname === "arxiv.org" || parsed.hostname === "www.arxiv.org";
+    return (
+      parsed.hostname === "arxiv.org" || parsed.hostname === "www.arxiv.org"
+    );
   } catch {
     return false;
   }
@@ -94,7 +99,10 @@ export function validateUrl(url: string): { valid: boolean; error?: string } {
   if (isFileUrl(url)) {
     const filePath = fileUrlToPath(url);
     if (!allowedLocalFiles.has(filePath)) {
-      return { valid: false, error: `Local file not in allowed list: ${filePath}` };
+      return {
+        valid: false,
+        error: `Local file not in allowed list: ${filePath}`,
+      };
     }
     if (!fs.existsSync(filePath)) {
       return { valid: false, error: `File not found: ${filePath}` };
@@ -106,7 +114,9 @@ export function validateUrl(url: string): { valid: boolean; error?: string } {
   try {
     const parsed = new URL(url);
     const origin = `${parsed.protocol}//${parsed.hostname}`;
-    if (![...allowedRemoteOrigins].some(allowed => origin.startsWith(allowed))) {
+    if (
+      ![...allowedRemoteOrigins].some((allowed) => origin.startsWith(allowed))
+    ) {
       return { valid: false, error: `Origin not allowed: ${origin}` };
     }
     return { valid: true };
@@ -160,7 +170,9 @@ export async function readPdfRange(
   });
 
   if (!response.ok && response.status !== 206) {
-    throw new Error(`Range request failed: ${response.status} ${response.statusText}`);
+    throw new Error(
+      `Range request failed: ${response.status} ${response.statusText}`,
+    );
   }
 
   // Parse total size from Content-Range header
@@ -198,14 +210,15 @@ export function createServer(): McpServer {
       }
 
       // Note: Remote URLs from allowed origins can be loaded dynamically
-      const text = pdfs.length > 0
-        ? `Available PDFs:\n${pdfs.map(p => `- ${p.url} (${p.type})`).join("\n")}\n\nRemote PDFs from ${[...allowedRemoteOrigins].join(", ")} can also be loaded dynamically.`
-        : `No local PDFs configured. Remote PDFs from ${[...allowedRemoteOrigins].join(", ")} can be loaded dynamically.`;
+      const text =
+        pdfs.length > 0
+          ? `Available PDFs:\n${pdfs.map((p) => `- ${p.url} (${p.type})`).join("\n")}\n\nRemote PDFs from ${[...allowedRemoteOrigins].join(", ")} can also be loaded dynamically.`
+          : `No local PDFs configured. Remote PDFs from ${[...allowedRemoteOrigins].join(", ")} can be loaded dynamically.`;
 
       return {
         content: [{ type: "text", text }],
         structuredContent: {
-          localFiles: pdfs.filter(p => p.type === "local").map(p => p.url),
+          localFiles: pdfs.filter((p) => p.type === "local").map((p) => p.url),
           allowedOrigins: [...allowedRemoteOrigins],
         },
       };
@@ -222,7 +235,12 @@ export function createServer(): McpServer {
       inputSchema: {
         url: z.string().describe("PDF URL"),
         offset: z.number().min(0).default(0).describe("Byte offset"),
-        byteCount: z.number().min(1).max(MAX_CHUNK_BYTES).default(MAX_CHUNK_BYTES).describe("Bytes to read"),
+        byteCount: z
+          .number()
+          .min(1)
+          .max(MAX_CHUNK_BYTES)
+          .default(MAX_CHUNK_BYTES)
+          .describe("Bytes to read"),
       },
       outputSchema: z.object({
         url: z.string(),
@@ -252,7 +270,12 @@ export function createServer(): McpServer {
         const hasMore = offset + data.length < totalBytes;
 
         return {
-          content: [{ type: "text", text: `${data.length} bytes at ${offset}/${totalBytes}` }],
+          content: [
+            {
+              type: "text",
+              text: `${data.length} bytes at ${offset}/${totalBytes}`,
+            },
+          ],
           structuredContent: {
             url: normalized,
             bytes,
@@ -264,7 +287,12 @@ export function createServer(): McpServer {
         };
       } catch (err) {
         return {
-          content: [{ type: "text", text: `Error: ${err instanceof Error ? err.message : String(err)}` }],
+          content: [
+            {
+              type: "text",
+              text: `Error: ${err instanceof Error ? err.message : String(err)}`,
+            },
+          ],
           isError: true,
         };
       }
@@ -273,7 +301,7 @@ export function createServer(): McpServer {
 
   // Build allowed domains list for tool description (strip https:// and www.)
   const allowedDomains = [...allowedRemoteOrigins]
-    .map(origin => origin.replace(/^https?:\/\/(www\.)?/, ""))
+    .map((origin) => origin.replace(/^https?:\/\/(www\.)?/, ""))
     .join(", ");
 
   // Tool: display_pdf - Show interactive viewer
@@ -333,7 +361,9 @@ Accepts:
         "utf-8",
       );
       return {
-        contents: [{ uri: RESOURCE_URI, mimeType: RESOURCE_MIME_TYPE, text: html }],
+        contents: [
+          { uri: RESOURCE_URI, mimeType: RESOURCE_MIME_TYPE, text: html },
+        ],
       };
     },
   );
