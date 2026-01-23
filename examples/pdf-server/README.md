@@ -2,7 +2,7 @@
 
 ![Screenshot](screenshot.png)
 
-A simple interactive PDF viewer that uses [PDF.js](https://mozilla.github.io/pdf.js/). Launch it w/ a few PDF files and/or URLs as CLI args (+ support loading any additional pdf from arxiv.org).
+An interactive PDF viewer using [PDF.js](https://mozilla.github.io/pdf.js/). Supports local files and remote URLs from academic sources (arxiv, biorxiv, zenodo, etc).
 
 ## MCP Client Configuration
 
@@ -25,134 +25,85 @@ Add to your MCP client configuration (stdio transport):
 }
 ```
 
-## What This Example Demonstrates
+## Usage
 
-### 1. Chunked Data Through Size-Limited Tool Calls
+```bash
+# Default: loads a sample arxiv paper
+bun examples/pdf-server/main.ts
 
-On some host platforms, tool calls have size limits, so large PDFs cannot be sent in a single response. This example shows a possible workaround:
+# Load local files
+bun examples/pdf-server/main.ts ./docs/paper.pdf /path/to/thesis.pdf
 
-**Server side** (`pdf-loader.ts`):
+# Load from URLs (arxiv, biorxiv, zenodo, etc)
+bun examples/pdf-server/main.ts https://arxiv.org/pdf/2401.00001.pdf
 
-```typescript
-// Returns chunks with pagination metadata
-async function loadPdfBytesChunk(entry, offset, byteCount) {
-  return {
-    bytes: base64Chunk,
-    offset,
-    byteCount,
-    totalBytes,
-    hasMore: offset + byteCount < totalBytes,
-  };
-}
+# stdio mode for MCP clients
+bun examples/pdf-server/main.ts --stdio ./papers/
 ```
 
-**Client side** (`mcp-app.ts`):
+## Tools
+
+| Tool             | Visibility | Purpose                                  |
+| ---------------- | ---------- | ---------------------------------------- |
+| `list_pdfs`      | Model      | List available local files and origins   |
+| `display_pdf`    | Model + UI | Display interactive viewer               |
+| `read_pdf_bytes` | App only   | Stream PDF data in chunks (used by viewer) |
+
+## Allowed Sources
+
+- **Local files**: Must be passed as CLI arguments
+- **Remote URLs**: arxiv.org, biorxiv.org, medrxiv.org, chemrxiv.org, zenodo.org, osf.io, hal.science, ssrn.com, and more
+
+## What This Example Demonstrates
+
+### 1. Chunked Data Loading
+
+PDFs are streamed in chunks using HTTP Range requests:
 
 ```typescript
-// Load in chunks with progress
+// Server: read_pdf_bytes returns chunks with pagination
+{ bytes, offset, byteCount, totalBytes, hasMore }
+
+// Client: loads chunks with progress
 while (hasMore) {
-  const chunk = await app.callServerTool("read_pdf_bytes", { pdfId, offset });
+  const chunk = await app.callServerTool("read_pdf_bytes", { url, offset });
   chunks.push(base64ToBytes(chunk.bytes));
   offset += chunk.byteCount;
-  hasMore = chunk.hasMore;
-  updateProgress(offset, chunk.totalBytes);
 }
 ```
 
 ### 2. Model Context Updates
 
-The viewer keeps the model informed about what the user is seeing:
+The viewer keeps the model informed about the current page and selection:
 
 ```typescript
 app.updateModelContext({
-  structuredContent: {
-    title: pdfTitle,
-    currentPage,
-    totalPages,
-    pageText: pageText.slice(0, 5000),
-    selection: selectedText ? { text, start, end } : undefined,
-  },
+  content: [{
+    type: "text",
+    text: `PDF viewer | "${title}" | Current Page: ${page}/${total}\n\nPage content:\n${text}`
+  }]
 });
 ```
 
-This enables the model to answer questions about the current page or selected text.
+### 3. Display Modes
 
-### 3. Display Modes: Fullscreen vs Inline
+- **Inline mode**: Fits content, no scrolling
+- **Fullscreen mode**: Fills screen with internal scrolling
 
-- **Inline mode**: App requests height changes to fit content
-- **Fullscreen mode**: App fills the screen with internal scrolling
+### 4. View Persistence
 
-```typescript
-// Request fullscreen
-app.requestDisplayMode({ mode: "fullscreen" });
-
-// Listen for mode changes
-app.ondisplaymodechange = (mode) => {
-  if (mode === "fullscreen") enableScrolling();
-  else disableScrolling();
-};
-```
-
-### 4. External Links (openLink)
-
-The viewer demonstrates opening external links (e.g., to the original arxiv page):
-
-```typescript
-titleEl.onclick = () => app.openLink(sourceUrl);
-```
-
-## Usage
-
-```bash
-# Default: loads a sample arxiv paper
-bun examples/pdf-server/server.ts
-
-# Load local files (converted to file:// URLs)
-bun examples/pdf-server/server.ts ./docs/paper.pdf /path/to/thesis.pdf
-
-# Load from URLs
-bun examples/pdf-server/server.ts https://arxiv.org/pdf/2401.00001.pdf
-
-# Mix local and remote
-bun examples/pdf-server/server.ts ./local.pdf https://arxiv.org/pdf/2401.00001.pdf
-
-# stdio mode for MCP clients
-bun examples/pdf-server/server.ts --stdio ./papers/
-```
-
-**Security**: Dynamic URLs (via `view_pdf` tool) are restricted to arxiv.org. Local files must be in the initial list.
-
-## Tools
-
-| Tool             | Visibility | Purpose                            |
-| ---------------- | ---------- | ---------------------------------- |
-| `list_pdfs`      | Model      | List indexed PDFs                  |
-| `display_pdf`    | Model + UI | Display interactive viewer in chat |
-| `read_pdf_bytes` | App only   | Chunked binary loading             |
+Page position is saved per-widget using `viewUUID` and localStorage.
 
 ## Architecture
 
 ```
-server.ts           # MCP server (233 lines)
-├── src/
-│   ├── types.ts        # Zod schemas (75 lines)
-│   ├── pdf-indexer.ts  # URL-based indexing (44 lines)
-│   ├── pdf-loader.ts   # Chunked loading (171 lines)
-│   └── mcp-app.ts      # Interactive viewer UI
+server.ts      # MCP server + tools
+main.ts        # CLI entry point
+src/
+└── mcp-app.ts # Interactive viewer UI (PDF.js)
 ```
-
-## Key Patterns Shown
-
-| Pattern           | Implementation                           |
-| ----------------- | ---------------------------------------- |
-| App-only tools    | `_meta: { ui: { visibility: ["app"] } }` |
-| Chunked responses | `hasMore` + `offset` pagination          |
-| Model context     | `app.updateModelContext()`               |
-| Display modes     | `app.requestDisplayMode()`               |
-| External links    | `app.openLink()`                         |
-| Size negotiation  | `app.sendSizeChanged()`                  |
 
 ## Dependencies
 
-- `pdfjs-dist`: PDF rendering
+- `pdfjs-dist`: PDF rendering (frontend only)
 - `@modelcontextprotocol/ext-apps`: MCP Apps SDK
