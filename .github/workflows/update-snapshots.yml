@@ -4,15 +4,15 @@ on:
   workflow_dispatch:
     inputs:
       branch:
-        description: 'Branch to update snapshots on'
+        description: "Branch to update snapshots on"
         required: true
-        default: 'main'
+        default: "main"
   # Temporary: auto-run on this branch to update snapshots
   push:
     branches:
-      - 'ochafik/fix-e2e-flaky-tests'
+      - "ochafik/fix-e2e-flaky-tests"
     paths:
-      - '.github/workflows/update-snapshots.yml'
+      - ".github/workflows/update-snapshots.yml"
 
 permissions:
   contents: write
