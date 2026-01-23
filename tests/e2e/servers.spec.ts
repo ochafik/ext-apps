@@ -16,6 +16,7 @@ const DYNAMIC_MASKS: Record<string, string[]> = {
   "basic-vue": ["#server-time"], // Server time display
   "cohort-heatmap": ['[class*="heatmapWrapper"]'], // Heatmap grid (random data)
   "customer-segmentation": [".chart-container"], // Scatter plot (random data)
+  "debug-server": ["#event-log", "#callback-table-body", "#current-size"], // Event log, callback counts, and size (dynamic)
   "say-server": [".playBtn", ".playOverlayBtn"], // Play buttons may have different states
   shadertoy: ["#canvas"], // WebGL shader canvas (animated)
   "system-monitor": [
@@ -95,6 +96,11 @@ const ALL_SERVERS = [
     key: "customer-segmentation",
     name: "Customer Segmentation Server",
     dir: "customer-segmentation-server",
+  },
+  {
+    key: "debug-server",
+    name: "Debug MCP App Server",
+    dir: "debug-server",
   },
   { key: "map-server", name: "Map Server", dir: "map-server" },
   { key: "pdf-server", name: "PDF Server", dir: "pdf-server" },
