@@ -80,6 +80,8 @@ let persistViewTimer: ReturnType<typeof setTimeout> | null = null;
 // Track whether tool input has been received (to know if we should restore persisted state)
 let hasReceivedToolInput = false;
 
+let viewUUID: string | undefined = undefined;
+
 /**
  * Persisted camera state for localStorage
  */
@@ -90,14 +92,6 @@ interface PersistedCameraState {
   heading: number; // radians
   pitch: number; // radians
   roll: number; // radians
-}
-
-/**
- * Get localStorage key for persisting view state.
- * Uses a fixed key so view persists across all tool calls for this server.
- */
-function getViewStorageKey(): string {
-  return "map:viewState";
 }
 
 /**
@@ -137,13 +131,18 @@ function schedulePersistViewState(cesiumViewer: any): void {
  * Persist current view state to localStorage
  */
 function persistViewState(cesiumViewer: any): void {
-  const key = getViewStorageKey();
+  if (!viewUUID) {
+    log.info("No storage key available, skipping view persistence");
+    return;
+  }
+
   const state = getCameraState(cesiumViewer);
   if (!state) return;
 
   try {
-    localStorage.setItem(key, JSON.stringify(state));
-    log.info("[localStorage] saved", key, state);
+    const value = JSON.stringify(state);
+    localStorage.setItem(viewUUID, value);
+    log.info("Persisted view state:", viewUUID, value);
   } catch (e) {
     log.warn("[localStorage] save failed:", e);
   }
@@ -153,12 +152,12 @@ function persistViewState(cesiumViewer: any): void {
  * Load persisted view state from localStorage
  */
 function loadPersistedViewState(): PersistedCameraState | null {
-  const key = getViewStorageKey();
+  if (!viewUUID) return null;
 
   try {
-    const stored = localStorage.getItem(key);
+    const stored = localStorage.getItem(viewUUID);
     if (!stored) {
-      log.info("[localStorage] no data for", key);
+      console.info("No persisted view state found");
       return null;
     }
 
@@ -172,7 +171,7 @@ function loadPersistedViewState(): PersistedCameraState | null {
       log.warn("[localStorage] invalid data for", key, state);
       return null;
     }
-    log.info("[localStorage] loaded", key, state);
+    log.info("Loaded persisted view state:", state);
     return state;
   } catch (e) {
     log.warn("[localStorage] load failed:", e);
@@ -400,8 +399,10 @@ async function getVisiblePlaces(extent: BoundingBox): Promise<string[]> {
 }
 
 /**
- * Debounced location update using multi-point reverse geocoding
- * Samples multiple points in the visible extent to discover places
+ * Debounced location update using multi-point reverse geocoding.
+ * Samples multiple points in the visible extent to discover places.
+ *
+ * Updates model context with structured YAML frontmatter (similar to pdf-server).
  */
 function scheduleLocationUpdate(cesiumViewer: any): void {
   if (reverseGeocodeTimer) {
@@ -412,40 +413,25 @@ function scheduleLocationUpdate(cesiumViewer: any): void {
     const center = getCameraCenter(cesiumViewer);
     const extent = getVisibleExtent(cesiumViewer);
 
-    if (!extent) {
-      log.info("No visible extent (camera looking at sky?)");
+    if (!extent || !center) {
+      log.info("No visible extent or center (camera looking at sky?)");
       return;
     }
 
     const { widthKm, heightKm } = getScaleDimensions(extent);
-    const extentInfo =
-      `Extent: [${extent.west.toFixed(4)}, ${extent.south.toFixed(4)}, ` +
-      `${extent.east.toFixed(4)}, ${extent.north.toFixed(4)}] ` +
-      `(${widthKm.toFixed(1)}km × ${heightKm.toFixed(1)}km)`;
-    log.info(extentInfo);
-
-    // Get places visible in the extent (samples multiple points for large areas)
     const places = await getVisiblePlaces(extent);
-    const placesText =
-      places.length > 0 ? `Visible places: ${places.join(", ")}` : "";
 
-    if (places.length > 0 || center) {
-      const centerText = center
-        ? `Center: ${center.lat.toFixed(4)}, ${center.lon.toFixed(4)}`
-        : "";
-
-      const contextText = [placesText, centerText, extentInfo]
-        .filter(Boolean)
-        .join("\n");
-
-      log.info("Updating model context:", contextText);
-
-      // Update the model's context with the current map location.
-      // If the host doesn't support this, the request will silently fail.
-      app.updateModelContext({
-        content: [{ type: "text", text: contextText }],
-      });
-    }
+    // Update the model's context with the current map location.
+    // If the host doesn't support this, the request will silently fail.
+    const content = [
+      `The map view of ${app.getHostContext()?.toolInfo?.id} is now ${widthKm.toFixed(1)}km wide × ${heightKm.toFixed(1)}km tall `,
+      `and has changed to the following location: [${places.join(", ")}] `,
+      `lat. / long. of center of map = [${center.lat.toFixed(4)}, ${center.lon.toFixed(4)}]`,
+    ].join("\n");
+    log.info("Updating model context:", content);
+    app.updateModelContext({
+      content: [{ type: "text", text: content }],
+    });
   }, 1500);
 }
 
@@ -1098,40 +1084,34 @@ app.ontoolinput = async (params) => {
 //   },
 // );
 
+// Handle tool result - extract viewUUID and restore persisted view if available
+app.ontoolresult = async (result) => {
+  viewUUID = result._meta?.viewUUID ? String(result._meta.viewUUID) : undefined;
+  log.info("Tool result received, viewUUID:", viewUUID);
+
+  // Now that we have viewUUID, try to restore persisted view
+  // This overrides the tool input position if a saved state exists
+  if (viewer && viewUUID) {
+    const restored = restorePersistedView(viewer);
+    if (restored) {
+      log.info("Restored persisted view from tool result handler");
+      await waitForTilesLoaded(viewer);
+      hideLoading();
+    }
+  }
+};
+
 // Initialize Cesium and connect to host
-async function init() {
+async function initialize() {
   try {
     log.info("Loading CesiumJS from CDN...");
     await loadCesium();
     log.info("CesiumJS loaded successfully");
 
     viewer = await initCesium();
-    // Don't hide loading here - we wait for tool input to position camera
-    // and for tiles to load before hiding the loading indicator
-    log.info("CesiumJS initialized, waiting for tool input...");
+    log.info("CesiumJS initialized");
 
-    // Fallback: if no tool input received within 2 seconds, try restoring
-    // persisted view or show default view
-    setTimeout(async () => {
-      const loadingEl = document.getElementById("loading");
-      if (
-        loadingEl &&
-        loadingEl.style.display !== "none" &&
-        !hasReceivedToolInput
-      ) {
-        // No explicit tool input - try to restore persisted view
-        const restored = restorePersistedView(viewer!);
-        if (restored) {
-          log.info("Restored persisted view, waiting for tiles...");
-        } else {
-          log.info("No persisted view, using default view...");
-        }
-        await waitForTilesLoaded(viewer!);
-        hideLoading();
-      }
-    }, 2000);
-
-    // Connect to host (auto-creates PostMessageTransport)
+    // Connect to host (must happen before we can receive notifications)
     await app.connect();
     log.info("Connected to host");
 
@@ -1163,6 +1143,26 @@ async function init() {
 
     // Set up keyboard shortcuts for fullscreen (Escape to exit, Ctrl/Cmd+Enter to toggle)
     document.addEventListener("keydown", handleFullscreenKeyboard);
+
+    // Wait a bit for tool input, then try restoring persisted view or show default
+    setTimeout(async () => {
+      const loadingEl = document.getElementById("loading");
+      if (
+        loadingEl &&
+        loadingEl.style.display !== "none" &&
+        !hasReceivedToolInput
+      ) {
+        // No explicit tool input - try to restore persisted view
+        const restored = restorePersistedView(viewer!);
+        if (restored) {
+          log.info("Restored persisted view, waiting for tiles...");
+        } else {
+          log.info("No persisted view, using default view...");
+        }
+        await waitForTilesLoaded(viewer!);
+        hideLoading();
+      }
+    }, 500);
   } catch (error) {
     log.error("Failed to initialize:", error);
     const loadingEl = document.getElementById("loading");
@@ -1173,4 +1173,5 @@ async function init() {
   }
 }
 
-init();
+// Start initialization
+initialize();

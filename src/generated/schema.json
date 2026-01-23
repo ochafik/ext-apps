@@ -207,7 +207,7 @@
           "additionalProperties": false
         },
         "message": {
-          "description": "Host supports receiving content messages (ui/message) from the Guest UI.",
+          "description": "Host supports receiving content messages (ui/message) from the view.",
           "type": "object",
           "properties": {
             "text": {
@@ -839,7 +839,6 @@
                   "type": "object",
                   "properties": {
                     "fonts": {
-                      "description": "CSS for font loading (@font-face rules or",
                       "type": "string"
                     }
                   },
@@ -1593,7 +1592,6 @@
               "type": "object",
               "properties": {
                 "fonts": {
-                  "description": "CSS for font loading (@font-face rules or",
                   "type": "string"
                 }
               },
@@ -1767,7 +1765,6 @@
       "type": "object",
       "properties": {
         "fonts": {
-          "description": "CSS for font loading (@font-face rules or",
           "type": "string"
         }
       },
@@ -2186,7 +2183,6 @@
           "type": "object",
           "properties": {
             "fonts": {
-              "description": "CSS for font loading (@font-face rules or",
               "type": "string"
             }
           },
@@ -2508,7 +2504,7 @@
               "additionalProperties": false
             },
             "message": {
-              "description": "Host supports receiving content messages (ui/message) from the Guest UI.",
+              "description": "Host supports receiving content messages (ui/message) from the view.",
               "type": "object",
               "properties": {
                 "text": {
@@ -3133,7 +3129,6 @@
                   "type": "object",
                   "properties": {
                     "fonts": {
-                      "description": "CSS for font loading (@font-face rules or",
                       "type": "string"
                     }
                   },
@@ -3882,7 +3877,7 @@
           "additionalProperties": false
         },
         "domain": {
-          "description": "Dedicated origin for widget sandbox.",
+          "description": "Dedicated origin for view sandbox.",
           "type": "string"
         },
         "prefersBorder": {

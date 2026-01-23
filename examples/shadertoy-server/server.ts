@@ -4,7 +4,6 @@ import {
   RESOURCE_MIME_TYPE,
 } from "@modelcontextprotocol/ext-apps/server";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import type {
   CallToolResult,
   ReadResourceResult,
@@ -12,9 +11,10 @@ import type {
 import fs from "node:fs/promises";
 import path from "node:path";
 import { z } from "zod";
-import { startServer } from "./server-utils.js";
-
-const DIST_DIR = path.join(import.meta.dirname, "dist");
+// Works both from source (server.ts) and compiled (dist/server.js)
+const DIST_DIR = import.meta.filename.endsWith(".ts")
+  ? path.join(import.meta.dirname, "dist")
+  : import.meta.dirname;
 
 const TOOL_DESCRIPTION = `Renders a ShaderToy-compatible GLSL fragment shader in real-time using WebGL 2.0.
 
@@ -33,9 +33,23 @@ AVAILABLE UNIFORMS:
 - iTime (float): elapsed time in seconds
 - iTimeDelta (float): time since last frame
 - iFrame (int): frame counter
-- iMouse (vec4): mouse position (xy=current, zw=click)
+- iMouse (vec4): mouse/touch position in pixels (see MOUSE INTERACTION below)
 - iDate (vec4): year, month, day, seconds
 - iChannel0-3 (sampler2D): buffer inputs for multi-pass shaders
+
+MOUSE INTERACTION:
+The iMouse uniform provides interactive mouse/touch input (works on mobile):
+- iMouse.xy: Current position while button/touch is held down (frozen on release)
+- iMouse.zw: Click start position (positive when down, negative when released)
+- iMouse.z > 0: Button is currently pressed
+- iMouse.z < 0: Button was released
+- iMouse.z == 0: Never clicked
+
+Example - camera control:
+  vec2 uv = iMouse.xy / iResolution.xy;  // normalized 0-1
+
+Example - detect click:
+  if (iMouse.z > 0.0) { /* button is down */ }
 
 MULTI-PASS RENDERING:
 - Use bufferA-D parameters for feedback effects, blur chains, simulations
@@ -140,17 +154,3 @@ export function createServer(): McpServer {
 
   return server;
 }
-
-async function main() {
-  if (process.argv.includes("--stdio")) {
-    await createServer().connect(new StdioServerTransport());
-  } else {
-    const port = parseInt(process.env.PORT ?? "3001", 10);
-    await startServer(createServer, { port, name: "ShaderToy Server" });
-  }
-}
-
-main().catch((e) => {
-  console.error(e);
-  process.exit(1);
-});

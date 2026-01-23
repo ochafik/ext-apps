@@ -5,7 +5,6 @@
  * and industry benchmarks by company stage.
  */
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import type {
   CallToolResult,
   ReadResourceResult,
@@ -18,9 +17,10 @@ import {
   registerAppResource,
   registerAppTool,
 } from "@modelcontextprotocol/ext-apps/server";
-import { startServer } from "./server-utils.js";
-
-const DIST_DIR = path.join(import.meta.dirname, "dist");
+// Works both from source (server.ts) and compiled (dist/server.js)
+const DIST_DIR = import.meta.filename.endsWith(".ts")
+  ? path.join(import.meta.dirname, "dist")
+  : import.meta.dirname;
 
 // ---------------------------------------------------------------------------
 // Schemas - types are derived from these using z.infer
@@ -335,17 +335,3 @@ export function createServer(): McpServer {
 // ---------------------------------------------------------------------------
 // Server Startup
 // ---------------------------------------------------------------------------
-
-async function main() {
-  if (process.argv.includes("--stdio")) {
-    await createServer().connect(new StdioServerTransport());
-  } else {
-    const port = parseInt(process.env.PORT ?? "3103", 10);
-    await startServer(createServer, { port, name: "Budget Allocator Server" });
-  }
-}
-
-main().catch((e) => {
-  console.error(e);
-  process.exit(1);
-});
