@@ -505,6 +505,27 @@ UI iframes can use the following subset of standard MCP protocol messages:
 - `ui/initialize` → `ui/notifications/initialized` - MCP-like handshake (replaces custom iframe-ready pattern in MCP-UI)
 - `ping` - Connection health check
 
+### App Capabilities in `ui/initialize`
+
+When the View sends an `ui/initialize` request to the Host, it MUST include its capabilities in the `appCapabilities` field:
+
+```typescript
+interface McpUiAppCapabilities {
+  /** Experimental features (structure TBD). */
+  experimental?: {};
+  /** App exposes MCP-style tools that the host can call. */
+  tools?: {
+    /** App supports tools/list_changed notifications. */
+    listChanged?: boolean;
+  };
+  /**
+   * Display modes the app supports. See Display Modes section for details.
+   * @example ["inline", "fullscreen"]
+   */
+  availableDisplayModes?: Array<"inline" | "fullscreen" | "pip">;
+}
+```
+
 ### Host Context in `McpUiInitializeResult`
 
 When the View sends an `ui/initialize` request to the Host, the Host SHOULD include UI-specific context in the `McpUiInitializeResult`'s `hostContext` field:
@@ -986,7 +1007,7 @@ Host behavior:
 
 View behavior:
 * View MUST declare all display modes it supports in `appCapabilities.availableDisplayModes` during initialization.
-* View SHOULD check `availableDisplayModes` in host context before requesting a mode change.
+* View MUST check if the requested mode is in `availableDisplayModes` from host context before requesting a mode change.
 * View MUST handle the response mode differing from the requested mode.
 
 `ui/update-model-context` - Update the model context
