@@ -23,6 +23,7 @@ const DEFAULT_WAIT_MS = 5000;
 const EXTRA_WAIT_MS: Record<string, number> = {
   "map-server": 45000, // CesiumJS needs time for map tiles
   "pdf-server": 45000, // Chunked loading of file
+  "say-server": 30000, // TTS model download from HuggingFace can be slow
 };
 
 // Servers to skip (screenshots maintained manually)

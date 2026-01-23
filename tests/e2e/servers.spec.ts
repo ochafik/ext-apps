@@ -35,6 +35,23 @@ const DYNAMIC_MASKS: Record<string, string[]> = {
 const SLOW_SERVERS: Record<string, number> = {
   "map-server": 5000, // CesiumJS needs time for tiles to load
   threejs: 2000, // Three.js WebGL initialization
+  "say-server": 10000, // TTS model download from HuggingFace can be slow
+};
+
+// Host-level masks (outside app iframe) - for dynamic content in Tool Input/Result panels
+// Use [class*="..."] for CSS modules which generate unique class names
+const HOST_MASKS: Record<string, string[]> = {
+  // Servers with dynamic timestamps in Tool Result (get-time response)
+  // Mask entire collapsible panels to avoid font rendering differences
+  integration: ['[class*="collapsiblePanel"]'],
+  "basic-preact": ['[class*="collapsiblePanel"]'],
+  "basic-react": ['[class*="collapsiblePanel"]'],
+  "basic-solid": ['[class*="collapsiblePanel"]'],
+  "basic-svelte": ['[class*="collapsiblePanel"]'],
+  "basic-vanillajs": ['[class*="collapsiblePanel"]'],
+  "basic-vue": ['[class*="collapsiblePanel"]'],
+  // System monitor has dynamic system stats in result
+  "system-monitor": ['[class*="collapsiblePanel"]'],
 };
 
 // Servers to skip in CI (require special resources like GPU, large ML models)
@@ -167,14 +184,25 @@ async function loadServer(page: Page, serverName: string) {
 }
 
 /**
- * Get mask locators for dynamic elements inside the nested app iframe.
+ * Get mask locators for dynamic elements (both in app iframe and host).
  */
 function getMaskLocators(page: Page, serverKey: string) {
-  const selectors = DYNAMIC_MASKS[serverKey];
-  if (!selectors) return [];
+  const masks = [];
 
-  const appFrame = getAppFrame(page);
-  return selectors.map((selector) => appFrame.locator(selector));
+  // App-level masks (inside nested iframe)
+  const appSelectors = DYNAMIC_MASKS[serverKey];
+  if (appSelectors) {
+    const appFrame = getAppFrame(page);
+    masks.push(...appSelectors.map((selector) => appFrame.locator(selector)));
+  }
+
+  // Host-level masks (Tool Input/Result panels with dynamic content)
+  const hostSelectors = HOST_MASKS[serverKey];
+  if (hostSelectors) {
+    masks.push(...hostSelectors.map((selector) => page.locator(selector)));
+  }
+
+  return masks;
 }
 
 test.describe("Host UI", () => {
