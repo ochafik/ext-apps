@@ -58,7 +58,7 @@ logger = logging.getLogger(__name__)
 
 VIEW_URI = "ui://say-demo/view.html"
 HOST = os.environ.get("HOST", "0.0.0.0")
-PORT = int(os.environ.get("PORT", "3109"))
+PORT = int(os.environ.get("PORT", "3001"))
 
 # Speaker icon as SVG data URI
 SPEAKER_ICON = Icon(
