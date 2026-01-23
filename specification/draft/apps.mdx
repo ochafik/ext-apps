@@ -505,47 +505,6 @@ UI iframes can use the following subset of standard MCP protocol messages:
 - `ui/initialize` → `ui/notifications/initialized` - MCP-like handshake (replaces custom iframe-ready pattern in MCP-UI)
 - `ping` - Connection health check
 
-### App Capabilities in `ui/initialize`
-
-When the View sends an `ui/initialize` request to the Host, it MUST include its capabilities in the `appCapabilities` field:
-
-```typescript
-interface McpUiAppCapabilities {
-  /** Experimental features (structure TBD). */
-  experimental?: {};
-  /** App exposes MCP-style tools that the host can call. */
-  tools?: {
-    /** App supports tools/list_changed notifications. */
-    listChanged?: boolean;
-  };
-  /**
-   * Display modes the app supports.
-   *
-   * Apps declare which display modes they are designed to work with.
-   * Hosts use this to determine which modes are available for the app.
-   *
-   * @example ["inline", "fullscreen"]
-   */
-  availableDisplayModes?: Array<"inline" | "fullscreen" | "pip">;
-}
-```
-
-#### View `availableDisplayModes`
-
-The `availableDisplayModes` field allows apps to declare which display modes they support. This enables hosts to only switch to (and provide UI controls for) display mode options that the app can handle.
-
-**App Behavior:**
-
-- Apps SHOULD declare all display modes they are designed to support
-- If omitted, hosts MAY assume the app supports all modes, or only `inline`. Apps that do not specify this field may not be able to take over fullscreen automatically.
-- Apps MUST handle graceful degradation if placed in an unsupported mode
-
-**Host Behavior:**
-
-- Host SHOULD honor requests for its declared supported display modes
-- Host MUST reject display mode requests for modes it does not support
-- Host MAY include the available modes in `HostContext.availableDisplayModes`
-
 ### Host Context in `McpUiInitializeResult`
 
 When the View sends an `ui/initialize` request to the Host, the Host SHOULD include UI-specific context in the `McpUiInitializeResult`'s `hostContext` field:
@@ -1019,12 +978,14 @@ Host behavior:
 ```
 
 Host behavior:
-* App MUST check if the requested mode is in `availableDisplayModes` from host context.
+* Host MUST NOT switch the View to a display mode that does not appear in its `appCapabilities.availableDisplayModes`, if set.
 * It is up to the host whether it switches to the requested mode, but the host MUST return the resulting mode (whether updated or not) in the response.
 * If the requested mode is not available, Host SHOULD return the current display mode in the response.
 * Host MAY coerce modes on certain platforms (e.g., "pip" to "fullscreen" on mobile).
+* Host MAY decline display mode requests from Views that did not declare said modes in their capabilities.
 
 View behavior:
+* View MUST declare all display modes it supports in `appCapabilities.availableDisplayModes` during initialization.
 * View SHOULD check `availableDisplayModes` in host context before requesting a mode change.
 * View MUST handle the response mode differing from the requested mode.
 
