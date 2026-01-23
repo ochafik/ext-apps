@@ -55,16 +55,6 @@ export const allowedRemoteOrigins = new Set([
 /** Allowed local file paths (populated from CLI args) */
 export const allowedLocalFiles = new Set<string>();
 
-/** Add a remote origin to the whitelist */
-export function addAllowedOrigin(origin: string): void {
-  allowedRemoteOrigins.add(origin);
-}
-
-/** Add a local file to the whitelist */
-export function addAllowedLocalFile(filePath: string): void {
-  allowedLocalFiles.add(path.resolve(filePath));
-}
-
 // Works both from source (server.ts) and compiled (dist/server.js)
 const DIST_DIR = import.meta.filename.endsWith(".ts")
   ? path.join(import.meta.dirname, "dist")
