@@ -147,7 +147,7 @@ export function createServer(port: number): McpServer {
         gameId: z
           .string()
           .describe(
-            'The archive.org identifier (e.g., "arcade_20pacgal", "msdos_doom_1993").',
+            'The archive.org identifier (e.g., "doom-play", "arcade_20pacgal").',
           ),
       }) as any,
       _meta: {
@@ -176,6 +176,7 @@ export function createServer(port: number): McpServer {
           content: [{ type: "text", text: `Loading arcade game: ${gameId}` }],
         };
       } catch (error) {
+        gameHtmlMap.delete(gameId);
         return {
           content: [
             {

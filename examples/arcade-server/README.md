@@ -80,4 +80,4 @@ Archive.org's game embed pages use ES module `import()` for loading the emulatio
 - `arcade_20pacgal` - Ms. Pac-Man / Galaga
 - `arcade_galaga` - Galaga
 - `arcade_sf2` - Street Fighter II
-- `msdos_doom_1993` - DOOM
+- `doom-play` - The Ultimate DOOM
