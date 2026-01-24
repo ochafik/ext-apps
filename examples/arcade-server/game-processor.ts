@@ -25,7 +25,8 @@ export async function processGameEmbed(
   gameId: string,
   serverPort: number,
 ): Promise<string> {
-  const embedUrl = `https://archive.org/embed/${gameId}`;
+  const encodedGameId = encodeURIComponent(gameId);
+  const embedUrl = `https://archive.org/embed/${encodedGameId}`;
 
   const response = await fetch(embedUrl, {
     headers: {
