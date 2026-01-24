@@ -17,8 +17,21 @@ import { searchArchiveOrgGames } from "./search.js";
 
 const GAME_VIEWER_RESOURCE_URI = "ui://arcade/game-viewer";
 
-// Cache for the last processed game HTML
-let cachedGameHtml: string | null = null;
+// Stores in-flight/completed game HTML promises keyed by game ID.
+// The HTTP endpoint awaits the promise for the requested game ID,
+// naturally synchronizing with the tool handler.
+const gameHtmlMap = new Map<string, Promise<string>>();
+
+/**
+ * Returns the game HTML for the given ID, awaiting processing if in-flight.
+ * Used by the /game-html/:gameId HTTP endpoint.
+ */
+export async function getGameHtmlForId(
+  gameId: string,
+): Promise<string | null> {
+  const promise = gameHtmlMap.get(gameId);
+  return promise ? promise : null;
+}
 
 /**
  * Validates an archive.org game identifier.
@@ -157,8 +170,8 @@ export function createServer(port: number): McpServer {
       }
 
       try {
-        const html = await processGameEmbed(gameId, port);
-        cachedGameHtml = html;
+        gameHtmlMap.set(gameId, processGameEmbed(gameId, port));
+        await gameHtmlMap.get(gameId);
 
         return {
           content: [{ type: "text", text: `Loading arcade game: ${gameId}` }],
@@ -202,12 +215,71 @@ export function createServer(port: number): McpServer {
       },
     },
     async (): Promise<ReadResourceResult> => {
-      const html =
-        cachedGameHtml ||
-        `<!DOCTYPE html>
+      // Static view shell with inline MCP Apps protocol handling.
+      // Performs the initialization handshake, then waits for tool input
+      // to know which game to load. Fetches game HTML from the server's
+      // HTTP endpoint keyed by game ID.
+      const html = `<!DOCTYPE html>
 <html><head><meta charset="UTF-8"></head>
 <body style="margin:0;background:#111;color:#0f0;font-family:monospace;display:flex;align-items:center;justify-content:center;height:100vh">
-<div>No game loaded. Use get_game_by_id first.</div>
+<div id="status">Loading game\u2026</div>
+<script>
+(function() {
+  var SERVER = "http://localhost:${port}";
+  var initialized = false;
+
+  function send(msg) { window.parent.postMessage(msg, "*"); }
+
+  window.addEventListener("message", function(event) {
+    var msg = event.data;
+    if (!msg || msg.jsonrpc !== "2.0") return;
+
+    // Handle initialize response
+    if (msg.id && msg.result && !initialized) {
+      initialized = true;
+      send({jsonrpc: "2.0", method: "ui/notifications/initialized"});
+      return;
+    }
+
+    // Handle ping
+    if (msg.method === "ping" && msg.id) {
+      send({jsonrpc: "2.0", id: msg.id, result: {}});
+      return;
+    }
+
+    // Handle tool input - load the game
+    if (msg.method === "ui/notifications/tool-input" && msg.params) {
+      var gameId = msg.params.arguments && msg.params.arguments.gameId;
+      if (gameId) loadGame(gameId);
+      return;
+    }
+  });
+
+  // Send initialize request
+  send({jsonrpc: "2.0", id: 1, method: "ui/initialize", params: {
+    appInfo: {name: "Arcade Game Viewer", version: "1.0.0"},
+    appCapabilities: {},
+    protocolVersion: "2025-11-21"
+  }});
+
+  function loadGame(gameId) {
+    document.getElementById("status").textContent = "Loading " + gameId + "\\u2026";
+    fetch(SERVER + "/game-html/" + encodeURIComponent(gameId))
+      .then(function(r) {
+        if (!r.ok) throw new Error(r.statusText);
+        return r.text();
+      })
+      .then(function(h) {
+        document.open();
+        document.write(h);
+        document.close();
+      })
+      .catch(function(e) {
+        document.getElementById("status").textContent = "Failed to load game: " + e.message;
+      });
+  }
+})();
+</script>
 </body></html>`;
 
       return {

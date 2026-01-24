@@ -4,11 +4,12 @@ An MCP Apps server that lets you browse and play classic arcade games from [arch
 
 ## Overview
 
-This example demonstrates serving **external HTML content** as an MCP App resource. Instead of bundling a custom UI, it fetches game pages from archive.org, processes the HTML server-side to work within an iframe sandbox, and returns it as an inline resource.
+This example demonstrates serving **external HTML content** as an MCP App resource. The resource is a static loader that uses the MCP Apps protocol to receive tool arguments, then fetches the processed game HTML from a server endpoint. This pattern allows the same resource to display different games based on tool input.
 
 Key techniques:
 
-- Server-side HTML fetching and processing
+- MCP Apps protocol handshake (`ui/initialize` → `ui/notifications/tool-input`) to receive game ID dynamically
+- Server-side HTML fetching and processing per game ID
 - `<base href>` tag for resolving relative URLs against archive.org
 - `baseUriDomains` CSP metadata to allow the base tag
 - Rewriting ES module `import()` to classic `<script src>` loading (for srcdoc iframe compatibility)
@@ -54,14 +55,16 @@ The server starts on `http://localhost:3002/mcp` by default. Set the `PORT` envi
 ```
 1. Host calls search_games → Server queries archive.org API → Returns game list
 2. Host calls get_game_by_id → Server fetches embed HTML from archive.org
-3. Server processes HTML:
+3. Server processes HTML and stores it keyed by game ID:
    - Removes archive.org's <base> tag
    - Injects <base href="https://archive.org/"> for URL resolution
    - Rewrites ES module import() to <script src> loading
    - Fetches emulation.min.js, patches it, serves from local endpoint
    - Injects layout CSS for full-viewport display
-4. Host reads resource → Receives processed HTML → Renders in iframe
-5. Game runs: emulator loads ROM, initializes MAME, game is playable
+4. Host reads resource → Gets static loader with MCP Apps protocol handler
+5. View performs ui/initialize handshake with host
+6. Host sends tool-input with gameId → View fetches /game-html/:gameId
+7. Game runs: emulator loads ROM, initializes MAME, game is playable
 ```
 
 ### Why the Processing?

@@ -48,14 +48,14 @@ export async function searchArchiveOrgGames(
     termWithUnderscores,
   ].filter((term, index, self) => term && self.indexOf(term) === index);
 
-  const exactQuery = `(${exactVariations.join(" OR ")})`;
+  const exactQuery = `title:(${exactVariations.join(" OR ")})`;
 
   // Step 1: Search with exact terms in game collections
   let games = await performSearch(exactQuery, true, maxResults);
 
-  // Step 2: Broader search with individual words
+  // Step 2: Broader search with individual words in title
   if (games.length === 0 && words.length > 1) {
-    const broaderQuery = `(${exactVariations.join(" OR ")} OR ${words.join(" OR ")})`;
+    const broaderQuery = `title:(${exactVariations.join(" OR ")} OR ${words.join(" OR ")})`;
     games = await performSearch(broaderQuery, true, maxResults);
   }
 
@@ -63,7 +63,7 @@ export async function searchArchiveOrgGames(
   if (games.length === 0) {
     const fallbackQuery =
       words.length > 1
-        ? `(${exactVariations.join(" OR ")} OR ${words.join(" OR ")})`
+        ? `title:(${exactVariations.join(" OR ")} OR ${words.join(" OR ")})`
         : exactQuery;
 
     try {
