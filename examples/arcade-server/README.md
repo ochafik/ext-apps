@@ -54,16 +54,16 @@ The server starts on `http://localhost:3002/mcp` by default. Set the `PORT` envi
 
 ```
 1. Host calls search_games → Server queries archive.org API → Returns game list
-2. Host calls get_game_by_id → Server fetches embed HTML from archive.org
-3. Server processes HTML and stores it keyed by game ID:
+2. Host calls get_game_by_id → Tool validates gameId and returns success
+3. Host reads resource → Gets static loader with MCP Apps protocol handler
+4. View performs ui/initialize handshake with host
+5. Host sends tool-input with gameId → View fetches /game-html/:gameId
+6. Server fetches embed HTML from archive.org and processes it:
    - Removes archive.org's <base> tag
    - Injects <base href="https://archive.org/"> for URL resolution
    - Rewrites ES module import() to <script src> loading
    - Fetches emulation.min.js, patches it, serves from local endpoint
    - Injects layout CSS for full-viewport display
-4. Host reads resource → Gets static loader with MCP Apps protocol handler
-5. View performs ui/initialize handshake with host
-6. Host sends tool-input with gameId → View fetches /game-html/:gameId
 7. Game runs: emulator loads ROM, initializes MAME, game is playable
 ```
 

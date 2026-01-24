@@ -10,8 +10,11 @@ import cors from "cors";
 import express from "express";
 import type { Request, Response } from "express";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
-import { createServer, getGameHtmlForId } from "./server.js";
-import { getCachedEmulationScript } from "./game-processor.js";
+import { createServer, validateGameId } from "./server.js";
+import {
+  getCachedEmulationScript,
+  processGameEmbed,
+} from "./game-processor.js";
 
 const DEFAULT_PORT = 3002;
 
@@ -35,16 +38,15 @@ async function main() {
     res.send(script);
   });
 
-  // Serve game HTML by ID. Awaits any in-flight processGameEmbed() for that
-  // game, so the view's fetch naturally blocks until processing completes.
+  // Serve game HTML by ID. Fetches and processes the game from archive.org.
   app.get("/game-html/:gameId", async (req: Request, res: Response) => {
     const gameId = req.params.gameId as string;
+    if (!validateGameId(gameId)) {
+      res.status(400).send("Invalid game ID.");
+      return;
+    }
     try {
-      const html = await getGameHtmlForId(gameId);
-      if (!html) {
-        res.status(404).send("Game not found. Call get_game_by_id first.");
-        return;
-      }
+      const html = await processGameEmbed(gameId, port);
       res.setHeader("Content-Type", "text/html");
       res.setHeader("Cache-Control", "no-cache");
       res.send(html);

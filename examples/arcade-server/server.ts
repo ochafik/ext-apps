@@ -12,29 +12,14 @@ import type {
   ReadResourceResult,
 } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
-import { processGameEmbed } from "./game-processor.js";
 import { searchArchiveOrgGames } from "./search.js";
 
 const GAME_VIEWER_RESOURCE_URI = "ui://arcade/game-viewer";
 
-// Stores in-flight/completed game HTML promises keyed by game ID.
-// The HTTP endpoint awaits the promise for the requested game ID,
-// naturally synchronizing with the tool handler.
-const gameHtmlMap = new Map<string, Promise<string>>();
-
-/**
- * Returns the game HTML for the given ID, awaiting processing if in-flight.
- * Used by the /game-html/:gameId HTTP endpoint.
- */
-export async function getGameHtmlForId(gameId: string): Promise<string | null> {
-  const promise = gameHtmlMap.get(gameId);
-  return promise ? promise : null;
-}
-
 /**
  * Validates an archive.org game identifier.
  */
-function validateGameId(gameId: string): boolean {
+export function validateGameId(gameId: string): boolean {
   return (
     gameId.length > 0 &&
     !gameId.includes("/") &&
@@ -168,25 +153,9 @@ export function createServer(port: number): McpServer {
         };
       }
 
-      try {
-        gameHtmlMap.set(gameId, processGameEmbed(gameId, port));
-        await gameHtmlMap.get(gameId);
-
-        return {
-          content: [{ type: "text", text: `Loading arcade game: ${gameId}` }],
-        };
-      } catch (error) {
-        gameHtmlMap.delete(gameId);
-        return {
-          content: [
-            {
-              type: "text",
-              text: `Error loading game: ${error instanceof Error ? error.message : String(error)}`,
-            },
-          ],
-          isError: true,
-        };
-      }
+      return {
+        content: [{ type: "text", text: `Loading arcade game: ${gameId}` }],
+      };
     },
   );
 
