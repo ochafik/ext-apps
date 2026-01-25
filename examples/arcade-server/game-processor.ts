@@ -153,7 +153,7 @@ async function rewriteEmulationScript(
  */
 function convertModuleScripts(html: string): string {
   return html.replace(
-    /(<script[^>]*>)([\s\S]*?)(<\/script\s*>)/gi,
+    /(<script[^>]*>)([\s\S]*?)(<\/script[^>]*>)/gi,
     (match, openTag: string, content: string, closeTag: string) => {
       // Skip our injected scripts
       if (content.includes("window.loadScript")) return match;
