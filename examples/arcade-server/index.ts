@@ -51,11 +51,8 @@ async function main() {
       res.setHeader("Cache-Control", "no-cache");
       res.send(html);
     } catch (error) {
-      res
-        .status(500)
-        .send(
-          `Failed to load game: ${error instanceof Error ? error.message : String(error)}`,
-        );
+      console.error("Failed to load game:", gameId, error);
+      res.status(500).send("Failed to load game.");
     }
   });
 
