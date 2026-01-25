@@ -466,9 +466,9 @@ export const McpUiHostCapabilitiesSchema = z.object({
       csp: McpUiResourceCspSchema.optional().describe(
         "CSP domains approved by the host.",
       ),
-      /** @description Sandbox flags granted by the host (popups, modals, downloads). */
-      sandbox: McpUiResourceSandboxSchema.optional().describe(
-        "Sandbox flags granted by the host (popups, modals, downloads).",
+      /** @description Sandbox flags granted by the host (forms, popups, modals, downloads). */
+      flags: McpUiResourceSandboxSchema.optional().describe(
+        "Sandbox flags granted by the host (forms, popups, modals, downloads).",
       ),
     })
     .optional()

@@ -468,8 +468,8 @@ export interface McpUiHostCapabilities {
     permissions?: McpUiResourcePermissions;
     /** @description CSP domains approved by the host. */
     csp?: McpUiResourceCsp;
-    /** @description Sandbox flags granted by the host (popups, modals, downloads). */
-    sandbox?: McpUiResourceSandbox;
+    /** @description Sandbox flags granted by the host (forms, popups, modals, downloads). */
+    flags?: McpUiResourceSandbox;
   };
   /** @description Host accepts context updates (ui/update-model-context) to be included in the model's context for future turns. */
   updateModelContext?: McpUiSupportedContentBlockModalities;
