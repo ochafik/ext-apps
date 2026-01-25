@@ -593,7 +593,7 @@ export interface McpUiResourceMeta {
   csp?: McpUiResourceCsp;
   /** @description Sandbox permissions requested by the UI. */
   permissions?: McpUiResourcePermissions;
-  /** @description Sandbox flags requested by the UI (popups, modals, downloads). */
+  /** @description Sandbox flags requested by the UI. */
   sandbox?: McpUiResourceSandbox;
   /** @description Dedicated origin for view sandbox. */
   domain?: string;

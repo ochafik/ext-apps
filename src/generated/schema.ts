@@ -533,9 +533,9 @@ export const McpUiResourceMetaSchema = z.object({
   permissions: McpUiResourcePermissionsSchema.optional().describe(
     "Sandbox permissions requested by the UI.",
   ),
-  /** @description Sandbox flags requested by the UI (popups, modals, downloads). */
+  /** @description Sandbox flags requested by the UI. */
   sandbox: McpUiResourceSandboxSchema.optional().describe(
-    "Sandbox flags requested by the UI (popups, modals, downloads).",
+    "Sandbox flags requested by the UI.",
   ),
   /** @description Dedicated origin for view sandbox. */
   domain: z.string().optional().describe("Dedicated origin for view sandbox."),

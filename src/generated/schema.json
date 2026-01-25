@@ -4037,7 +4037,7 @@
           "additionalProperties": false
         },
         "sandbox": {
-          "description": "Sandbox flags requested by the UI (popups, modals, downloads).",
+          "description": "Sandbox flags requested by the UI.",
           "type": "object",
           "properties": {
             "forms": {
