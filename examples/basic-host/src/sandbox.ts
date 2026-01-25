@@ -1,5 +1,5 @@
 import type { McpUiSandboxProxyReadyNotification, McpUiSandboxResourceReadyNotification } from "../../../dist/src/types";
-import { buildAllowAttribute } from "../../../dist/src/app-bridge";
+import { buildAllowAttribute, buildSandboxAttribute } from "../../../dist/src/app-bridge";
 
 const ALLOWED_REFERRER_PATTERN = /^http:\/\/(localhost|127\.0\.0\.1)(:|\/|$)/;
 
@@ -43,7 +43,7 @@ try {
 // origins.
 const inner = document.createElement("iframe");
 inner.style = "width:100%; height:100%; border:none;";
-inner.setAttribute("sandbox", "allow-scripts allow-same-origin allow-forms");
+inner.setAttribute("sandbox", "allow-scripts allow-same-origin");
 // Note: allow attribute is set later when receiving sandbox-resource-ready notification
 // based on the permissions requested by the app
 document.body.appendChild(inner);
@@ -85,9 +85,12 @@ window.addEventListener("message", async (event) => {
 
     if (event.data && event.data.method === RESOURCE_READY_NOTIFICATION) {
       const { html, sandbox, permissions } = event.data.params;
-      if (typeof sandbox === "string") {
-        inner.setAttribute("sandbox", sandbox);
-      }
+      // sandbox can be a string (raw override) or object (structured flags)
+      const sandboxAttr = typeof sandbox === "string"
+        ? sandbox
+        : buildSandboxAttribute(sandbox);
+      console.log("[Sandbox] Setting sandbox attribute:", sandboxAttr);
+      inner.setAttribute("sandbox", sandboxAttr);
       // Set Permission Policy allow attribute if permissions are requested
       const allowAttribute = buildAllowAttribute(permissions);
       if (allowAttribute) {

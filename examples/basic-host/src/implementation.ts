@@ -1,4 +1,4 @@
-import { RESOURCE_MIME_TYPE, getToolUiResourceUri, type McpUiSandboxProxyReadyNotification, AppBridge, PostMessageTransport, type McpUiResourceCsp, type McpUiResourcePermissions, buildAllowAttribute, type McpUiUpdateModelContextRequest, type McpUiMessageRequest } from "@modelcontextprotocol/ext-apps/app-bridge";
+import { RESOURCE_MIME_TYPE, getToolUiResourceUri, type McpUiSandboxProxyReadyNotification, AppBridge, PostMessageTransport, type McpUiResourceCsp, type McpUiResourcePermissions, type McpUiResourceSandbox, buildAllowAttribute, buildSandboxAttribute, type McpUiUpdateModelContextRequest, type McpUiMessageRequest } from "@modelcontextprotocol/ext-apps/app-bridge";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { SSEClientTransport } from "@modelcontextprotocol/sdk/client/sse.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
@@ -66,6 +66,7 @@ interface UiResourceData {
   html: string;
   csp?: McpUiResourceCsp;
   permissions?: McpUiResourcePermissions;
+  sandbox?: McpUiResourceSandbox;
 }
 
 export interface ToolCallInfo {
@@ -136,8 +137,9 @@ async function getUiResource(serverInfo: ServerInfo, uri: string): Promise<UiRes
   const contentMeta = (content as any)._meta || (content as any).meta;
   const csp = contentMeta?.ui?.csp;
   const permissions = contentMeta?.ui?.permissions;
+  const sandbox = contentMeta?.ui?.sandbox;
 
-  return { html, csp, permissions };
+  return { html, csp, permissions, sandbox };
 }
 
 
@@ -145,11 +147,13 @@ export function loadSandboxProxy(
   iframe: HTMLIFrameElement,
   csp?: McpUiResourceCsp,
   permissions?: McpUiResourcePermissions,
+  sandbox?: McpUiResourceSandbox,
 ): Promise<boolean> {
   // Prevent reload
   if (iframe.src) return Promise.resolve(false);
 
-  iframe.setAttribute("sandbox", "allow-scripts allow-same-origin allow-forms");
+  // Set sandbox attribute on outer iframe (must match inner iframe capabilities)
+  iframe.setAttribute("sandbox", buildSandboxAttribute(sandbox));
 
   // Set Permission Policy allow attribute based on requested permissions
   const allowAttribute = buildAllowAttribute(permissions);
@@ -199,10 +203,10 @@ export async function initializeApp(
     new PostMessageTransport(iframe.contentWindow!, iframe.contentWindow!),
   );
 
-  // Load inner iframe HTML with CSP and permissions metadata
-  const { html, csp, permissions } = await appResourcePromise;
-  log.info("Sending UI resource HTML to MCP App", csp ? `(CSP: ${JSON.stringify(csp)})` : "", permissions ? `(Permissions: ${JSON.stringify(permissions)})` : "");
-  await appBridge.sendSandboxResourceReady({ html, csp, permissions });
+  // Load inner iframe HTML with CSP, permissions, and sandbox metadata
+  const { html, csp, permissions, sandbox } = await appResourcePromise;
+  log.info("Sending UI resource HTML to MCP App", csp ? `(CSP: ${JSON.stringify(csp)})` : "", permissions ? `(Permissions: ${JSON.stringify(permissions)})` : "", sandbox ? `(Sandbox: ${JSON.stringify(sandbox)})` : "");
+  await appBridge.sendSandboxResourceReady({ html, csp, permissions, sandbox });
 
   // Wait for inner iframe to be ready
   log.info("Waiting for MCP App to initialize...");
