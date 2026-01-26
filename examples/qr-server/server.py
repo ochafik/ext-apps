@@ -19,17 +19,18 @@ import base64
 import qrcode
 import uvicorn
 from mcp.server.fastmcp import FastMCP
+from mcp.server.transport_security import TransportSecuritySettings
 from mcp import types
 from starlette.middleware.cors import CORSMiddleware
 
-WIDGET_URI = "ui://qr-server/widget.html"
+VIEW_URI = "ui://qr-server/view.html"
 HOST = os.environ.get("HOST", "0.0.0.0")  # 0.0.0.0 for Docker compatibility
-PORT = int(os.environ.get("PORT", "3108"))
+PORT = int(os.environ.get("PORT", "3001"))
 
 mcp = FastMCP("QR Code Server")
 
-# Embedded widget HTML for self-contained usage (uv run <url> or unbundled)
-EMBEDDED_WIDGET_HTML = """<!DOCTYPE html>
+# Embedded View HTML for self-contained usage (uv run <url> or unbundled)
+EMBEDDED_VIEW_HTML = """<!DOCTYPE html>
 <html>
 <head>
   <meta name="color-scheme" content="light dark">
@@ -60,7 +61,7 @@ EMBEDDED_WIDGET_HTML = """<!DOCTYPE html>
   <script type="module">
     import { App } from "https://unpkg.com/@modelcontextprotocol/ext-apps@0.4.0/app-with-deps";
 
-    const app = new App({ name: "QR Widget", version: "1.0.0" });
+    const app = new App({ name: "QR View", version: "1.0.0" });
 
     app.ontoolresult = ({ content }) => {
       const img = content?.find(c => c.type === 'image');
@@ -100,8 +101,8 @@ EMBEDDED_WIDGET_HTML = """<!DOCTYPE html>
 
 
 @mcp.tool(meta={
-    "ui":{"resourceUri": WIDGET_URI},
-    "ui/resourceUri": WIDGET_URI, # legacy support
+    "ui":{"resourceUri": VIEW_URI},
+    "ui/resourceUri": VIEW_URI, # legacy support
 })
 def generate_qr(
     text: str = "https://modelcontextprotocol.io",
@@ -147,13 +148,13 @@ def generate_qr(
 # IMPORTANT: all the external domains used by app must be listed
 # in the meta.ui.csp.resourceDomains - otherwise they will be blocked by CSP policy
 @mcp.resource(
-    WIDGET_URI,
+    VIEW_URI,
     mime_type="text/html;profile=mcp-app",
     meta={"ui": {"csp": {"resourceDomains": ["https://unpkg.com"]}}},
 )
-def widget() -> str:
-    """Widget HTML resource with CSP metadata for external dependencies."""
-    return EMBEDDED_WIDGET_HTML
+def view() -> str:
+    """View HTML resource with CSP metadata for external dependencies."""
+    return EMBEDDED_VIEW_HTML
 
 if __name__ == "__main__":
     if "--stdio" in sys.argv:
@@ -161,7 +162,11 @@ if __name__ == "__main__":
         mcp.run(transport="stdio")
     else:
         # HTTP mode for basic-host (default) - with CORS
-        app = mcp.streamable_http_app(stateless_http=True)
+        # Allow Docker bridge IP for container-to-host communication
+        security = TransportSecuritySettings(
+            allowed_hosts=["127.0.0.1:*", "localhost:*", "[::1]:*", "172.17.0.1:*"]
+        )
+        app = mcp.streamable_http_app(stateless_http=True, transport_security=security)
         app.add_middleware(
             CORSMiddleware,
             allow_origins=["*"],

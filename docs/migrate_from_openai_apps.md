@@ -4,9 +4,16 @@ title: Migrate OpenAI App
 
 # Migrating from OpenAI Apps SDK to MCP Apps SDK
 
-This guide helps you migrate from the OpenAI Apps SDK to the MCP Apps SDK (`@modelcontextprotocol/ext-apps`).
+This reference maps OpenAI Apps SDK concepts to their MCP Apps SDK (`@modelcontextprotocol/ext-apps`) equivalents. Use the tables below for quick lookup during migration, and refer to the code examples for complete before/after comparisons.
+
+This guide covers server-side changes first (metadata, tools, resources), then client-side changes (setup, context, events).
+
+> [!NOTE]
+> Some OpenAI Apps SDK features don't have MCP equivalents yet. These are marked "Not yet implemented" in the tables below.
 
 ## Server-Side
+
+The server-side changes involve updating metadata structure and using helper functions.
 
 ### Quick Start Comparison
 
@@ -72,7 +79,7 @@ function createServer() {
       inputSchema: { userId: z.string() },
       annotations: { readOnlyHint: true },
       _meta: {
-        "openai/outputTemplate": "ui://widget/cart.html",
+        "openai/outputTemplate": "ui://view/cart.html",
         "openai/toolInvocation/invoking": "Loading cart...",
         "openai/toolInvocation/invoked": "Cart ready",
         "openai/widgetAccessible": true,
@@ -89,13 +96,13 @@ function createServer() {
 
   // Register UI resource
   server.registerResource(
-    "Cart Widget",
-    "ui://widget/cart.html",
+    "Cart View",
+    "ui://view/cart.html",
     { mimeType: "text/html+skybridge" },
     async () => ({
       contents: [
         {
-          uri: "ui://widget/cart.html",
+          uri: "ui://view/cart.html",
           mimeType: "text/html+skybridge",
           text: getCartHtml(),
           _meta: {
@@ -137,7 +144,7 @@ function createServer() {
       description: "Display the user's shopping cart",
       inputSchema: { userId: z.string() },
       annotations: { readOnlyHint: true },
-      _meta: { ui: { resourceUri: "ui://widget/cart.html" } },
+      _meta: { ui: { resourceUri: "ui://view/cart.html" } },
     },
     async (args) => {
       const cart = await getCart(args.userId);
@@ -151,13 +158,13 @@ function createServer() {
   // Register UI resource
   registerAppResource(
     server,
-    "Cart Widget",
-    "ui://widget/cart.html",
+    "Cart View",
+    "ui://view/cart.html",
     { description: "Shopping cart UI" },
     async () => ({
       contents: [
         {
-          uri: "ui://widget/cart.html",
+          uri: "ui://view/cart.html",
           mimeType: RESOURCE_MIME_TYPE,
           text: getCartHtml(),
           _meta: {
@@ -189,6 +196,8 @@ function createServer() {
 7. **Not Yet Implemented**: `_meta["openai/toolInvocation/invoking"]`, `_meta["openai/toolInvocation/invoked"]`, and `_meta["openai/widgetDescription"]` don't have MCP equivalents yet
 
 ## Client-Side
+
+Client-side migration involves replacing the implicit `window.openai` global with an explicit `App` instance.
 
 ### Quick Start Comparison
 
@@ -282,16 +291,17 @@ function createServer() {
 | ------------------------------------------- | -------- | ------------------- |
 | `await window.openai.requestModal(options)` | —        | Not yet implemented |
 | `window.openai.requestClose()`              | —        | Not yet implemented |
+| `window.openai.setOpenInAppUrl({ href })`   | —        | Not yet implemented |
 | `window.openai.view`                        | —        | Not yet mapped      |
 
 ### Event Handling
 
-| OpenAI                         | MCP Apps                                    | Notes                            |
-| ------------------------------ | ------------------------------------------- | -------------------------------- |
-| Read `window.openai.*` on load | `app.ontoolinput = (params) => {...}`       | Register before `connect()`      |
-| Read `window.openai.*` on load | `app.ontoolresult = (params) => {...}`      | Register before `connect()`      |
-| Poll or re-read properties     | `app.onhostcontextchanged = (ctx) => {...}` | MCP pushes context changes       |
-| —                              | `app.onteardown = async () => {...}`        | MCP adds: cleanup before unmount |
+| OpenAI                                        | MCP Apps                                    | Notes                                                              |
+| --------------------------------------------- | ------------------------------------------- | ------------------------------------------------------------------ |
+| `window.openai.toolInput` (read on load)      | `app.ontoolinput = (params) => {...}`       | OpenAI: sync property; MCP: callback (register before `connect()`) |
+| `window.openai.toolOutput` (read on load)     | `app.ontoolresult = (params) => {...}`      | OpenAI: sync property; MCP: callback (register before `connect()`) |
+| `addEventListener("openai:set_globals", ...)` | `app.onhostcontextchanged = (ctx) => {...}` | Both push updates; MCP uses callback, OpenAI uses DOM event        |
+| —                                             | `app.onteardown = async () => {...}`        | MCP adds: cleanup before unmount                                   |
 
 ### Logging
 

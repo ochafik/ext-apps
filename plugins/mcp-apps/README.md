@@ -1,6 +1,6 @@
 # MCP Apps Plugin for Claude Code
 
-A Claude Code plugin that provides the "Create MCP App" skill for building MCP Apps with interactive UIs.
+A Claude Code plugin that provides skills for building MCP Apps.
 
 ## Installation
 
@@ -19,7 +19,7 @@ Invoke skills by asking Claude Code to:
 
 - "Create an MCP App"
 - "Add a UI to an MCP tool"
-- "Build an interactive MCP widget"
+- "Build an interactive MCP View"
 - "Scaffold an MCP App"
 
 ### Migrate from OpenAI
