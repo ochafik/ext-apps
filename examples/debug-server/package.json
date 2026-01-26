@@ -1,6 +1,6 @@
 {
   "name": "@modelcontextprotocol/server-debug",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "type": "module",
   "description": "Debug MCP App Server for testing all SDK capabilities",
   "repository": {
@@ -23,7 +23,7 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@modelcontextprotocol/ext-apps": "../..",
+    "@modelcontextprotocol/ext-apps": "^1.0.0",
     "@modelcontextprotocol/sdk": "^1.24.0",
     "zod": "^4.1.13"
   },
