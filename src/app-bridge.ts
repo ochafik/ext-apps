@@ -174,10 +174,7 @@ export type HostOptions = ProtocolOptions & {
  * The SDK automatically handles version negotiation during initialization.
  * Hosts don't need to manage protocol versions manually.
  */
-export const SUPPORTED_PROTOCOL_VERSIONS = [
-  LATEST_PROTOCOL_VERSION,
-  "2025-11-21", // Previous version, kept for backwards compatibility
-];
+export const SUPPORTED_PROTOCOL_VERSIONS = [LATEST_PROTOCOL_VERSION];
 
 /**
  * Extra metadata passed to request handlers.
