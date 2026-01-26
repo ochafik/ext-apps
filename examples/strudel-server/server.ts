@@ -177,9 +177,7 @@ export function createServer(): McpServer {
           "https://unpkg.com",
           "https://strudel.cc",
         ],
-        frameDomains: [
-          "https://strudel.cc",
-        ],
+        frameDomains: ["https://strudel.cc"],
       },
     },
   };

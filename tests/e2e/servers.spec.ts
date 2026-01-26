@@ -1,4 +1,10 @@
-import { test, expect, type Page, type ConsoleMessage, type Locator } from "@playwright/test";
+import {
+  test,
+  expect,
+  type Page,
+  type ConsoleMessage,
+  type Locator,
+} from "@playwright/test";
 
 // Dynamic element selectors to mask for screenshot comparison
 //
