@@ -18,12 +18,8 @@ Then add to your MCP client configuration (stdio transport), replacing `~/code/e
 {
   "mcpServers": {
     "qr": {
-      "command": "uv",
-      "args": [
-        "run",
-        "~/code/ext-apps/examples/qr-server/server.py",
-        "--stdio"
-      ]
+      "command": "bash",
+      "args": ["-c", "uv run ~/code/ext-apps/examples/qr-server/server.py --stdio"]
     }
   }
 }
