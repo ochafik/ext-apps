@@ -6,10 +6,10 @@ This repo contains the SDK and specification for MCP Apps Extension ([SEP-1865](
 
 ## Specification
 
-| Version | Status | Link |
-|---------|--------|------|
-| **2026-01-26** | Stable | [specification/2026-01-26/apps.mdx](https://github.com/modelcontextprotocol/ext-apps/blob/main/specification/2026-01-26/apps.mdx) |
-| draft | Development | [specification/draft/apps.mdx](https://github.com/modelcontextprotocol/ext-apps/blob/main/specification/draft/apps.mdx) |
+| Version        | Status      | Link                                                                                                                              |
+| -------------- | ----------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| **2026-01-26** | Stable      | [specification/2026-01-26/apps.mdx](https://github.com/modelcontextprotocol/ext-apps/blob/main/specification/2026-01-26/apps.mdx) |
+| draft          | Development | [specification/draft/apps.mdx](https://github.com/modelcontextprotocol/ext-apps/blob/main/specification/draft/apps.mdx)           |
 
 MCP Apps are a proposed standard inspired by [MCP-UI](https://mcpui.dev/) and [OpenAI's Apps SDK](https://developers.openai.com/apps-sdk/) to allow MCP Servers to display interactive UI elements in conversational MCP clients / chatbots.
 
@@ -486,11 +486,17 @@ Then configure your MCP client to build and run the local server. Replace `~/cod
     },
     "qr": {
       "command": "bash",
-      "args": ["-c", "uv run ~/code/ext-apps/examples/qr-server/server.py --stdio"]
+      "args": [
+        "-c",
+        "uv run ~/code/ext-apps/examples/qr-server/server.py --stdio"
+      ]
     },
     "say": {
       "command": "bash",
-      "args": ["-c", "uv run --index https://pypi.org/simple ~/code/ext-apps/examples/say-server/server.py --stdio"]
+      "args": [
+        "-c",
+        "uv run --index https://pypi.org/simple ~/code/ext-apps/examples/say-server/server.py --stdio"
+      ]
     }
   }
 }
