@@ -42,11 +42,17 @@ jobs:
       - run: npm ci
       - run: npm test
 
-  publish:
+  approve:
     runs-on: ubuntu-latest
     if: github.event_name == 'release'
     environment: Release
     needs: [build, test]
+    steps:
+      - run: echo "Approved"
+
+  publish-sdk:
+    runs-on: ubuntu-latest
+    needs: [approve]
 
     permissions:
       contents: read
@@ -68,12 +74,9 @@ jobs:
         id: npm-tag
         run: |
           VERSION=$(node -p "require('./package.json').version")
-          # Check if this is a beta release
           if [[ "$VERSION" == *"-beta"* ]]; then
             echo "tag=--tag beta" >> $GITHUB_OUTPUT
-          # Check if this release is from a non-main branch (patch/maintenance release)
           elif [[ "${{ github.event.release.target_commitish }}" != "main" ]]; then
-            # Use "release-X.Y" as tag for old branch releases
             MAJOR_MINOR=$(echo "$VERSION" | cut -d. -f1,2)
             echo "tag=--tag release-${MAJOR_MINOR}" >> $GITHUB_OUTPUT
           else
@@ -86,9 +89,8 @@ jobs:
 
   publish-examples:
     runs-on: ubuntu-latest
-    if: github.event_name == 'release'
-    environment: Release
-    needs: [publish]
+    needs: [approve, publish-sdk]
+    if: ${{ !cancelled() && needs.approve.result == 'success' }}
 
     permissions:
       contents: read
