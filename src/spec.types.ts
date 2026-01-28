@@ -7,7 +7,7 @@
  * - Use `@description` JSDoc tags to generate `.describe()` calls on schemas
  * - Run `npm run generate:schemas` to regenerate schemas from these types
  *
- * @see https://github.com/modelcontextprotocol/ext-apps/blob/main/specification/draft/apps.mdx
+ * @see https://github.com/modelcontextprotocol/ext-apps/blob/main/specification/2026-01-26/apps.mdx
  */
 
 import type {
@@ -24,7 +24,7 @@ import type {
  * The SDK automatically handles version negotiation during initialization.
  * Apps and hosts don't need to manage protocol versions manually.
  */
-export const LATEST_PROTOCOL_VERSION = "2025-11-21";
+export const LATEST_PROTOCOL_VERSION = "2026-01-26";
 
 /**
  * @description Color theme preference for the host environment.
@@ -199,7 +199,7 @@ export interface McpUiMessageResult {
 /**
  * @description Notification that the sandbox proxy iframe is ready to receive content.
  * @internal
- * @see https://github.com/modelcontextprotocol/ext-apps/blob/main/specification/draft/apps.mdx#sandbox-proxy
+ * @see https://github.com/modelcontextprotocol/ext-apps/blob/main/specification/2026-01-26/apps.mdx#sandbox-proxy
  */
 export interface McpUiSandboxProxyReadyNotification {
   method: "ui/notifications/sandbox-proxy-ready";
@@ -209,7 +209,7 @@ export interface McpUiSandboxProxyReadyNotification {
 /**
  * @description Notification containing HTML resource for the sandbox proxy to load.
  * @internal
- * @see https://github.com/modelcontextprotocol/ext-apps/blob/main/specification/draft/apps.mdx#sandbox-proxy
+ * @see https://github.com/modelcontextprotocol/ext-apps/blob/main/specification/2026-01-26/apps.mdx#sandbox-proxy
  */
 export interface McpUiSandboxResourceReadyNotification {
   method: "ui/notifications/sandbox-resource-ready";

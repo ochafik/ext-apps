@@ -11,6 +11,7 @@ const config = {
     "docs/overview.md",
     "docs/quickstart.md",
     "docs/agent-skills.md",
+    "docs/testing-mcp-apps.md",
     "docs/patterns.md",
     "docs/migrate_from_openai_apps.md",
   ],
@@ -37,7 +38,7 @@ const config = {
   navigationLinks: {
     GitHub: "https://github.com/modelcontextprotocol/ext-apps",
     Specification:
-      "https://github.com/modelcontextprotocol/ext-apps/blob/main/specification/draft/apps.mdx",
+      "https://github.com/modelcontextprotocol/ext-apps/blob/main/specification/2026-01-26/apps.mdx",
   },
   out: "docs/api",
   plugin: [
