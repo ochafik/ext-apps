@@ -135,6 +135,10 @@ export type McpUiClickResultSchemaInferredType = z.infer<
   typeof generated.McpUiClickResultSchema
 >;
 
+export type McpUiClientCapabilitiesSchemaInferredType = z.infer<
+  typeof generated.McpUiClientCapabilitiesSchema
+>;
+
 export type McpUiMessageRequestSchemaInferredType = z.infer<
   typeof generated.McpUiMessageRequestSchema
 >;
@@ -309,6 +313,12 @@ expectType<spec.McpUiClickRequest>({} as McpUiClickRequestSchemaInferredType);
 expectType<McpUiClickRequestSchemaInferredType>({} as spec.McpUiClickRequest);
 expectType<spec.McpUiClickResult>({} as McpUiClickResultSchemaInferredType);
 expectType<McpUiClickResultSchemaInferredType>({} as spec.McpUiClickResult);
+expectType<spec.McpUiClientCapabilities>(
+  {} as McpUiClientCapabilitiesSchemaInferredType,
+);
+expectType<McpUiClientCapabilitiesSchemaInferredType>(
+  {} as spec.McpUiClientCapabilities,
+);
 expectType<spec.McpUiMessageRequest>(
   {} as McpUiMessageRequestSchemaInferredType,
 );

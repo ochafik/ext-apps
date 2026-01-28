@@ -4,35 +4,32 @@
  * Or: node dist/index.js [--stdio] [pdf-urls...]
  */
 
-/**
- * Shared utilities for running MCP servers with Streamable HTTP transport.
- */
-
+import fs from "node:fs";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { createMcpExpressApp } from "@modelcontextprotocol/sdk/server/express.js";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import cors from "cors";
 import type { Request, Response } from "express";
-import { createServer, initializePdfIndex } from "./server.js";
-import { isArxivUrl, toFileUrl, normalizeArxivUrl } from "./src/pdf-indexer.js";
-
-export interface ServerOptions {
-  port: number;
-  name?: string;
-}
+import {
+  createServer,
+  isArxivUrl,
+  isFileUrl,
+  normalizeArxivUrl,
+  pathToFileUrl,
+  fileUrlToPath,
+  allowedLocalFiles,
+  allowedRemoteOrigins,
+  DEFAULT_PDF,
+} from "./server.js";
 
 /**
  * Starts an MCP server with Streamable HTTP transport in stateless mode.
- *
- * @param createServer - Factory function that creates a new McpServer instance per request.
- * @param options - Server configuration options.
  */
-export async function startServer(
+export async function startStreamableHTTPServer(
   createServer: () => McpServer,
-  options: ServerOptions,
 ): Promise<void> {
-  const { port, name = "MCP Server" } = options;
+  const port = parseInt(process.env.PORT ?? "3001", 10);
 
   const app = createMcpExpressApp({ host: "0.0.0.0" });
   app.use(cors());
@@ -68,7 +65,7 @@ export async function startServer(
       console.error("Failed to start server:", err);
       process.exit(1);
     }
-    console.log(`${name} listening on http://localhost:${port}/mcp`);
+    console.log(`MCP server listening on http://localhost:${port}/mcp`);
   });
 
   const shutdown = () => {
@@ -80,7 +77,16 @@ export async function startServer(
   process.on("SIGTERM", shutdown);
 }
 
-const DEFAULT_PDF = "https://arxiv.org/pdf/1706.03762"; // Attention Is All You Need
+/**
+ * Starts an MCP server with stdio transport.
+ *
+ * @param createServer - Factory function that creates a new McpServer instance.
+ */
+export async function startStdioServer(
+  createServer: () => McpServer,
+): Promise<void> {
+  await createServer().connect(new StdioServerTransport());
+}
 
 function parseArgs(): { urls: string[]; stdio: boolean } {
   const args = process.argv.slice(2);
@@ -98,7 +104,7 @@ function parseArgs(): { urls: string[]; stdio: boolean } {
         !arg.startsWith("https://") &&
         !arg.startsWith("file://")
       ) {
-        url = toFileUrl(arg);
+        url = pathToFileUrl(arg);
       } else if (isArxivUrl(arg)) {
         url = normalizeArxivUrl(arg);
       }
@@ -112,15 +118,28 @@ function parseArgs(): { urls: string[]; stdio: boolean } {
 async function main() {
   const { urls, stdio } = parseArgs();
 
-  console.error(`[pdf-server] Initializing with ${urls.length} PDF(s)...`);
-  await initializePdfIndex(urls);
-  console.error(`[pdf-server] Ready`);
+  // Register local files in whitelist
+  for (const url of urls) {
+    if (isFileUrl(url)) {
+      const filePath = fileUrlToPath(url);
+      if (fs.existsSync(filePath)) {
+        allowedLocalFiles.add(filePath);
+        console.error(`[pdf-server] Registered local file: ${filePath}`);
+      } else {
+        console.error(`[pdf-server] Warning: File not found: ${filePath}`);
+      }
+    }
+  }
+
+  console.error(`[pdf-server] Ready (${urls.length} URL(s) configured)`);
+  console.error(
+    `[pdf-server] Allowed origins: ${[...allowedRemoteOrigins].join(", ")}`,
+  );
 
   if (stdio) {
-    await createServer().connect(new StdioServerTransport());
+    await startStdioServer(createServer);
   } else {
-    const port = parseInt(process.env.PORT ?? "3120", 10);
-    await startServer(createServer, { port, name: "PDF Server" });
+    await startStreamableHTTPServer(createServer);
   }
 }
 

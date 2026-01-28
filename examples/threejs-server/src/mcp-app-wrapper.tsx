@@ -1,8 +1,8 @@
 /**
- * Three.js Widget - MCP App Wrapper
+ * Three.js view - MCP App Wrapper
  *
  * Generic wrapper that handles MCP App connection and passes all relevant
- * props to the actual widget component.
+ * props to the actual view component.
  */
 import type { App, McpUiHostContext } from "@modelcontextprotocol/ext-apps";
 import { useApp, useHostStyles } from "@modelcontextprotocol/ext-apps/react";
@@ -18,7 +18,7 @@ import "./global.css";
 // =============================================================================
 
 /**
- * Scene state tracked for widget interaction tools.
+ * Scene state tracked for view interaction tools.
  */
 export interface SceneState {
   /** Current Three.js code */
@@ -32,10 +32,10 @@ export interface SceneState {
 }
 
 /**
- * Props passed to the widget component.
- * This interface can be reused for other widgets.
+ * Props passed to the view component.
+ * This interface can be reused for other views.
  */
-export interface WidgetProps<TToolInput = Record<string, unknown>> {
+export interface ViewProps<TToolInput = Record<string, unknown>> {
   /** Complete tool input (after streaming finishes) */
   toolInputs: TToolInput | null;
   /** Partial tool input (during streaming) */
@@ -171,7 +171,7 @@ function McpAppWrapper() {
   const appRef = useRef<App | null>(null);
 
   const { app, error } = useApp({
-    appInfo: { name: "Three.js Widget", version: "1.0.0" },
+    appInfo: { name: "Three.js View", version: "1.0.0" },
     capabilities: { tools: {} },
     onAppCreated: (app) => {
       appRef.current = app;

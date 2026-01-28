@@ -67,6 +67,7 @@ export {
   type McpUiClickResult,
   type McpUiToolVisibility,
   type McpUiToolMeta,
+  type McpUiClientCapabilities,
 } from "./spec.types.js";
 
 // Import types needed for protocol type unions (not re-exported, just used internally)

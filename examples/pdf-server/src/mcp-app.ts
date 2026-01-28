@@ -6,16 +6,23 @@
  * - Text selection via PDF.js TextLayer
  * - Page navigation, zoom
  */
-import { App, type McpUiHostContext } from "@modelcontextprotocol/ext-apps";
+import {
+  App,
+  type McpUiHostContext,
+  applyDocumentTheme,
+  applyHostStyleVariables,
+} from "@modelcontextprotocol/ext-apps";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
+import type { ContentBlock } from "@modelcontextprotocol/sdk/spec.types.js";
 import { z } from "zod";
 import * as pdfjsLib from "pdfjs-dist";
 import { TextLayer } from "pdfjs-dist";
 import "./global.css";
 import "./mcp-app.css";
 
-// const MAX_MODEL_CONTEXT_LENGTH = 5000;
-const MAX_MODEL_CONTEXT_LENGTH = 1500;
+const MAX_MODEL_CONTEXT_LENGTH = 15000;
+const MAX_MODEL_CONTEXT_UPDATE_IMAGE_DIMENSION = 768; // Max screenshot dimension
+const CHUNK_SIZE = 500 * 1024; // 500KB chunks
 
 // Configure PDF.js worker
 pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
@@ -36,7 +43,7 @@ let totalPages = 0;
 let scale = 1.0;
 let pdfUrl = "";
 let pdfTitle: string | undefined;
-let widgetUUID: string | undefined;
+let viewUUID: string | undefined;
 let currentRenderTask: { cancel: () => void } | null = null;
 
 // DOM Elements
@@ -248,7 +255,7 @@ function findSelectionInText(
   return undefined;
 }
 
-// Extract text from current page and update model context as markdown
+// Extract text from current page and update model context
 async function updatePageContext() {
   if (!pdfDocument) return;
 
@@ -277,22 +284,64 @@ async function updatePageContext() {
       );
     }
 
-    // Format content with selection and truncation
+    // Format content with selection markers and truncation
     const content = formatPageContent(
       pageText,
       MAX_MODEL_CONTEXT_LENGTH,
       selection,
     );
 
-    const markdown = `---
-title: ${pdfTitle || ""}
-url: ${pdfUrl}
-current-page: ${currentPage}/${totalPages}
----
+    // Build context with tool ID for multi-tool disambiguation
+    const toolId = app.getHostContext()?.toolInfo?.id;
+    const header = [
+      `PDF viewer${toolId ? ` (${toolId})` : ""}`,
+      pdfTitle ? `"${pdfTitle}"` : pdfUrl,
+      `Current Page: ${currentPage}/${totalPages}`,
+    ].join(" | ");
 
-${content}`;
+    const contextText = `${header}\n\nPage content:\n${content}`;
 
-    app.updateModelContext({ content: [{ type: "text", text: markdown }] });
+    // Build content array with text and optional screenshot
+    const contentBlocks: ContentBlock[] = [{ type: "text", text: contextText }];
+
+    // Add screenshot if host supports image content
+    if (app.getHostCapabilities()?.updateModelContext?.image) {
+      try {
+        // Scale down to reduce token usage (tokens depend on dimensions)
+        const sourceCanvas = canvasEl;
+        const scale = Math.min(
+          1,
+          MAX_MODEL_CONTEXT_UPDATE_IMAGE_DIMENSION /
+            Math.max(sourceCanvas.width, sourceCanvas.height),
+        );
+        const targetWidth = Math.round(sourceCanvas.width * scale);
+        const targetHeight = Math.round(sourceCanvas.height * scale);
+
+        const tempCanvas = document.createElement("canvas");
+        tempCanvas.width = targetWidth;
+        tempCanvas.height = targetHeight;
+        const ctx = tempCanvas.getContext("2d");
+        if (ctx) {
+          ctx.drawImage(sourceCanvas, 0, 0, targetWidth, targetHeight);
+          const dataUrl = tempCanvas.toDataURL("image/png");
+          const base64Data = dataUrl.split(",")[1];
+          if (base64Data) {
+            contentBlocks.push({
+              type: "image",
+              data: base64Data,
+              mimeType: "image/png",
+            });
+            log.info(
+              `Added screenshot to model context (${targetWidth}x${targetHeight})`,
+            );
+          }
+        }
+      } catch (err) {
+        log.info("Failed to capture screenshot:", err);
+      }
+    }
+
+    app.updateModelContext({ content: contentBlocks });
   } catch (err) {
     log.error("Error updating context:", err);
   }
@@ -405,10 +454,10 @@ async function renderPage() {
 }
 
 function saveCurrentPage() {
-  log.info("saveCurrentPage: key=", widgetUUID, "page=", currentPage);
-  if (widgetUUID) {
+  log.info("saveCurrentPage: key=", viewUUID, "page=", currentPage);
+  if (viewUUID) {
     try {
-      localStorage.setItem(widgetUUID, String(currentPage));
+      localStorage.setItem(viewUUID, String(currentPage));
       log.info("saveCurrentPage: saved successfully");
     } catch (err) {
       log.error("saveCurrentPage: error", err);
@@ -417,10 +466,10 @@ function saveCurrentPage() {
 }
 
 function loadSavedPage(): number | null {
-  log.info("loadSavedPage: key=", widgetUUID);
-  if (!widgetUUID) return null;
+  log.info("loadSavedPage: key=", viewUUID);
+  if (!viewUUID) return null;
   try {
-    const saved = localStorage.getItem(widgetUUID);
+    const saved = localStorage.getItem(viewUUID);
     log.info("loadSavedPage: saved value=", saved);
     if (saved) {
       const page = parseInt(saved, 10);
@@ -636,7 +685,6 @@ function updateProgress(loaded: number, total: number) {
 
 // Load PDF in chunks with progress
 async function loadPdfInChunks(urlToLoad: string): Promise<Uint8Array> {
-  const CHUNK_SIZE = 500 * 1024; // 500KB chunks
   const chunks: Uint8Array[] = [];
   let offset = 0;
   let totalBytes = 0;
@@ -707,9 +755,7 @@ app.ontoolresult = async (result) => {
   pdfUrl = parsed.url;
   pdfTitle = parsed.title;
   totalPages = parsed.pageCount;
-  widgetUUID = result._meta?.widgetUUID
-    ? String(result._meta.widgetUUID)
-    : undefined;
+  viewUUID = result._meta?.viewUUID ? String(result._meta.viewUUID) : undefined;
 
   // Restore saved page or use initial page
   const savedPage = loadSavedPage();
@@ -753,6 +799,16 @@ app.onerror = (err) => {
 function handleHostContextChanged(ctx: McpUiHostContext) {
   log.info("Host context changed:", ctx);
 
+  // Apply theme from host
+  if (ctx.theme) {
+    applyDocumentTheme(ctx.theme);
+  }
+
+  // Apply host CSS variables
+  if (ctx.styles?.variables) {
+    applyHostStyleVariables(ctx.styles.variables);
+  }
+
   // Apply safe area insets
   if (ctx.safeAreaInsets) {
     mainEl.style.paddingTop = `${ctx.safeAreaInsets.top}px`;
@@ -770,16 +826,12 @@ function handleHostContextChanged(ctx: McpUiHostContext) {
   if (ctx.displayMode) {
     const wasFullscreen = currentDisplayMode === "fullscreen";
     currentDisplayMode = ctx.displayMode as "inline" | "fullscreen";
-    if (ctx.displayMode === "fullscreen") {
-      mainEl.classList.add("fullscreen");
-      log.info("Fullscreen mode enabled");
-    } else {
-      mainEl.classList.remove("fullscreen");
-      log.info("Inline mode");
-      // When exiting fullscreen, request resize to fit content
-      if (wasFullscreen && pdfDocument) {
-        requestFitToContent();
-      }
+    const isFullscreen = currentDisplayMode === "fullscreen";
+    mainEl.classList.toggle("fullscreen", isFullscreen);
+    log.info(isFullscreen ? "Fullscreen mode enabled" : "Inline mode");
+    // When exiting fullscreen, request resize to fit content
+    if (wasFullscreen && !isFullscreen && pdfDocument) {
+      requestFitToContent();
     }
     updateFullscreenButton();
   }

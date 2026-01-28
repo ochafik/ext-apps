@@ -24,6 +24,27 @@
             }
           },
           "additionalProperties": false
+        },
+        "availableDisplayModes": {
+          "description": "Display modes the app supports.",
+          "type": "array",
+          "items": {
+            "anyOf": [
+              {
+                "type": "string",
+                "const": "inline"
+              },
+              {
+                "type": "string",
+                "const": "fullscreen"
+              },
+              {
+                "type": "string",
+                "const": "pip"
+              }
+            ],
+            "description": "Display mode for UI presentation."
+          }
         }
       },
       "additionalProperties": false
@@ -112,6 +133,20 @@
       },
       "required": ["success"],
       "additionalProperties": {}
+    },
+    "McpUiClientCapabilities": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "mimeTypes": {
+          "description": "Array of supported MIME types for UI resources.\nMust include `\"text/html;profile=mcp-app\"` for MCP Apps support.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false
     },
     "McpUiDisplayMode": {
       "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -292,7 +327,7 @@
           "additionalProperties": false
         },
         "message": {
-          "description": "Host supports receiving content messages (ui/message) from the Guest UI.",
+          "description": "Host supports receiving content messages (ui/message) from the view.",
           "type": "object",
           "properties": {
             "text": {
@@ -953,7 +988,21 @@
               "description": "Display modes the host supports.",
               "type": "array",
               "items": {
-                "type": "string"
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "const": "inline"
+                  },
+                  {
+                    "type": "string",
+                    "const": "fullscreen"
+                  },
+                  {
+                    "type": "string",
+                    "const": "pip"
+                  }
+                ],
+                "description": "Display mode for UI presentation."
               }
             },
             "containerDimensions": {
@@ -1706,7 +1755,21 @@
           "description": "Display modes the host supports.",
           "type": "array",
           "items": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string",
+                "const": "inline"
+              },
+              {
+                "type": "string",
+                "const": "fullscreen"
+              },
+              {
+                "type": "string",
+                "const": "pip"
+              }
+            ],
+            "description": "Display mode for UI presentation."
           }
         },
         "containerDimensions": {
@@ -2355,6 +2418,27 @@
                     }
                   },
                   "additionalProperties": false
+                },
+                "availableDisplayModes": {
+                  "description": "Display modes the app supports.",
+                  "type": "array",
+                  "items": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "const": "inline"
+                      },
+                      {
+                        "type": "string",
+                        "const": "fullscreen"
+                      },
+                      {
+                        "type": "string",
+                        "const": "pip"
+                      }
+                    ],
+                    "description": "Display mode for UI presentation."
+                  }
                 }
               },
               "additionalProperties": false,
@@ -2589,7 +2673,7 @@
               "additionalProperties": false
             },
             "message": {
-              "description": "Host supports receiving content messages (ui/message) from the Guest UI.",
+              "description": "Host supports receiving content messages (ui/message) from the view.",
               "type": "object",
               "properties": {
                 "text": {
@@ -3243,7 +3327,21 @@
               "description": "Display modes the host supports.",
               "type": "array",
               "items": {
-                "type": "string"
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "const": "inline"
+                  },
+                  {
+                    "type": "string",
+                    "const": "fullscreen"
+                  },
+                  {
+                    "type": "string",
+                    "const": "pip"
+                  }
+                ],
+                "description": "Display mode for UI presentation."
               }
             },
             "containerDimensions": {
@@ -3962,7 +4060,7 @@
           "additionalProperties": false
         },
         "domain": {
-          "description": "Dedicated origin for widget sandbox.",
+          "description": "Dedicated origin for view sandbox.",
           "type": "string"
         },
         "prefersBorder": {
