@@ -21,8 +21,9 @@ The [`basic-host`](https://github.com/modelcontextprotocol/ext-apps/tree/main/ex
 
    ```bash
    git clone https://github.com/modelcontextprotocol/ext-apps.git
-   cd ext-apps/examples/basic-host
+   cd ext-apps
    npm install
+   cd examples/basic-host
    ```
 
 2. Start basic-host, pointing it to your MCP server:
@@ -59,9 +60,10 @@ For additional observability, open your browser's developer console. Basic-host 
 To test your App in a real conversational environment, install your MCP server in a host that supports MCP Apps:
 
 - Claude\.ai
-  - [Remote MCP servers (over HTTP)](https://claude.ai/docs/connectors/custom/remote-mcp)
-  - [Local MCP servers (over stdio)](https://claude.ai/docs/connectors/custom/desktop-extensions)
-- [VS Code Copilot](https://code.visualstudio.com/docs/copilot/customization/mcp-servers)
+  - [Remote MCP servers (over HTTP)](https://claude.com/docs/connectors/custom/remote-mcp)
+  - [Local MCP servers (over stdio)](https://claude.com/docs/connectors/custom/desktop-extensions)
+- [VS Code (Insiders)](https://code.visualstudio.com/docs/copilot/customization/mcp-servers)
+- [Goose](https://block.github.io/goose/docs/getting-started/using-extensions/)
 
 Once your server is configured, ask the agent to perform a task related to your App-enhanced tool. For example, if you have a weather App, ask the agent "Show me the current weather."
 

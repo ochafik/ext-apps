@@ -27,6 +27,7 @@ const EXTRA_WAIT_MS: Record<string, number> = {
 
 // Servers to skip (screenshots maintained manually)
 const SKIP_SERVERS = new Set([
+  "arcade-server", // Loads games from archive.org - screenshots maintained manually
   "video-resource", // Uses custom screenshot from PR comment
   "qr-server", // Uses custom screenshot from PR comment
   "say-server", // TTS model download from HuggingFace can be slow
@@ -37,6 +38,7 @@ const EXAMPLE_FILTER = process.env.EXAMPLE;
 
 // Server configurations (excludes integration-server which is for E2E testing)
 const ALL_SERVERS = [
+  { key: "arcade-server", name: "Arcade Server", dir: "arcade-server" },
   {
     key: "basic-react",
     name: "Basic MCP App Server (React)",
