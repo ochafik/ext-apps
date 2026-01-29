@@ -58,7 +58,6 @@ const HOST_MASKS: Record<string, string[]> = {
 
 // Servers to skip in CI (require special resources like GPU, large ML models)
 const SKIP_SERVERS = new Set<string>([
-  // None currently - say-server view works without TTS model for screenshots
   "arcade-server", // Loads games from archive.org which may be slow/unreliable in CI
   "qr-server", // TODO
   "say-server", // TTS model download from HuggingFace can be slow
