@@ -38,4 +38,5 @@ jobs:
             ./examples/threejs-server \
             ./examples/transcript-server \
             ./examples/video-resource-server \
-            ./examples/wiki-explorer-server
+            ./examples/wiki-explorer-server \
+            ./examples/arcade-server
