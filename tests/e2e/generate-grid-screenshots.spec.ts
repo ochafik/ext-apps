@@ -21,7 +21,6 @@ const DEFAULT_WAIT_MS = 5000;
 
 // Extra wait time for slow-loading servers (tiles, etc.)
 const EXTRA_WAIT_MS: Record<string, number> = {
-  "arcade-server": 30000, // Game loading from archive.org can be slow
   "map-server": 45000, // CesiumJS needs time for map tiles
   "pdf-server": 45000, // Chunked loading of file
 };
