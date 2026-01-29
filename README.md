@@ -176,6 +176,16 @@ To use these examples with MCP clients that support the stdio transport (such as
         "--stdio"
       ]
     },
+    "arcade": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "--silent",
+        "--registry=https://registry.npmjs.org/",
+        "@modelcontextprotocol/server-arcade",
+        "--stdio"
+      ]
+    },
     "budget-allocator": {
       "command": "npx",
       "args": [
@@ -323,16 +333,6 @@ To use these examples with MCP clients that support the stdio transport (such as
         "https://raw.githubusercontent.com/modelcontextprotocol/ext-apps/refs/heads/main/examples/say-server/server.py",
         "--stdio"
       ]
-    },
-    "arcade": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "--silent",
-        "--registry=https://registry.npmjs.org/",
-        "@modelcontextprotocol/server-arcade",
-        "--stdio"
-      ]
     }
   }
 }
@@ -401,6 +401,13 @@ Then configure your MCP client to build and run the local server. Replace `~/cod
       "args": [
         "-c",
         "cd ~/code/ext-apps/examples/basic-server-solid && npm run build >&2 && node dist/index.js --stdio"
+      ]
+    },
+    "arcade": {
+      "command": "bash",
+      "args": [
+        "-c",
+        "cd ~/code/ext-apps/examples/arcade-server && npm run build >&2 && node dist/index.js --stdio"
       ]
     },
     "budget-allocator": {
@@ -506,13 +513,6 @@ Then configure your MCP client to build and run the local server. Replace `~/cod
       "args": [
         "-c",
         "uv run --index https://pypi.org/simple ~/code/ext-apps/examples/say-server/server.py --stdio"
-      ]
-    },
-    "arcade": {
-      "command": "bash",
-      "args": [
-        "-c",
-        "cd ~/code/ext-apps/examples/arcade-server && npm run build >&2 && node dist/index.js --stdio"
       ]
     }
   }
