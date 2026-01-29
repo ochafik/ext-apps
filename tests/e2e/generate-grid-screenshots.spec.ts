@@ -21,12 +21,14 @@ const DEFAULT_WAIT_MS = 5000;
 
 // Extra wait time for slow-loading servers (tiles, etc.)
 const EXTRA_WAIT_MS: Record<string, number> = {
+  "arcade-server": 30000, // Game loading from archive.org can be slow
   "map-server": 45000, // CesiumJS needs time for map tiles
   "pdf-server": 45000, // Chunked loading of file
 };
 
 // Servers to skip (screenshots maintained manually)
 const SKIP_SERVERS = new Set([
+  "arcade-server", // Loads games from archive.org - screenshots maintained manually
   "video-resource", // Uses custom screenshot from PR comment
   "qr-server", // Uses custom screenshot from PR comment
   "say-server", // TTS model download from HuggingFace can be slow
@@ -37,6 +39,7 @@ const EXAMPLE_FILTER = process.env.EXAMPLE;
 
 // Server configurations (excludes integration-server which is for E2E testing)
 const ALL_SERVERS = [
+  { key: "arcade-server", name: "Arcade Server", dir: "arcade-server" },
   {
     key: "basic-react",
     name: "Basic MCP App Server (React)",

@@ -35,7 +35,7 @@ export function validateGameId(gameId: string): boolean {
  */
 export function createServer(port: number): McpServer {
   const server = new McpServer({
-    name: "arcade-mcp-server",
+    name: "Arcade Server",
     version: "1.0.0",
   });
 
