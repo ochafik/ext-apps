@@ -249,6 +249,53 @@ try {
 }
 ```
 
+## Serving binary blobs via resources
+
+Binary content (e.g., video) can be served via MCP resources as base64-encoded blobs. The server returns the data in the `blob` field of the resource content, and the App fetches it via `resources/read` for use in the browser.
+
+**Server-side**: Register a resource that returns binary data in the `blob` field:
+
+<!-- prettier-ignore -->
+```ts source="./patterns.tsx#binaryBlobResourceServer"
+server.registerResource(
+  "Video",
+  new ResourceTemplate("video://{id}", { list: undefined }),
+  {
+    description: "Video data served as base64 blob",
+    mimeType: "video/mp4",
+  },
+  async (uri, { id }): Promise<ReadResourceResult> => {
+    // Fetch or load your binary data
+    const idString = Array.isArray(id) ? id[0] : id;
+    const buffer = await getVideoData(idString);
+    const blob = Buffer.from(buffer).toString("base64");
+
+    return { contents: [{ uri: uri.href, mimeType: "video/mp4", blob }] };
+  },
+);
+```
+
+**Client-side**: Fetch the resource and convert the base64 blob to a data URI:
+
+<!-- prettier-ignore -->
+```ts source="./patterns.tsx#binaryBlobResourceClient"
+const result = await app.request(
+  { method: "resources/read", params: { uri: `video://${videoId}` } },
+  ReadResourceResultSchema,
+);
+
+const content = result.contents[0];
+if (!content || !("blob" in content)) {
+  throw new Error("Resource did not contain blob data");
+}
+
+const videoEl = document.querySelector("video")!;
+videoEl.src = `data:${content.mimeType!};base64,${content.blob}`;
+```
+
+> [!NOTE]
+> For a full example that implements this pattern, see: [`examples/video-resource-server/`](https://github.com/modelcontextprotocol/ext-apps/tree/main/examples/video-resource-server).
+
 ## Adapting to host context (theme, styling, fonts, and safe areas)
 
 The host provides context about its environment via {@link types!McpUiHostContext `McpUiHostContext`}. Use this to adapt your app's appearance and layout:
