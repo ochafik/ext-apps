@@ -34,8 +34,8 @@ const DYNAMIC_MASKS: Record<string, string[]> = {
 
 // Servers that need extra stabilization time (e.g., for tile loading, WebGL init)
 const SLOW_SERVERS: Record<string, number> = {
-  "arcade-server": 15000, // Game loading from archive.org can be slow
   "map-server": 15000, // CesiumJS needs time for tiles to load
+  "arcade-server": 15000, // Game loading from archive.org can be slow
   threejs: 2000, // Three.js WebGL initialization
   "say-server": 10000, // TTS model download from HuggingFace can be slow
 };
