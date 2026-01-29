@@ -1,8 +1,18 @@
+import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-/** Current SDK version - used in generated package.json files */
-export const SDK_VERSION = "0.4.1";
+/** Current SDK version - read from create-mcp-app's own package.json at runtime */
+export const SDK_VERSION: string = JSON.parse(
+  fs.readFileSync(
+    path.join(
+      path.dirname(fileURLToPath(import.meta.url)),
+      "..",
+      "package.json",
+    ),
+    "utf-8",
+  ),
+).version;
 
 /** Available templates */
 export const TEMPLATES = [
@@ -23,18 +33,18 @@ export function getTemplatesDir(): string {
   return path.join(__dirname, "..", "templates");
 }
 
-/** Validate project name */
-export function validateProjectName(name: string): string | undefined {
+/** Validate project name - must be a valid directory and npm package name */
+export function validateProjectName(name: string | undefined): string | undefined {
   if (!name) {
     return undefined; // Allow empty for placeholder default
   }
 
-  if (!/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/i.test(name)) {
-    return "Project name must be lowercase alphanumeric with optional hyphens";
+  if (/[<>:"/\\|?*\x00-\x1f]/.test(name)) {
+    return "Project name contains invalid characters";
   }
 
-  if (name.length > 214) {
-    return "Project name is too long (max 214 characters)";
+  if (name.startsWith(".") || name.startsWith("_")) {
+    return "Project name cannot start with a dot or underscore";
   }
 
   return undefined;
@@ -47,7 +57,7 @@ export function processTemplate(
 ): string {
   let result = content;
   for (const [key, value] of Object.entries(replacements)) {
-    result = result.replace(new RegExp(`\\{\\{${key}\\}\\}`, "g"), value);
+    result = result.replaceAll(`{{${key}}}`, value);
   }
   return result;
 }

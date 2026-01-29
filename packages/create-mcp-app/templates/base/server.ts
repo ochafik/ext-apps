@@ -11,42 +11,30 @@ import type {
 import fs from "node:fs/promises";
 import path from "node:path";
 
-// Works both from source (server.ts) and compiled (dist/server.js)
-const DIST_DIR = import.meta.filename.endsWith(".ts")
-  ? path.join(import.meta.dirname, "dist")
-  : import.meta.dirname;
+const DIST_DIR = path.join(import.meta.dirname, "dist");
 
-/**
- * Creates a new MCP server instance with tools and resources registered.
- */
 export function createServer(): McpServer {
   const server = new McpServer({
     name: "MCP App Server",
     version: "1.0.0",
   });
 
-  // Two-part registration: tool + resource, tied together by the resource URI.
-  const resourceUri = "ui://get-time/mcp-app.html";
+  const resourceUri = "ui://hello/mcp-app.html";
 
-  // Register a tool with UI metadata. When the host calls this tool, it reads
-  // `_meta.ui.resourceUri` to know which resource to fetch and render as an
-  // interactive UI.
   registerAppTool(
     server,
-    "get-time",
+    "hello",
     {
-      title: "Get Time",
-      description: "Returns the current server time as an ISO 8601 string.",
+      title: "Hello",
+      description: "Returns a greeting.",
       inputSchema: {},
-      _meta: { ui: { resourceUri } }, // Links this tool to its UI resource
+      _meta: { ui: { resourceUri } },
     },
     async (): Promise<CallToolResult> => {
-      const time = new Date().toISOString();
-      return { content: [{ type: "text", text: time }] };
+      return { content: [{ type: "text", text: "Hello from the server!" }] };
     },
   );
 
-  // Register the resource, which returns the bundled HTML/JavaScript for the UI.
   registerAppResource(
     server,
     resourceUri,

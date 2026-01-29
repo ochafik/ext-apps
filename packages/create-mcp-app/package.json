@@ -12,6 +12,7 @@
   ],
   "scripts": {
     "build": "tsc && chmod +x dist/index.js",
+    "test": "npm run build && node test/scaffold-build.test.mjs",
     "prepublishOnly": "npm run build"
   },
   "repository": {

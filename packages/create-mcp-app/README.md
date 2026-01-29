@@ -11,14 +11,11 @@ npm create @modelcontextprotocol/mcp-app
 # With project name
 npm create @modelcontextprotocol/mcp-app my-app
 
-# With template
-npm create @modelcontextprotocol/mcp-app my-app --template react
-
-# Skip npm install
-npm create @modelcontextprotocol/mcp-app my-app --no-install
+# With framework
+npm create @modelcontextprotocol/mcp-app my-app --framework react
 ```
 
-## Templates
+## Frameworks
 
 - **react** - React + Vite + TypeScript
 - **vanillajs** - Vanilla JavaScript + Vite + TypeScript
@@ -27,7 +24,7 @@ npm create @modelcontextprotocol/mcp-app my-app --no-install
 
 Each generated project includes:
 
-- MCP server with a sample `get-time` tool
+- MCP server with a sample tool
 - Interactive UI that communicates with the host
 - Vite build configuration for bundling the UI
 - TypeScript configuration
@@ -39,14 +36,7 @@ After creating your project:
 
 ```bash
 cd my-app
-npm install  # if you used --no-install
 npm run dev
-```
-
-Then test with the basic-host:
-
-```bash
-SERVERS='["http://localhost:3001/mcp"]' npx @modelcontextprotocol/basic-host
 ```
 
 ## License

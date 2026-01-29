@@ -10,8 +10,7 @@ import {
 
 interface CliArgs {
   projectName?: string;
-  template?: string;
-  noInstall?: boolean;
+  framework?: string;
   help?: boolean;
 }
 
@@ -22,10 +21,8 @@ function parseArgs(args: string[]): CliArgs {
     const arg = args[i];
     if (arg === "--help" || arg === "-h") {
       result.help = true;
-    } else if (arg === "--no-install") {
-      result.noInstall = true;
-    } else if (arg === "--template" || arg === "-t") {
-      result.template = args[++i];
+    } else if (arg === "--framework" || arg === "-f") {
+      result.framework = args[++i];
     } else if (!arg.startsWith("-") && !result.projectName) {
       result.projectName = arg;
     }
@@ -42,15 +39,13 @@ ${pc.bold("Usage:")}
   npm create @modelcontextprotocol/mcp-app [project-name] [options]
 
 ${pc.bold("Options:")}
-  -t, --template <name>  Template to use (${TEMPLATES.map((t) => t.value).join(", ")})
-  --no-install           Skip npm install
-  -h, --help             Show this help message
+  -f, --framework <name>  Framework to use (${TEMPLATES.map((t) => t.value).join(", ")})
+  -h, --help              Show this help message
 
 ${pc.bold("Examples:")}
   npm create @modelcontextprotocol/mcp-app
   npm create @modelcontextprotocol/mcp-app my-app
-  npm create @modelcontextprotocol/mcp-app my-app --template react
-  npm create @modelcontextprotocol/mcp-app my-app --no-install
+  npm create @modelcontextprotocol/mcp-app my-app --framework react
 `);
 }
 
@@ -66,8 +61,7 @@ export async function main(): Promise<void> {
   p.intro(pc.bgCyan(pc.black(" create-mcp-app ")));
 
   let projectName = args.projectName;
-  let template = args.template;
-  const runInstall = !args.noInstall;
+  let framework = args.framework;
 
   // Prompt for project name if not provided
   if (!projectName) {
@@ -91,24 +85,24 @@ export async function main(): Promise<void> {
     }
   }
 
-  // Prompt for template if not provided
-  if (!template) {
-    const templateResult = await p.select({
-      message: "Select a template:",
+  // Prompt for framework if not provided
+  if (!framework) {
+    const frameworkResult = await p.select({
+      message: "Select a framework:",
       options: [...TEMPLATES],
     });
 
-    if (p.isCancel(templateResult)) {
+    if (p.isCancel(frameworkResult)) {
       p.cancel("Operation cancelled.");
       process.exit(0);
     }
 
-    template = templateResult as TemplateName;
+    framework = frameworkResult as TemplateName;
   } else {
-    const validTemplates = TEMPLATES.map((t) => t.value) as readonly string[];
-    if (!validTemplates.includes(template)) {
+    const validFrameworks = TEMPLATES.map((t) => t.value) as readonly string[];
+    if (!validFrameworks.includes(framework)) {
       p.cancel(
-        `Invalid template "${template}". Valid options: ${validTemplates.join(", ")}`,
+        `Invalid framework "${framework}". Valid options: ${validFrameworks.join(", ")}`,
       );
       process.exit(1);
     }
@@ -121,29 +115,23 @@ export async function main(): Promise<void> {
 
     await scaffold({
       projectName,
-      template: template!,
+      template: framework!,
       targetDir: projectName,
       sdkVersion: SDK_VERSION,
     });
 
     s.stop("Project created!");
 
-    if (runInstall) {
-      s.start("Installing dependencies...");
-      const { execSync } = await import("node:child_process");
-      execSync("npm install", {
-        cwd: projectName,
-        stdio: "ignore",
-      });
-      s.stop("Dependencies installed!");
-    }
+    s.start("Installing dependencies...");
+    const { execSync } = await import("node:child_process");
+    execSync("npm install", {
+      cwd: projectName,
+      stdio: "ignore",
+    });
+    s.stop("Dependencies installed!");
 
     p.note(
-      [
-        `cd ${projectName}`,
-        ...(runInstall ? [] : ["npm install"]),
-        "npm run dev",
-      ].join("\n"),
+      [`cd ${projectName}`, "npm run dev"].join("\n"),
       "Next steps:",
     );
 
