@@ -26,7 +26,6 @@ jobs:
             . \
             ./examples/basic-server-react \
             ./examples/basic-server-vanillajs \
-            ./examples/arcade-server \
             ./examples/budget-allocator-server \
             ./examples/cohort-heatmap-server \
             ./examples/customer-segmentation-server \

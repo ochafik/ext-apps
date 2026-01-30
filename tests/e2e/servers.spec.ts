@@ -35,7 +35,6 @@ const DYNAMIC_MASKS: Record<string, string[]> = {
 // Servers that need extra stabilization time (e.g., for tile loading, WebGL init)
 const SLOW_SERVERS: Record<string, number> = {
   "map-server": 15000, // CesiumJS needs time for tiles to load
-  "arcade-server": 15000, // Game loading from archive.org can be slow
   threejs: 2000, // Three.js WebGL initialization
   "say-server": 10000, // TTS model download from HuggingFace can be slow
 };
@@ -58,7 +57,6 @@ const HOST_MASKS: Record<string, string[]> = {
 
 // Servers to skip in CI (require special resources like GPU, large ML models)
 const SKIP_SERVERS = new Set<string>([
-  "arcade-server", // Loads games from archive.org which may be slow/unreliable in CI
   "qr-server", // TODO
   "say-server", // TTS model download from HuggingFace can be slow
 ]);
@@ -68,7 +66,6 @@ const EXAMPLE_FILTER = process.env.EXAMPLE;
 
 // Server configurations (key is used for screenshot filenames, name is the MCP server name, dir is the folder name)
 const ALL_SERVERS = [
-  { key: "arcade-server", name: "Arcade Server", dir: "arcade-server" },
   {
     key: "integration",
     name: "Integration Test Server",
