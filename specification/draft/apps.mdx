@@ -99,10 +99,17 @@ interface UIResource {
   mimeType: string;
 
   /**
-   * Resource metadata for security and rendering configuration
+   * Resource metadata for security and rendering configuration.
    *
-   * Includes Content Security Policy configuration, dedicated domain settings,
-   * and visual preferences.
+   * Declares the security and rendering policy for this resource at
+   * discovery time (i.e. in the `resources/list` response).  Hosts MAY
+   * use it before issuing `resources/read` — for example to pre-validate
+   * CSP or to decide whether to offer the resource to the user.
+   *
+   * Servers MAY omit this entirely and attach `_meta.ui` on the content
+   * item returned by `resources/read` instead (or in addition).  When
+   * present in both places the content-item metadata takes precedence
+   * on a per-field basis (see below).
    */
   _meta?: {
     ui?: UIResourceMeta;
@@ -228,6 +235,19 @@ interface UIResourceMeta {
 }
 ```
 
+
+> **Where to put `_meta.ui`?**  `UIResourceMeta` is accepted in two places:
+>
+> | Location | When it is visible | Typical use |
+> |---|---|---|
+> | Resource descriptor (`resources/list`) | Discovery time, before content is fetched | Static policy declaration; pre-validation by hosts |
+> | Content item (`resources/read`) | After the resource is read | Per-read policy; dynamic CSP/permissions tied to the content |
+>
+> Servers SHOULD place `_meta.ui` on the content item returned by `resources/read`, because that is the only location where the metadata travels together with the HTML it protects and can be varied per read.
+> Servers MAY additionally (or instead) include it on the resource descriptor; hosts MAY use it for early validation.
+>
+> When metadata appears in **both** locations the host MUST merge them on a per-field basis, with the content-item value taking precedence for any field that is present in both.
+
 The resource content is returned via `resources/read`:
 
 ```typescript
@@ -240,6 +260,8 @@ The resource content is returned via `resources/read`:
     blob?: string;                // OR base64-encoded HTML
     _meta?: {
       ui?: {
+        // Same UIResourceMeta shape as on the resource descriptor.
+        // When present here it takes precedence over the descriptor-level value.
         csp?: {
           connectDomains?: string[]; // Origins for network requests (fetch/XHR/WebSocket).
           resourceDomains?: string[]; // Origins for static resources (scripts, images, styles, fonts).
@@ -1725,7 +1747,10 @@ Hosts MUST enforce Content Security Policies based on resource metadata.
 **CSP Construction from Metadata:**
 
 ```typescript
-const csp = resource._meta?.ui?.csp; // `resource` is extracted from the `contents` of the `resources/read` result
+// `resource` is extracted from the `contents` of the `resources/read` result.
+// Per-field merge: content-item _meta.ui overrides any same-keyed value in the
+// resource descriptor (from `resources/list`).
+const csp = resource._meta?.ui?.csp;
 const permissions = resource._meta?.ui?.permissions;
 
 const cspValue = `
