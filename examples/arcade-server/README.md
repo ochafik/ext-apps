@@ -33,11 +33,11 @@ See [`allowlist.ts`](allowlist.ts) for the complete list with legal documentatio
 
 Archive.org uses the [Emularity](https://github.com/db48x/emularity) system to run games in the browser. This includes:
 
-| Emulator | License | Used For |
-|----------|---------|----------|
-| [DOSBox](https://www.dosbox.com/) | GPL-2.0+ | DOS games |
-| [EM-DOSBox](https://github.com/dreamlayers/em-dosbox) | GPL-2.0+ | DOSBox compiled to JavaScript via Emscripten |
-| [MAME](https://www.mamedev.org/) | BSD-3-Clause / GPL-2.0+ | Arcade games |
+| Emulator                                              | License                 | Used For                                     |
+| ----------------------------------------------------- | ----------------------- | -------------------------------------------- |
+| [DOSBox](https://www.dosbox.com/)                     | GPL-2.0+                | DOS games                                    |
+| [EM-DOSBox](https://github.com/dreamlayers/em-dosbox) | GPL-2.0+                | DOSBox compiled to JavaScript via Emscripten |
+| [MAME](https://www.mamedev.org/)                      | BSD-3-Clause / GPL-2.0+ | Arcade games                                 |
 
 **Our relationship with these emulators:**
 
@@ -123,10 +123,10 @@ The server starts on `http://localhost:3002/mcp` by default. Set the `PORT` envi
 
 ## Tools
 
-| Tool             | Description                                          | UI  |
-| ---------------- | ---------------------------------------------------- | --- |
-| `search_games`   | Search for verified shareware/freeware games         | No  |
-| `get_game_by_id` | Load and play a verified-rights game                 | Yes |
+| Tool             | Description                                  | UI  |
+| ---------------- | -------------------------------------------- | --- |
+| `search_games`   | Search for verified shareware/freeware games | No  |
+| `get_game_by_id` | Load and play a verified-rights game         | Yes |
 
 ### search_games Parameters
 
@@ -174,33 +174,33 @@ All games have verified distribution rights. See [`allowlist.ts`](allowlist.ts) 
 
 ### id Software Shareware
 
-| Identifier | Title | Year |
-|------------|-------|------|
-| `doom-play` | DOOM | 1993 |
-| `msdos_DOOM_1993` | DOOM (MS-DOS) | 1993 |
-| `wolfenstein-3d` | Wolfenstein 3D | 1992 |
-| `w3d-box` | Wolfenstein 3D v1.4 | 1993 |
+| Identifier                      | Title                            | Year |
+| ------------------------------- | -------------------------------- | ---- |
+| `doom-play`                     | DOOM                             | 1993 |
+| `msdos_DOOM_1993`               | DOOM (MS-DOS)                    | 1993 |
+| `wolfenstein-3d`                | Wolfenstein 3D                   | 1992 |
+| `w3d-box`                       | Wolfenstein 3D v1.4              | 1993 |
 | `commander_keen_volume_one_131` | Commander Keen: Marooned on Mars | 1990 |
-| `heretic-dos` | Heretic | 1994 |
+| `heretic-dos`                   | Heretic                          | 1994 |
 
 ### Apogee / 3D Realms Shareware
 
-| Identifier | Title | Year |
-|------------|-------|------|
-| `duke-nukem2-sw` | Duke Nukem II | 1993 |
-| `3dduke13SW-altcontrols` | Duke Nukem 3D | 1996 |
-| `Bs-aog-sw1` | Blake Stone: Aliens of Gold | 1993 |
-| `rise-of-the-triad-the-hunt-begins-version-1.0` | Rise of the Triad | 1994 |
-| `biomenace1-sw` | Bio Menace | 1993 |
-| `Crystal-cave-sw1` | Crystal Caves | 1991 |
-| `monster-bash1-sw` | Monster Bash | 1993 |
-| `halloween_harry_shareware` | Halloween Harry | 1993 |
+| Identifier                                      | Title                       | Year |
+| ----------------------------------------------- | --------------------------- | ---- |
+| `duke-nukem2-sw`                                | Duke Nukem II               | 1993 |
+| `3dduke13SW-altcontrols`                        | Duke Nukem 3D               | 1996 |
+| `Bs-aog-sw1`                                    | Blake Stone: Aliens of Gold | 1993 |
+| `rise-of-the-triad-the-hunt-begins-version-1.0` | Rise of the Triad           | 1994 |
+| `biomenace1-sw`                                 | Bio Menace                  | 1993 |
+| `Crystal-cave-sw1`                              | Crystal Caves               | 1991 |
+| `monster-bash1-sw`                              | Monster Bash                | 1993 |
+| `halloween_harry_shareware`                     | Halloween Harry             | 1993 |
 
 ### Epic MegaGames Shareware / Freeware
 
-| Identifier | Title | Year |
-|------------|-------|------|
-| `Epic-pinball-sw1` | Epic Pinball | 1993 |
-| `radsw20` | Radix: Beyond the Void | 1995 |
-| `msdos_Tyrian_2000_1999` | Tyrian 2000 (Freeware) | 1999 |
+| Identifier                | Title                         | Year |
+| ------------------------- | ----------------------------- | ---- |
+| `Epic-pinball-sw1`        | Epic Pinball                  | 1993 |
+| `radsw20`                 | Radix: Beyond the Void        | 1995 |
+| `msdos_Tyrian_2000_1999`  | Tyrian 2000 (Freeware)        | 1999 |
 | `jill-of-the-jungle-0mhz` | Jill of the Jungle (Freeware) | 1992 |

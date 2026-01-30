@@ -68,7 +68,10 @@ export async function searchArchiveOrgGames(
   // SECOND: Only if no allowlist matches, search archive.org
   // This is slower but may find games with permissive metadata
   try {
-    const archiveResults = await searchArchiveOrgWithTimeout(searchTerm, maxResults);
+    const archiveResults = await searchArchiveOrgWithTimeout(
+      searchTerm,
+      maxResults,
+    );
     return archiveResults;
   } catch {
     // On any error/timeout, return empty (allowlist was already empty)
@@ -177,7 +180,9 @@ async function searchArchiveOrgWithTimeout(
 
   // If no allowlist matches, check metadata for verified rights
   const limitedGames = games.slice(0, 10);
-  const rightsMap = await checkRightsBatch(limitedGames.map((g) => g.identifier));
+  const rightsMap = await checkRightsBatch(
+    limitedGames.map((g) => g.identifier),
+  );
 
   const verified: GameSearchResult[] = [];
   for (const game of limitedGames) {

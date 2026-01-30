@@ -141,7 +141,9 @@ export async function checkRightsBatch(
   // Second pass: fetch remaining in parallel with concurrency limit
   if (needsFetch.length > 0) {
     const fetchResults = await Promise.allSettled(
-      needsFetch.map((id) => fetchWithConcurrencyLimit(id).then((r) => ({ id, result: r }))),
+      needsFetch.map((id) =>
+        fetchWithConcurrencyLimit(id).then((r) => ({ id, result: r })),
+      ),
     );
 
     for (const outcome of fetchResults) {
@@ -240,11 +242,17 @@ async function fetchAndAnalyzeMetadata(
 /**
  * Checks if the identifier itself indicates shareware/freeware status.
  */
-function checkIdentifierForRights(identifier: string): RightsCheckResult | null {
+function checkIdentifierForRights(
+  identifier: string,
+): RightsCheckResult | null {
   const idLower = identifier.toLowerCase();
 
   // Common shareware/freeware indicators in identifiers
-  if (idLower.includes("shareware") || idLower.includes("-sw") || idLower.endsWith("sw")) {
+  if (
+    idLower.includes("shareware") ||
+    idLower.includes("-sw") ||
+    idLower.endsWith("sw")
+  ) {
     return {
       status: "allowed",
       note: "Identifier indicates shareware",
@@ -278,7 +286,10 @@ function checkIdentifierForRights(identifier: string): RightsCheckResult | null 
 /**
  * Analyzes archive.org metadata to determine rights status.
  */
-function analyzeMetadata(identifier: string, data: ArchiveMetadata): RightsCheckResult {
+function analyzeMetadata(
+  identifier: string,
+  data: ArchiveMetadata,
+): RightsCheckResult {
   const metadata = data.metadata;
   if (!metadata) {
     // No metadata, but archive.org is hosting it publicly
