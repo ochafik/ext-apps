@@ -129,6 +129,26 @@ export function validateUrl(url: string): { valid: boolean; error?: string } {
 // Range Request Helpers
 // =============================================================================
 
+/**
+ * Cache for remote PDFs from servers that don't support Range requests.
+ * When a server returns HTTP 200 (full body) instead of 206 (partial),
+ * we store the full response here so subsequent chunk requests don't
+ * re-download the entire file.
+ */
+const remoteFullBodyCache = new Map<string, Uint8Array>();
+
+/** Slice a cached or freshly-fetched full body to the requested range. */
+function sliceToChunk(
+  fullData: Uint8Array,
+  offset: number,
+  clampedByteCount: number,
+): { data: Uint8Array; totalBytes: number } {
+  const totalBytes = fullData.length;
+  const start = Math.min(offset, totalBytes);
+  const end = Math.min(start + clampedByteCount, totalBytes);
+  return { data: fullData.slice(start, end), totalBytes };
+}
+
 export async function readPdfRange(
   url: string,
   offset: number,
@@ -162,6 +182,12 @@ export async function readPdfRange(
     return { data: new Uint8Array(buffer), totalBytes };
   }
 
+  // Serve from cache if we previously downloaded the full body
+  const cached = remoteFullBodyCache.get(normalized);
+  if (cached) {
+    return sliceToChunk(cached, offset, clampedByteCount);
+  }
+
   // Remote URL - Range request
   const response = await fetch(normalized, {
     headers: {
@@ -175,7 +201,15 @@ export async function readPdfRange(
     );
   }
 
-  // Parse total size from Content-Range header
+  // HTTP 200 means the server ignored our Range header and sent the full body.
+  // Cache it so subsequent chunk requests don't re-download, then slice.
+  if (response.status === 200) {
+    const fullData = new Uint8Array(await response.arrayBuffer());
+    remoteFullBodyCache.set(normalized, fullData);
+    return sliceToChunk(fullData, offset, clampedByteCount);
+  }
+
+  // HTTP 206 Partial Content — parse total size from Content-Range header
   const contentRange = response.headers.get("content-range");
   let totalBytes = 0;
   if (contentRange) {
