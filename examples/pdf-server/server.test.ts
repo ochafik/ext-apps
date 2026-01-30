@@ -1,20 +1,22 @@
 import { describe, it, expect, beforeEach, afterEach, spyOn } from "bun:test";
 import {
-  getCacheSize,
-  clearCache,
+  createPdfCache,
   CACHE_INACTIVITY_TIMEOUT_MS,
   CACHE_MAX_LIFETIME_MS,
   CACHE_MAX_PDF_SIZE_BYTES,
-  readPdfRange,
+  type PdfCache,
 } from "./server";
 
 describe("PDF Cache with Timeouts", () => {
+  let pdfCache: PdfCache;
+
   beforeEach(() => {
-    clearCache();
+    // Each test gets its own session-local cache
+    pdfCache = createPdfCache();
   });
 
   afterEach(() => {
-    clearCache();
+    pdfCache.clearCache();
   });
 
   describe("cache configuration", () => {
@@ -33,12 +35,22 @@ describe("PDF Cache with Timeouts", () => {
 
   describe("cache management", () => {
     it("should start with empty cache", () => {
-      expect(getCacheSize()).toBe(0);
+      expect(pdfCache.getCacheSize()).toBe(0);
     });
 
     it("should clear all entries", () => {
-      clearCache();
-      expect(getCacheSize()).toBe(0);
+      pdfCache.clearCache();
+      expect(pdfCache.getCacheSize()).toBe(0);
+    });
+
+    it("should isolate caches between sessions", () => {
+      // Create two independent cache instances
+      const cache1 = createPdfCache();
+      const cache2 = createPdfCache();
+
+      // They should be independent (both start empty)
+      expect(cache1.getCacheSize()).toBe(0);
+      expect(cache2.getCacheSize()).toBe(0);
     });
   });
 
@@ -57,13 +69,13 @@ describe("PDF Cache with Timeouts", () => {
 
       try {
         // First request - should fetch and cache
-        const result1 = await readPdfRange(testUrl, 0, 1024);
+        const result1 = await pdfCache.readPdfRange(testUrl, 0, 1024);
         expect(result1.data).toEqual(testData);
         expect(result1.totalBytes).toBe(testData.length);
-        expect(getCacheSize()).toBe(1);
+        expect(pdfCache.getCacheSize()).toBe(1);
 
         // Second request - should serve from cache (no new fetch)
-        const result2 = await readPdfRange(testUrl, 0, 1024);
+        const result2 = await pdfCache.readPdfRange(testUrl, 0, 1024);
         expect(result2.data).toEqual(testData);
         expect(mockFetch).toHaveBeenCalledTimes(1); // Only one fetch call
       } finally {
@@ -85,8 +97,8 @@ describe("PDF Cache with Timeouts", () => {
       );
 
       try {
-        await readPdfRange(testUrl, 0, 2);
-        expect(getCacheSize()).toBe(0); // Not cached when 206
+        await pdfCache.readPdfRange(testUrl, 0, 2);
+        expect(pdfCache.getCacheSize()).toBe(0); // Not cached when 206
       } finally {
         mockFetch.mockRestore();
       }
@@ -101,11 +113,11 @@ describe("PDF Cache with Timeouts", () => {
 
       try {
         // First request caches full body
-        await readPdfRange(testUrl, 0, 1024);
-        expect(getCacheSize()).toBe(1);
+        await pdfCache.readPdfRange(testUrl, 0, 1024);
+        expect(pdfCache.getCacheSize()).toBe(1);
 
         // Subsequent request gets slice from cache
-        const result = await readPdfRange(testUrl, 2, 3);
+        const result = await pdfCache.readPdfRange(testUrl, 2, 3);
         expect(result.data).toEqual(new Uint8Array([3, 4, 5]));
         expect(result.totalBytes).toBe(10);
         expect(mockFetch).toHaveBeenCalledTimes(1);
@@ -115,7 +127,7 @@ describe("PDF Cache with Timeouts", () => {
     });
 
     it("should reject PDFs larger than max size limit", async () => {
-      const testUrl = "https://arxiv.org/pdf/huge-pdf";
+      const hugeUrl = "https://arxiv.org/pdf/huge-pdf";
       // Create data larger than the limit
       const hugeData = new Uint8Array(CACHE_MAX_PDF_SIZE_BYTES + 1);
 
@@ -127,17 +139,17 @@ describe("PDF Cache with Timeouts", () => {
       );
 
       try {
-        await expect(readPdfRange(testUrl, 0, 1024)).rejects.toThrow(
+        await expect(pdfCache.readPdfRange(hugeUrl, 0, 1024)).rejects.toThrow(
           /PDF too large to cache/,
         );
-        expect(getCacheSize()).toBe(0); // Should not be cached
+        expect(pdfCache.getCacheSize()).toBe(0); // Should not be cached
       } finally {
         mockFetch.mockRestore();
       }
     });
 
     it("should reject when Content-Length header exceeds limit", async () => {
-      const testUrl = "https://arxiv.org/pdf/huge-pdf-header";
+      const headerUrl = "https://arxiv.org/pdf/huge-pdf-header";
       const smallData = new Uint8Array([1, 2, 3, 4]);
 
       const mockFetch = spyOn(globalThis, "fetch").mockResolvedValueOnce(
@@ -151,10 +163,10 @@ describe("PDF Cache with Timeouts", () => {
       );
 
       try {
-        await expect(readPdfRange(testUrl, 0, 1024)).rejects.toThrow(
+        await expect(pdfCache.readPdfRange(headerUrl, 0, 1024)).rejects.toThrow(
           /PDF too large to cache/,
         );
-        expect(getCacheSize()).toBe(0);
+        expect(pdfCache.getCacheSize()).toBe(0);
       } finally {
         mockFetch.mockRestore();
       }
