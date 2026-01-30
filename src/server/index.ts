@@ -44,7 +44,7 @@ import type {
   RegisteredTool,
   ResourceMetadata,
   ToolCallback,
-  ReadResourceCallback,
+  ReadResourceCallback as _ReadResourceCallback,
   RegisteredResource,
 } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type {
@@ -53,12 +53,13 @@ import type {
 } from "@modelcontextprotocol/sdk/server/zod-compat.js";
 import type {
   ClientCapabilities,
+  ReadResourceResult,
   ToolAnnotations,
 } from "@modelcontextprotocol/sdk/types.js";
 
 // Re-exports for convenience
 export { RESOURCE_URI_META_KEY, RESOURCE_MIME_TYPE };
-export type { ResourceMetadata, ToolCallback, ReadResourceCallback };
+export type { ResourceMetadata, ToolCallback };
 
 /**
  * Base tool configuration matching the standard MCP server tool options.
@@ -242,6 +243,15 @@ export function registerAppTool<
   return server.registerTool(name, { ...config, _meta: normalizedMeta }, cb);
 }
 
+export type McpUiReadResourceResult = ReadResourceResult & {
+  _meta?: {
+    ui?: McpUiResourceMeta;
+    [key: string]: unknown;
+  };
+};
+export type McpUiReadResourceCallback = (uri: URL, extra: Parameters<_ReadResourceCallback>[1]) => McpUiReadResourceResult | Promise<McpUiReadResourceResult>;
+export type ReadResourceCallback = McpUiReadResourceCallback;
+
 /**
  * Register an app resource with the MCP server.
  *
@@ -312,7 +322,7 @@ export function registerAppResource(
   name: string,
   uri: string,
   config: McpUiAppResourceConfig,
-  readCallback: ReadResourceCallback,
+  readCallback: McpUiReadResourceCallback,
 ): RegisteredResource {
   return server.registerResource(
     name,
