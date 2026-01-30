@@ -249,7 +249,10 @@ export type McpUiReadResourceResult = ReadResourceResult & {
     [key: string]: unknown;
   };
 };
-export type McpUiReadResourceCallback = (uri: URL, extra: Parameters<_ReadResourceCallback>[1]) => McpUiReadResourceResult | Promise<McpUiReadResourceResult>;
+export type McpUiReadResourceCallback = (
+  uri: URL,
+  extra: Parameters<_ReadResourceCallback>[1],
+) => McpUiReadResourceResult | Promise<McpUiReadResourceResult>;
 export type ReadResourceCallback = McpUiReadResourceCallback;
 
 /**
