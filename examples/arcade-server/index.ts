@@ -27,6 +27,7 @@ async function main() {
 
   // Serve the modified emulation script (import() rewritten to loadScript()).
   // <script src> is not subject to CORS, so this works from srcdoc iframes.
+  // NOTE: Script is cached in memory only, not persisted to disk.
   app.get("/scripts/emulation.js", (_req: Request, res: Response) => {
     const script = getCachedEmulationScript();
     if (!script) {
@@ -34,7 +35,8 @@ async function main() {
       return;
     }
     res.setHeader("Content-Type", "application/javascript");
-    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
+    res.setHeader("Pragma", "no-cache");
     res.send(script);
   });
 
@@ -48,7 +50,8 @@ async function main() {
     try {
       const html = await processGameEmbed(gameId, port);
       res.setHeader("Content-Type", "text/html");
-      res.setHeader("Cache-Control", "no-cache");
+      res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
+      res.setHeader("Pragma", "no-cache");
       res.send(html);
     } catch (error) {
       console.error("Failed to load game:", gameId, error);

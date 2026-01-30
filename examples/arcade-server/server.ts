@@ -3,6 +3,9 @@
  *
  * MCP server for browsing and playing arcade games from archive.org.
  * Fetches game HTML server-side and serves it as an inline MCP App resource.
+ *
+ * IMPORTANT: Only games with verified distribution rights (shareware, freeware,
+ * public domain) can be loaded. See allowlist.ts for the curated list.
  */
 
 import {
@@ -13,6 +16,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 import { searchArchiveOrgGames } from "./search.js";
+import { checkRights } from "./rights-checker.js";
 
 const GAME_VIEWER_RESOURCE_URI = "ui://arcade/game-viewer";
 
@@ -44,12 +48,13 @@ export function createServer(port: number): McpServer {
     "search_games",
     {
       description:
-        "Searches archive.org for arcade games matching the search term. Returns a list of game identifiers and titles sorted by relevance.",
+        "Searches for shareware, freeware, and public domain arcade games. " +
+        "Only returns games with verified distribution rights.",
       inputSchema: z.object({
         searchTerm: z
           .string()
           .describe(
-            'The game name or search term (e.g., "doom", "pacman", "mario").',
+            'The game name or search term (e.g., "doom", "commander keen", "tyrian").',
           ),
         maxResults: z
           .number()
@@ -81,7 +86,7 @@ export function createServer(port: number): McpServer {
             content: [
               {
                 type: "text",
-                text: `No arcade games found for "${searchTerm}". Try a different search term.`,
+                text: `No verified-rights games found for "${searchTerm}". Try a different search term, or check the allowlist for available games.`,
               },
             ],
           };
@@ -93,6 +98,8 @@ export function createServer(port: number): McpServer {
           description: game.description || null,
           year: game.year || null,
           creator: game.creator || null,
+          rightsStatus: game.rightsStatus,
+          rightsNote: game.rightsNote || null,
         }));
 
         return {
@@ -100,7 +107,12 @@ export function createServer(port: number): McpServer {
             {
               type: "text",
               text: JSON.stringify(
-                { total: games.length, searchTerm, games: gameData },
+                {
+                  total: games.length,
+                  searchTerm,
+                  note: "All results have verified distribution rights (shareware, freeware, or public domain)",
+                  games: gameData,
+                },
                 null,
                 2,
               ),
@@ -127,12 +139,14 @@ export function createServer(port: number): McpServer {
     {
       title: "Play Arcade Game",
       description:
-        "Loads and displays a playable arcade game from archive.org by its identifier.",
+        "Loads and displays a playable arcade game from archive.org. " +
+        "Only games with verified distribution rights (shareware, freeware, public domain) can be loaded. " +
+        "Use search_games first to find available games.",
       inputSchema: z.object({
         gameId: z
           .string()
           .describe(
-            'The archive.org identifier (e.g., "doom-play", "arcade_20pacgal").',
+            'The archive.org identifier for a verified-rights game (e.g., "doom-play", "heretic-dos").',
           ),
       }) as any,
       _meta: {
@@ -153,8 +167,32 @@ export function createServer(port: number): McpServer {
         };
       }
 
+      // Check rights status - only allow verified games
+      const rights = await checkRights(gameId);
+
+      if (rights.status !== "allowed") {
+        return {
+          content: [
+            {
+              type: "text",
+              text:
+                `Error: Cannot load "${gameId}" - distribution rights not verified.\n` +
+                `Status: ${rights.note || "Rights status unknown"}\n\n` +
+                `Only shareware, freeware, and public domain games can be loaded. ` +
+                `Use search_games to find available games.`,
+            },
+          ],
+          isError: true,
+        };
+      }
+
       return {
-        content: [{ type: "text", text: `Loading arcade game: ${gameId}` }],
+        content: [
+          {
+            type: "text",
+            text: `Loading arcade game: ${gameId}\nRights: ${rights.note || "Verified for distribution"}`,
+          },
+        ],
       };
     },
   );
