@@ -110,12 +110,19 @@ export interface McpUiAppToolConfig extends ToolConfig {
  * Extends the base MCP SDK `ResourceMetadata` with optional UI metadata
  * for configuring security policies and rendering preferences.
  *
+ * The `_meta.ui` field here is included in the `resources/list` response and serves as
+ * a static default for hosts to review at connection time. When the `resources/read`
+ * content item also includes `_meta.ui`, the content-item value takes precedence.
+ *
  * @see {@link registerAppResource `registerAppResource`} for usage
  */
 export interface McpUiAppResourceConfig extends ResourceMetadata {
   /**
    * Optional UI metadata for the resource.
-   * Used to configure security policies (CSP) and rendering preferences.
+   *
+   * This appears on the resource entry in `resources/list` and acts as a listing-level
+   * fallback. Individual content items returned by `resources/read` may include their
+   * own `_meta.ui` which takes precedence over this value.
    */
   _meta?: {
     /**
