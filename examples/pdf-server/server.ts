@@ -33,6 +33,15 @@ export const DEFAULT_PDF = "https://arxiv.org/pdf/1706.03762"; // Attention Is A
 export const MAX_CHUNK_BYTES = 512 * 1024; // 512KB max per request
 export const RESOURCE_URI = "ui://pdf-viewer/mcp-app.html";
 
+/** Inactivity timeout: clear cache entry if not accessed for this long */
+export const CACHE_INACTIVITY_TIMEOUT_MS = 10_000; // 10 seconds
+
+/** Max lifetime: clear cache entry after this time regardless of access */
+export const CACHE_MAX_LIFETIME_MS = 60_000; // 60 seconds
+
+/** Max size for cached PDFs (defensive limit to prevent memory exhaustion) */
+export const CACHE_MAX_PDF_SIZE_BYTES = 50 * 1024 * 1024; // 50MB
+
 /** Allowed remote origins (security allowlist) */
 export const allowedRemoteOrigins = new Set([
   "https://agrirxiv.org",
@@ -130,12 +139,86 @@ export function validateUrl(url: string): { valid: boolean; error?: string } {
 // =============================================================================
 
 /**
+ * Cache entry for remote PDFs from servers that don't support Range requests.
+ * Tracks both inactivity and max lifetime for automatic cleanup.
+ */
+interface CacheEntry {
+  /** The cached PDF data */
+  data: Uint8Array;
+  /** Timestamp when entry was created (for max lifetime) */
+  createdAt: number;
+  /** Timer that fires after CACHE_INACTIVITY_TIMEOUT_MS of no access */
+  inactivityTimer: ReturnType<typeof setTimeout>;
+  /** Timer that fires after CACHE_MAX_LIFETIME_MS from creation */
+  maxLifetimeTimer: ReturnType<typeof setTimeout>;
+}
+
+/**
  * Cache for remote PDFs from servers that don't support Range requests.
  * When a server returns HTTP 200 (full body) instead of 206 (partial),
  * we store the full response here so subsequent chunk requests don't
  * re-download the entire file.
+ *
+ * Entries are automatically cleared after:
+ * - 10 seconds of inactivity (no access)
+ * - 60 seconds max lifetime (regardless of access)
  */
-const remoteFullBodyCache = new Map<string, Uint8Array>();
+const remoteFullBodyCache = new Map<string, CacheEntry>();
+
+/** Delete a cache entry and clear its timers */
+function deleteCacheEntry(url: string): void {
+  const entry = remoteFullBodyCache.get(url);
+  if (entry) {
+    clearTimeout(entry.inactivityTimer);
+    clearTimeout(entry.maxLifetimeTimer);
+    remoteFullBodyCache.delete(url);
+  }
+}
+
+/** Get cached data and refresh the inactivity timer */
+function getCacheEntry(url: string): Uint8Array | undefined {
+  const entry = remoteFullBodyCache.get(url);
+  if (!entry) return undefined;
+
+  // Refresh inactivity timer on access
+  clearTimeout(entry.inactivityTimer);
+  entry.inactivityTimer = setTimeout(() => {
+    deleteCacheEntry(url);
+  }, CACHE_INACTIVITY_TIMEOUT_MS);
+
+  return entry.data;
+}
+
+/** Add data to cache with both inactivity and max lifetime timers */
+function setCacheEntry(url: string, data: Uint8Array): void {
+  // Clear any existing entry first
+  deleteCacheEntry(url);
+
+  const entry: CacheEntry = {
+    data,
+    createdAt: Date.now(),
+    inactivityTimer: setTimeout(() => {
+      deleteCacheEntry(url);
+    }, CACHE_INACTIVITY_TIMEOUT_MS),
+    maxLifetimeTimer: setTimeout(() => {
+      deleteCacheEntry(url);
+    }, CACHE_MAX_LIFETIME_MS),
+  };
+
+  remoteFullBodyCache.set(url, entry);
+}
+
+/** Get current cache size (for testing) */
+export function getCacheSize(): number {
+  return remoteFullBodyCache.size;
+}
+
+/** Clear all cache entries (for testing) */
+export function clearCache(): void {
+  for (const url of [...remoteFullBodyCache.keys()]) {
+    deleteCacheEntry(url);
+  }
+}
 
 /** Slice a cached or freshly-fetched full body to the requested range. */
 function sliceToChunk(
@@ -183,7 +266,7 @@ export async function readPdfRange(
   }
 
   // Serve from cache if we previously downloaded the full body
-  const cached = remoteFullBodyCache.get(normalized);
+  const cached = getCacheEntry(normalized);
   if (cached) {
     return sliceToChunk(cached, offset, clampedByteCount);
   }
@@ -204,8 +287,27 @@ export async function readPdfRange(
   // HTTP 200 means the server ignored our Range header and sent the full body.
   // Cache it so subsequent chunk requests don't re-download, then slice.
   if (response.status === 200) {
+    // Check Content-Length header first as a preliminary size check
+    const contentLength = response.headers.get("content-length");
+    if (contentLength) {
+      const declaredSize = parseInt(contentLength, 10);
+      if (declaredSize > CACHE_MAX_PDF_SIZE_BYTES) {
+        throw new Error(
+          `PDF too large to cache: ${declaredSize} bytes exceeds ${CACHE_MAX_PDF_SIZE_BYTES} byte limit`,
+        );
+      }
+    }
+
     const fullData = new Uint8Array(await response.arrayBuffer());
-    remoteFullBodyCache.set(normalized, fullData);
+
+    // Check actual size (may differ from Content-Length)
+    if (fullData.length > CACHE_MAX_PDF_SIZE_BYTES) {
+      throw new Error(
+        `PDF too large to cache: ${fullData.length} bytes exceeds ${CACHE_MAX_PDF_SIZE_BYTES} byte limit`,
+      );
+    }
+
+    setCacheEntry(normalized, fullData);
     return sliceToChunk(fullData, offset, clampedByteCount);
   }
 
