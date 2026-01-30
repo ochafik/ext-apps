@@ -314,10 +314,6 @@ See `examples/shadertoy-server/` for complete implementation.
 8. **No streaming for large inputs** - Use `ontoolinputpartial` to show progress during generation
 9. **CSP `_meta` in wrong location** - Put `_meta.ui.csp` in the `contents` array (readCallback), NOT in the `registerResource` config. Only the contents location is read by hosts:
    ```typescript
-   // WRONG - config param
-   registerAppResource(server, "View", "ui://app", { _meta: { ui: { csp: {...} } } }, callback);
-
-   // CORRECT - in contents returned by callback
    async () => ({
      contents: [{
        uri, mimeType, text: html,
