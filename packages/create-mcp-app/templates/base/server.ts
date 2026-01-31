@@ -19,19 +19,19 @@ export function createServer(): McpServer {
     version: "1.0.0",
   });
 
-  const resourceUri = "ui://hello/mcp-app.html";
+  const resourceUri = "ui://my-tool/mcp-app.html";
 
   registerAppTool(
     server,
-    "hello",
+    "my-tool",
     {
-      title: "Hello",
-      description: "Returns a greeting.",
+      title: "My Tool",
+      description: "TODO: Describe what this tool does.",
       inputSchema: {},
       _meta: { ui: { resourceUri } },
     },
     async (): Promise<CallToolResult> => {
-      return { content: [{ type: "text", text: "Hello from the server!" }] };
+      return { content: [{ type: "text", text: "TODO: Return tool result." }] };
     },
   );
 

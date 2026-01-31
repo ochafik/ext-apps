@@ -2,17 +2,28 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
 /** Current SDK version - read from create-mcp-app's own package.json at runtime */
 export const SDK_VERSION: string = JSON.parse(
-  fs.readFileSync(
-    path.join(
-      path.dirname(fileURLToPath(import.meta.url)),
-      "..",
-      "package.json",
-    ),
-    "utf-8",
-  ),
+  fs.readFileSync(path.join(__dirname, "..", "package.json"), "utf-8"),
 ).version;
+
+/** MCP SDK version - read from the installed @modelcontextprotocol/sdk package */
+export const MCP_SDK_VERSION: string = (() => {
+  // Resolve any entry point in the SDK, then walk up to find the package root
+  const sdkEntry = fileURLToPath(import.meta.resolve("@modelcontextprotocol/sdk"));
+  let dir = path.dirname(sdkEntry);
+  while (dir !== path.dirname(dir)) {
+    const candidate = path.join(dir, "package.json");
+    if (fs.existsSync(candidate)) {
+      const pkg = JSON.parse(fs.readFileSync(candidate, "utf-8"));
+      if (pkg.name === "@modelcontextprotocol/sdk") return pkg.version as string;
+    }
+    dir = path.dirname(dir);
+  }
+  throw new Error("Could not find @modelcontextprotocol/sdk package.json");
+})();
 
 /** Available templates */
 export const TEMPLATES = [
@@ -28,13 +39,14 @@ export type TemplateName = (typeof TEMPLATES)[number]["value"];
 
 /** Get the templates directory path */
 export function getTemplatesDir(): string {
-  const __dirname = path.dirname(fileURLToPath(import.meta.url));
   // Works both in development (src/) and production (dist/)
   return path.join(__dirname, "..", "templates");
 }
 
 /** Validate project name - must be a valid directory and npm package name */
-export function validateProjectName(name: string | undefined): string | undefined {
+export function validateProjectName(
+  name: string | undefined,
+): string | undefined {
   if (!name) {
     return undefined; // Allow empty for placeholder default
   }
@@ -43,9 +55,6 @@ export function validateProjectName(name: string | undefined): string | undefine
     return "Project name contains invalid characters";
   }
 
-  if (name.startsWith(".") || name.startsWith("_")) {
-    return "Project name cannot start with a dot or underscore";
-  }
 
   return undefined;
 }

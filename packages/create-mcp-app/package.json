@@ -23,6 +23,7 @@
   "license": "MIT",
   "dependencies": {
     "@clack/prompts": "^0.10.0",
+    "@modelcontextprotocol/sdk": "^1.24.0",
     "picocolors": "^1.1.0"
   },
   "devDependencies": {

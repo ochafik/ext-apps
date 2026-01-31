@@ -2,7 +2,7 @@
  * End-to-end test: scaffolds each template, runs `npm install` and `npm run build`.
  * Verifies that generated code compiles without errors.
  */
-import { execSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -16,9 +16,9 @@ const createMcpAppDir = path.resolve(
   "..",
 );
 
-function run(cmd, cwd) {
-  console.log(`  $ ${cmd}`);
-  execSync(cmd, { cwd, stdio: "inherit", timeout: TIMEOUT });
+function run(args, cwd) {
+  console.log(`  $ ${args.join(" ")}`);
+  execFileSync(args[0], args.slice(1), { cwd, stdio: "inherit", timeout: TIMEOUT });
 }
 
 let failed = false;
@@ -32,8 +32,9 @@ for (const template of TEMPLATES) {
 
   try {
     // Scaffold using the CLI directly (built dist)
+    const cliPath = path.join(createMcpAppDir, "dist", "index.js");
     run(
-      `node ${path.join(createMcpAppDir, "dist", "index.js")} ${projectName} --framework ${template}`,
+      ["node", cliPath, projectName, "--framework", template],
       tmpRoot,
     );
 
@@ -42,11 +43,13 @@ for (const template of TEMPLATES) {
       fs.readFileSync(path.join(projectDir, "package.json"), "utf-8"),
     );
     if (pkg.name !== projectName) {
-      throw new Error(`Expected package name "${projectName}", got "${pkg.name}"`);
+      throw new Error(
+        `Expected package name "${projectName}", got "${pkg.name}"`,
+      );
     }
 
     // Build (install already happened during scaffold)
-    run("npm run build", projectDir);
+    run(["npm", "run", "build"], projectDir);
 
     // Verify dist output exists
     const distDir = path.join(projectDir, "dist");

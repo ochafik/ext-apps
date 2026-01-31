@@ -11,6 +11,7 @@ export interface ScaffoldOptions {
   template: TemplateName | string;
   targetDir: string;
   sdkVersion: string;
+  mcpSdkVersion: string;
 }
 
 /**
@@ -56,7 +57,7 @@ async function copyDir(
  * Scaffold a new MCP App project
  */
 export async function scaffold(options: ScaffoldOptions): Promise<void> {
-  const { projectName, template, targetDir, sdkVersion } = options;
+  const { projectName, template, targetDir, sdkVersion, mcpSdkVersion } = options;
   const templatesDir = getTemplatesDir();
   const targetPath = path.resolve(process.cwd(), targetDir);
 
@@ -73,6 +74,7 @@ export async function scaffold(options: ScaffoldOptions): Promise<void> {
   const replacements = {
     name: projectName,
     sdkVersion,
+    mcpSdkVersion,
   };
 
   // Create target directory

@@ -2,6 +2,7 @@ import * as p from "@clack/prompts";
 import pc from "picocolors";
 import { scaffold } from "./scaffold.js";
 import {
+  MCP_SDK_VERSION,
   SDK_VERSION,
   TEMPLATES,
   type TemplateName,
@@ -118,6 +119,7 @@ export async function main(): Promise<void> {
       template: framework!,
       targetDir: projectName,
       sdkVersion: SDK_VERSION,
+      mcpSdkVersion: MCP_SDK_VERSION,
     });
 
     s.stop("Project created!");
@@ -130,10 +132,7 @@ export async function main(): Promise<void> {
     });
     s.stop("Dependencies installed!");
 
-    p.note(
-      [`cd ${projectName}`, "npm run dev"].join("\n"),
-      "Next steps:",
-    );
+    p.note([`cd ${projectName}`, "npm run dev"].join("\n"), "Next steps:");
 
     p.outro(pc.green("Happy building!"));
   } catch (error) {
