@@ -8,7 +8,7 @@ This document covers common patterns and recipes for building MCP Apps.
 
 ## Tools that are private to Apps
 
-Set {@link types!McpUiToolMeta.visibility `Tool._meta.ui.visibility`} to `["app"]` to make tools only callable by Apps (hidden from the model). This is useful for UI-driven actions like updating quantities, toggling settings, or other interactions that shouldn't appear in the model's tool list.
+Set {@link types!McpUiToolMeta.visibility `Tool._meta.ui.visibility`} to `["app"]` to make tools only callable by Apps (hidden from the model). This is useful for UI-driven actions like updating server-side state, polling, or other interactions that shouldn't appear in the model's tool list.
 
 <!-- prettier-ignore -->
 ```ts source="../src/server/index.examples.ts#registerAppTool_appOnlyVisibility"
@@ -32,7 +32,73 @@ registerAppTool(
 );
 ```
 
-_See [`examples/system-monitor-server/`](https://github.com/modelcontextprotocol/ext-apps/tree/main/examples/system-monitor-server) for a full implementation of this pattern._
+> [!NOTE]
+> For full examples that implement this pattern, see: [`examples/system-monitor-server/`](https://github.com/modelcontextprotocol/ext-apps/tree/main/examples/system-monitor-server) and [`examples/pdf-server/`](https://github.com/modelcontextprotocol/ext-apps/tree/main/examples/pdf-server).
+
+## Polling for live data
+
+For real-time dashboards or monitoring views, use an app-only tool (with `visibility: ["app"]`) that the App polls at regular intervals.
+
+**Vanilla JS:**
+
+<!-- prettier-ignore -->
+```ts source="./patterns.tsx#pollingVanillaJs"
+let intervalId: number | null = null;
+
+async function poll() {
+  const result = await app.callServerTool({
+    name: "poll-data",
+    arguments: {},
+  });
+  updateUI(result.structuredContent);
+}
+
+function startPolling() {
+  if (intervalId !== null) return;
+  poll();
+  intervalId = window.setInterval(poll, 2000);
+}
+
+function stopPolling() {
+  if (intervalId === null) return;
+  clearInterval(intervalId);
+  intervalId = null;
+}
+
+// Clean up when host tears down the view
+app.onteardown = async () => {
+  stopPolling();
+  return {};
+};
+```
+
+**React:**
+
+<!-- prettier-ignore -->
+```tsx source="./patterns.tsx#pollingReact"
+useEffect(() => {
+  if (!app) return;
+  let cancelled = false;
+
+  async function poll() {
+    const result = await app!.callServerTool({
+      name: "poll-data",
+      arguments: {},
+    });
+    if (!cancelled) setData(result.structuredContent);
+  }
+
+  poll();
+  const id = setInterval(poll, 2000);
+  return () => {
+    cancelled = true;
+    clearInterval(id);
+  };
+}, [app]);
+```
+
+> [!NOTE]
+> For a full example that implements this pattern, see: [`examples/system-monitor-server/`](https://github.com/modelcontextprotocol/ext-apps/tree/main/examples/system-monitor-server).
 
 ## Reading large amounts of data via chunked tool calls
 
@@ -156,7 +222,8 @@ loadDataInChunks(resourceId, (loaded, total) => {
 });
 ```
 
-_See [`examples/pdf-server/`](https://github.com/modelcontextprotocol/ext-apps/tree/main/examples/pdf-server) for a full implementation of this pattern._
+> [!NOTE]
+> For a full example that implements this pattern, see: [`examples/pdf-server/`](https://github.com/modelcontextprotocol/ext-apps/tree/main/examples/pdf-server).
 
 ## Giving errors back to the model
 
@@ -181,6 +248,112 @@ try {
   });
 }
 ```
+
+## Serving binary blobs via resources
+
+Binary content (e.g., video) can be served via MCP resources as base64-encoded blobs. The server returns the data in the `blob` field of the resource content, and the App fetches it via `resources/read` for use in the browser.
+
+**Server-side**: Register a resource that returns binary data in the `blob` field:
+
+<!-- prettier-ignore -->
+```ts source="./patterns.tsx#binaryBlobResourceServer"
+server.registerResource(
+  "Video",
+  new ResourceTemplate("video://{id}", { list: undefined }),
+  {
+    description: "Video data served as base64 blob",
+    mimeType: "video/mp4",
+  },
+  async (uri, { id }): Promise<ReadResourceResult> => {
+    // Fetch or load your binary data
+    const idString = Array.isArray(id) ? id[0] : id;
+    const buffer = await getVideoData(idString);
+    const blob = Buffer.from(buffer).toString("base64");
+
+    return { contents: [{ uri: uri.href, mimeType: "video/mp4", blob }] };
+  },
+);
+```
+
+**Client-side**: Fetch the resource and convert the base64 blob to a data URI:
+
+<!-- prettier-ignore -->
+```ts source="./patterns.tsx#binaryBlobResourceClient"
+const result = await app.request(
+  { method: "resources/read", params: { uri: `video://${videoId}` } },
+  ReadResourceResultSchema,
+);
+
+const content = result.contents[0];
+if (!content || !("blob" in content)) {
+  throw new Error("Resource did not contain blob data");
+}
+
+const videoEl = document.querySelector("video")!;
+videoEl.src = `data:${content.mimeType!};base64,${content.blob}`;
+```
+
+> [!NOTE]
+> For a full example that implements this pattern, see: [`examples/video-resource-server/`](https://github.com/modelcontextprotocol/ext-apps/tree/main/examples/video-resource-server).
+
+## Configuring CSP and CORS
+
+Unlike regular web apps, MCP Apps HTML is served as an MCP resource and runs in a sandboxed iframe with no same-origin server. Any app that makes network requests must configure Content Security Policy (CSP) and possibly CORS.
+
+**CSP** controls what the _browser_ allows. You must declare _all_ origins in {@link types!McpUiResourceMeta.csp `_meta.ui.csp`} ({@link types!McpUiResourceCsp `McpUiResourceCsp`}) — including `localhost` during development. Declare `connectDomains` for fetch/XHR/WebSocket requests and `resourceDomains` for scripts, stylesheets, images, and fonts.
+
+**CORS** controls what the _API server_ allows. Public APIs that respond with `Access-Control-Allow-Origin: *` or use API key authentication work without CORS configuration. For APIs that allowlist specific origins, use {@link types!McpUiResourceMeta.domain `_meta.ui.domain`} to give the app a stable origin that the API server can allowlist. The format is host-specific, so check each host's documentation for its supported format.
+
+<!-- prettier-ignore -->
+```ts source="../src/server/index.examples.ts#registerAppResource_withDomain"
+// Computes a stable origin from an MCP server URL for hosting in Claude.
+function computeAppDomainForClaude(mcpServerUrl: string): string {
+  const hash = crypto
+    .createHash("sha256")
+    .update(mcpServerUrl)
+    .digest("hex")
+    .slice(0, 32);
+  return `${hash}.claudemcpcontent.com`;
+}
+
+const APP_DOMAIN = computeAppDomainForClaude("https://example.com/mcp");
+
+registerAppResource(
+  server,
+  "Company Dashboard",
+  "ui://dashboard/view.html",
+  {
+    description: "Internal dashboard with company data",
+  },
+  async () => ({
+    contents: [
+      {
+        uri: "ui://dashboard/view.html",
+        mimeType: RESOURCE_MIME_TYPE,
+        text: dashboardHtml,
+        _meta: {
+          ui: {
+            // CSP: tell browser the app is allowed to make requests
+            csp: {
+              connectDomains: ["https://api.example.com"],
+            },
+            // CORS: give app a stable origin for the API server to allowlist
+            //
+            // (Public APIs that use `Access-Control-Allow-Origin: *` or API
+            // key auth don't need this.)
+            domain: APP_DOMAIN,
+          },
+        },
+      },
+    ],
+  }),
+);
+```
+
+Note that `_meta.ui.csp` and `_meta.ui.domain` are set in the `contents[]` objects returned by the resource read callback, not in `registerAppResource()`'s config object.
+
+> [!NOTE]
+> For full examples that configures CSP, see: [`examples/sheet-music-server/`](https://github.com/modelcontextprotocol/ext-apps/tree/main/examples/sheet-music-server) (`connectDomains`) and [`examples/map-server/`](https://github.com/modelcontextprotocol/ext-apps/tree/main/examples/map-server) (`connectDomains` and `resourceDomains`).
 
 ## Adapting to host context (theme, styling, fonts, and safe areas)
 
@@ -279,7 +452,8 @@ function MyApp() {
 }
 ```
 
-_See [`examples/basic-server-vanillajs/`](https://github.com/modelcontextprotocol/ext-apps/tree/main/examples/basic-server-vanillajs) and [`examples/basic-server-react/`](https://github.com/modelcontextprotocol/ext-apps/tree/main/examples/basic-server-react) for full implementations of this pattern._
+> [!NOTE]
+> For full examples that implement this pattern, see: [`examples/basic-server-vanillajs/`](https://github.com/modelcontextprotocol/ext-apps/tree/main/examples/basic-server-vanillajs) and [`examples/basic-server-react/`](https://github.com/modelcontextprotocol/ext-apps/tree/main/examples/basic-server-react).
 
 ## Entering / exiting fullscreen
 
@@ -329,7 +503,8 @@ In fullscreen mode, remove the container's border radius so content extends to t
 }
 ```
 
-_See [`examples/shadertoy-server/`](https://github.com/modelcontextprotocol/ext-apps/tree/main/examples/shadertoy-server) for a full implementation of this pattern._
+> [!NOTE]
+> For full examples that implement this pattern, see: [`examples/shadertoy-server/`](https://github.com/modelcontextprotocol/ext-apps/tree/main/examples/shadertoy-server), [`examples/pdf-server/`](https://github.com/modelcontextprotocol/ext-apps/tree/main/examples/pdf-server), and [`examples/map-server/`](https://github.com/modelcontextprotocol/ext-apps/tree/main/examples/map-server).
 
 ## Passing contextual information from the App to the model
 
@@ -352,7 +527,8 @@ await app.updateModelContext({
 });
 ```
 
-_See [`examples/map-server/`](https://github.com/modelcontextprotocol/ext-apps/tree/main/examples/map-server) for a full implementation of this pattern._
+> [!NOTE]
+> For full examples that implement this pattern, see: [`examples/map-server/`](https://github.com/modelcontextprotocol/ext-apps/tree/main/examples/map-server) and [`examples/transcript-server/`](https://github.com/modelcontextprotocol/ext-apps/tree/main/examples/transcript-server).
 
 ## Sending large follow-up messages
 
@@ -377,11 +553,12 @@ await app.sendMessage({
 });
 ```
 
-_See [`examples/transcript-server/`](https://github.com/modelcontextprotocol/ext-apps/tree/main/examples/transcript-server) for a full implementation of this pattern._
+> [!NOTE]
+> For a full example that implements this pattern, see: [`examples/transcript-server/`](https://github.com/modelcontextprotocol/ext-apps/tree/main/examples/transcript-server).
 
 ## Persisting view state
 
-To persist view state across conversation reloads (e.g., current page in a PDF viewer, camera position in a map), use [`localStorage`](https://developer.mozilla.org/en-US/docs/Web/API/Window/localStorage) with a stable identifier provided by the server.
+For recoverable view state (e.g., current page in a PDF viewer, camera position in a map), use [`localStorage`](https://developer.mozilla.org/en-US/docs/Web/API/Window/localStorage) with a stable identifier provided by the server.
 
 **Server-side**: Tool handler generates a unique `viewUUID` and returns it in `CallToolResult._meta.viewUUID`:
 
@@ -443,7 +620,10 @@ app.ontoolresult = (result) => {
 // e.g., saveState({ currentPage: 5 });
 ```
 
-_See [`examples/map-server/`](https://github.com/modelcontextprotocol/ext-apps/tree/main/examples/map-server) for a full implementation of this pattern._
+For state that represents user effort (e.g., saved bookmarks, annotations, custom configurations), consider persisting it server-side using [app-only tools](#tools-that-are-private-to-apps) instead. Pass the `viewUUID` to the app-only tool to scope the saved data to that view instance.
+
+> [!NOTE]
+> For full examples using `localStorage`, see: [`examples/pdf-server/`](https://github.com/modelcontextprotocol/ext-apps/tree/main/examples/pdf-server) (persists current page) and [`examples/map-server/`](https://github.com/modelcontextprotocol/ext-apps/tree/main/examples/map-server) (persists camera position).
 
 ## Pausing computation-heavy views when offscreen
 
@@ -471,7 +651,8 @@ app.onteardown = async () => {
 };
 ```
 
-_See [`examples/shadertoy-server/`](https://github.com/modelcontextprotocol/ext-apps/tree/main/examples/shadertoy-server) for a full implementation of this pattern._
+> [!NOTE]
+> For full examples that implement this pattern, see: [`examples/shadertoy-server/`](https://github.com/modelcontextprotocol/ext-apps/tree/main/examples/shadertoy-server) and [`examples/threejs-server/`](https://github.com/modelcontextprotocol/ext-apps/tree/main/examples/threejs-server).
 
 ## Lowering perceived latency
 
@@ -498,4 +679,5 @@ app.ontoolinput = (params) => {
 > [!IMPORTANT]
 > Partial arguments are "healed" JSON — the host closes unclosed brackets/braces to produce valid JSON. This means objects may be incomplete (e.g., the last item in an array may be truncated). Don't rely on partial data for critical operations; use it only for preview UI.
 
-_See [`examples/threejs-server/`](https://github.com/modelcontextprotocol/ext-apps/tree/main/examples/threejs-server) for a full implementation of this pattern._
+> [!NOTE]
+> For full examples that implement this pattern, see: [`examples/shadertoy-server/`](https://github.com/modelcontextprotocol/ext-apps/tree/main/examples/shadertoy-server) and [`examples/threejs-server/`](https://github.com/modelcontextprotocol/ext-apps/tree/main/examples/threejs-server).
