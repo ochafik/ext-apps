@@ -10,6 +10,45 @@ A React-based demo MCP App that lets users adjust SaaS business parameters and s
   </tr>
 </table>
 
+## MCP Client Configuration
+
+Add to your MCP client configuration (stdio transport):
+
+```json
+{
+  "mcpServers": {
+    "scenario-modeler": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "--silent",
+        "--registry=https://registry.npmjs.org/",
+        "@modelcontextprotocol/server-scenario-modeler",
+        "--stdio"
+      ]
+    }
+  }
+}
+```
+
+### Local Development
+
+To test local modifications, use this configuration (replace `~/code/ext-apps` with your clone path):
+
+```json
+{
+  "mcpServers": {
+    "scenario-modeler": {
+      "command": "bash",
+      "args": [
+        "-c",
+        "cd ~/code/ext-apps/examples/scenario-modeler-server && npm run build >&2 && node dist/index.js --stdio"
+      ]
+    }
+  }
+}
+```
+
 ## Features
 
 - **Interactive Parameters**: 5 sliders for Starting MRR, Growth Rate, Churn Rate, Gross Margin, and Fixed Costs

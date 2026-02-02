@@ -9,6 +9,45 @@ A demo MCP App that renders [ABC notation](https://en.wikipedia.org/wiki/ABC_not
   </tr>
 </table>
 
+## MCP Client Configuration
+
+Add to your MCP client configuration (stdio transport):
+
+```json
+{
+  "mcpServers": {
+    "sheet-music": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "--silent",
+        "--registry=https://registry.npmjs.org/",
+        "@modelcontextprotocol/server-sheet-music",
+        "--stdio"
+      ]
+    }
+  }
+}
+```
+
+### Local Development
+
+To test local modifications, use this configuration (replace `~/code/ext-apps` with your clone path):
+
+```json
+{
+  "mcpServers": {
+    "sheet-music": {
+      "command": "bash",
+      "args": [
+        "-c",
+        "cd ~/code/ext-apps/examples/sheet-music-server && npm run build >&2 && node dist/index.js --stdio"
+      ]
+    }
+  }
+}
+```
+
 ## Features
 
 - **Audio Playback**: Built-in audio player with play/pause and loop controls
@@ -38,7 +77,12 @@ When calling the `play-sheet-music` tool, provide ABC notation:
 
 ```json
 {
-  "abcNotation": "X:1\nT:C Major Scale\nM:4/4\nL:1/4\nK:C\nC D E F | G A B c |"
+  "abcNotation": "X:1
+T:C Major Scale
+M:4/4
+L:1/4
+K:C
+C D E F | G A B c |"
 }
 ```
 

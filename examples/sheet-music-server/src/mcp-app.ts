@@ -1,18 +1,16 @@
 /**
  * @file Sheet Music App - renders ABC notation with abcjs and provides audio playback
  */
-import { App } from "@modelcontextprotocol/ext-apps";
+import { App, type McpUiHostContext } from "@modelcontextprotocol/ext-apps";
 import ABCJS from "abcjs";
 import "abcjs/abcjs-audio.css";
 import "./global.css";
 import "./mcp-app.css";
 
-const log = {
-  info: console.log.bind(console, "[APP]"),
-  error: console.error.bind(console, "[APP]"),
-};
+// =============================================================================
+// State
+// =============================================================================
 
-// State management
 interface AppState {
   visualObj: ABCJS.TuneObject[] | null;
   synthControl: ABCJS.SynthObjectController | null;
@@ -23,11 +21,18 @@ const state: AppState = {
   synthControl: null,
 };
 
-// DOM element references
+// =============================================================================
+// DOM References
+// =============================================================================
+
 const mainEl = document.querySelector(".main") as HTMLElement;
 const statusEl = document.getElementById("status")!;
 const sheetMusicEl = document.getElementById("sheet-music")!;
 const audioControlsEl = document.getElementById("audio-controls")!;
+
+// =============================================================================
+// ABC Rendering
+// =============================================================================
 
 /**
  * Updates the status display.
@@ -77,18 +82,21 @@ async function renderAbc(abcNotation: string): Promise<void> {
 
     setStatus("Ready to play!");
   } catch (error) {
-    log.error("Render error:", error);
+    console.error("Render error:", error);
     setStatus(`Error: ${(error as Error).message}`, true);
     audioControlsEl.innerHTML = "";
   }
 }
 
-// Create app instance
+// =============================================================================
+// MCP Apps SDK Integration
+// =============================================================================
+
 const app = new App({ name: "Sheet Music App", version: "1.0.0" });
 
 // Handle tool input - receives ABC notation from the host
 app.ontoolinput = (params) => {
-  log.info("Received tool input:", params);
+  console.info("Received tool input:", params);
 
   const abcNotation = params.arguments?.abcNotation as string | undefined;
 
@@ -99,22 +107,22 @@ app.ontoolinput = (params) => {
   }
 };
 
-// Error handler
-app.onerror = log.error;
+app.onerror = console.error;
 
-app.onhostcontextchanged = (params) => {
-  if (params.safeAreaInsets) {
-    mainEl.style.paddingTop = `${params.safeAreaInsets.top}px`;
-    mainEl.style.paddingRight = `${params.safeAreaInsets.right}px`;
-    mainEl.style.paddingBottom = `${params.safeAreaInsets.bottom}px`;
-    mainEl.style.paddingLeft = `${params.safeAreaInsets.left}px`;
+function handleHostContextChanged(ctx: McpUiHostContext) {
+  if (ctx.safeAreaInsets) {
+    mainEl.style.paddingTop = `${ctx.safeAreaInsets.top}px`;
+    mainEl.style.paddingRight = `${ctx.safeAreaInsets.right}px`;
+    mainEl.style.paddingBottom = `${ctx.safeAreaInsets.bottom}px`;
+    mainEl.style.paddingLeft = `${ctx.safeAreaInsets.left}px`;
   }
-};
+}
 
-// Connect to host
+app.onhostcontextchanged = handleHostContextChanged;
+
 app.connect().then(() => {
   const ctx = app.getHostContext();
   if (ctx) {
-    app.onhostcontextchanged(ctx);
+    handleHostContextChanged(ctx);
   }
 });

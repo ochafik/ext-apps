@@ -1,7 +1,7 @@
 /**
  * @file System Monitor App - displays real-time OS metrics with Chart.js
  */
-import { App } from "@modelcontextprotocol/ext-apps";
+import { App, type McpUiHostContext } from "@modelcontextprotocol/ext-apps";
 import { Chart, registerables } from "chart.js";
 import "./global.css";
 import "./mcp-app.css";
@@ -9,37 +9,57 @@ import "./mcp-app.css";
 // Register Chart.js components
 Chart.register(...registerables);
 
-const log = {
-  info: console.log.bind(console, "[APP]"),
-  error: console.error.bind(console, "[APP]"),
-};
+// =============================================================================
+// Types
+// =============================================================================
 
-// Types for system stats response
-interface SystemStats {
+// Static system info (received once via ontoolresult from LLM-facing tool)
+interface SystemInfo {
+  hostname: string;
+  platform: string;
+  arch: string;
   cpu: {
-    cores: Array<{ idle: number; total: number }>;
     model: string;
     count: number;
   };
   memory: {
-    usedBytes: number;
     totalBytes: number;
+  };
+}
+
+// Dynamic polling data (received repeatedly via poll-system-stats)
+interface PollStats {
+  cpu: {
+    cores: Array<{ idle: number; total: number }>;
+  };
+  memory: {
+    usedBytes: number;
     usedPercent: number;
     freeBytes: number;
-    usedFormatted: string;
-    totalFormatted: string;
   };
-  system: {
-    hostname: string;
-    platform: string;
-    arch: string;
-    uptime: number;
-    uptimeFormatted: string;
+  uptime: {
+    seconds: number;
   };
   timestamp: string;
 }
 
-// DOM element references
+interface AppState {
+  // Static info (set once via ontoolresult)
+  systemInfo: SystemInfo | null;
+  // Polling state
+  isPolling: boolean;
+  intervalId: number | null;
+  cpuHistory: number[][]; // [timestamp][coreIndex] = usage%
+  labels: string[];
+  chart: Chart | null;
+  previousCpuSnapshots: Array<{ idle: number; total: number }> | null;
+}
+
+// =============================================================================
+// DOM References
+// =============================================================================
+
+const mainEl = document.querySelector(".main") as HTMLElement;
 const pollToggleBtn = document.getElementById("poll-toggle-btn")!;
 const statusIndicator = document.getElementById("status-indicator")!;
 const statusText = document.getElementById("status-text")!;
@@ -53,29 +73,12 @@ const infoHostname = document.getElementById("info-hostname")!;
 const infoPlatform = document.getElementById("info-platform")!;
 const infoUptime = document.getElementById("info-uptime")!;
 
-// Polling state
+// =============================================================================
+// Constants & State
+// =============================================================================
+
 const HISTORY_LENGTH = 30;
 const POLL_INTERVAL = 2000;
-
-interface PollingState {
-  isPolling: boolean;
-  intervalId: number | null;
-  cpuHistory: number[][]; // [timestamp][coreIndex] = usage%
-  labels: string[];
-  coreCount: number;
-  chart: Chart | null;
-  previousCpuSnapshots: Array<{ idle: number; total: number }> | null;
-}
-
-const state: PollingState = {
-  isPolling: false,
-  intervalId: null,
-  cpuHistory: [],
-  labels: [],
-  coreCount: 0,
-  chart: null,
-  previousCpuSnapshots: null,
-};
 
 // Color palette for CPU cores (distinct colors)
 const CORE_COLORS = [
@@ -97,22 +100,45 @@ const CORE_COLORS = [
   "rgba(244, 114, 182, 0.7)", // pink-light
 ];
 
-// Calculate CPU usage percentages from raw timing data
-function calculateCpuUsage(
-  current: Array<{ idle: number; total: number }>,
-  previous: Array<{ idle: number; total: number }> | null,
-): number[] {
-  if (!previous || previous.length !== current.length) {
-    return current.map(() => 0);
+const state: AppState = {
+  systemInfo: null,
+  isPolling: false,
+  intervalId: null,
+  cpuHistory: [],
+  labels: [],
+  chart: null,
+  previousCpuSnapshots: null,
+};
+
+// =============================================================================
+// Formatting Utilities
+// =============================================================================
+
+function formatBytes(bytes: number): string {
+  const units = ["B", "KB", "MB", "GB", "TB"];
+  let value = bytes;
+  let unitIndex = 0;
+  while (value >= 1024 && unitIndex < units.length - 1) {
+    value /= 1024;
+    unitIndex++;
   }
-  return current.map((cur, i) => {
-    const prev = previous[i];
-    const idleDiff = cur.idle - prev.idle;
-    const totalDiff = cur.total - prev.total;
-    if (totalDiff === 0) return 0;
-    return Math.round((1 - idleDiff / totalDiff) * 100);
-  });
+  return `${value.toFixed(1)} ${units[unitIndex]}`;
 }
+
+function formatUptime(seconds: number): string {
+  const days = Math.floor(seconds / 86400);
+  const hours = Math.floor((seconds % 86400) / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const parts: string[] = [];
+  if (days > 0) parts.push(`${days}d`);
+  if (hours > 0) parts.push(`${hours}h`);
+  if (minutes > 0) parts.push(`${minutes}m`);
+  return parts.length > 0 ? parts.join(" ") : "< 1m";
+}
+
+// =============================================================================
+// Chart.js Setup
+// =============================================================================
 
 function initChart(coreCount: number): Chart {
   const isDarkMode = window.matchMedia("(prefers-color-scheme: dark)").matches;
@@ -187,13 +213,17 @@ function initChart(coreCount: number): Chart {
   });
 }
 
-function updateChart(cpuHistory: number[][], labels: string[]): void {
+function updateChart(
+  cpuHistory: number[][],
+  labels: string[],
+  coreCount: number,
+): void {
   if (!state.chart) return;
 
   state.chart.data.labels = labels;
 
   // Transpose: cpuHistory[time][core] -> datasets[core].data[time]
-  for (let coreIdx = 0; coreIdx < state.coreCount; coreIdx++) {
+  for (let coreIdx = 0; coreIdx < coreCount; coreIdx++) {
     state.chart.data.datasets[coreIdx].data = cpuHistory.map(
       (snapshot) => snapshot[coreIdx] ?? 0,
     );
@@ -208,8 +238,8 @@ function updateChart(cpuHistory: number[][], labels: string[]): void {
 
   // Add 20% headroom, clamp to reasonable bounds
   const headroom = 1.2;
-  const minVisible = state.coreCount * 15; // At least 15% per core visible
-  const absoluteMax = state.coreCount * 100;
+  const minVisible = coreCount * 15; // At least 15% per core visible
+  const absoluteMax = coreCount * 100;
 
   const dynamicMax = Math.min(
     Math.max(currentMax * headroom, minVisible),
@@ -221,7 +251,14 @@ function updateChart(cpuHistory: number[][], labels: string[]): void {
   state.chart.update("none");
 }
 
-function updateMemoryBar(memory: SystemStats["memory"]): void {
+// =============================================================================
+// UI Updates
+// =============================================================================
+
+function updateMemoryBar(
+  memory: PollStats["memory"],
+  totalBytes: number,
+): void {
   const percent = memory.usedPercent;
 
   memoryBarFill.style.width = `${percent}%`;
@@ -234,13 +271,18 @@ function updateMemoryBar(memory: SystemStats["memory"]): void {
   }
 
   memoryPercent.textContent = `${percent}%`;
-  memoryDetail.textContent = `${memory.usedFormatted} / ${memory.totalFormatted}`;
+  memoryDetail.textContent = `${formatBytes(memory.usedBytes)} / ${formatBytes(totalBytes)}`;
 }
 
-function updateSystemInfo(system: SystemStats["system"]): void {
-  infoHostname.textContent = system.hostname;
-  infoPlatform.textContent = system.platform;
-  infoUptime.textContent = system.uptimeFormatted;
+// Called once when static system info is received
+function updateStaticSystemInfo(info: SystemInfo): void {
+  infoHostname.textContent = info.hostname;
+  infoPlatform.textContent = info.platform;
+}
+
+// Called on each poll for dynamic uptime
+function updateDynamicUptime(uptime: PollStats["uptime"]): void {
+  infoUptime.textContent = formatUptime(uptime.seconds);
 }
 
 function updateStatus(text: string, isPolling = false, isError = false): void {
@@ -254,29 +296,41 @@ function updateStatus(text: string, isPolling = false, isError = false): void {
   }
 }
 
-// Create app instance
+// =============================================================================
+// MCP App & Data Fetching
+// =============================================================================
+
 const app = new App({ name: "System Monitor", version: "1.0.0" });
 
+function calculateCpuUsage(
+  current: Array<{ idle: number; total: number }>,
+  previous: Array<{ idle: number; total: number }> | null,
+): number[] {
+  if (!previous || previous.length !== current.length) {
+    return current.map(() => 0);
+  }
+  return current.map((cur, i) => {
+    const prev = previous[i];
+    const idleDiff = cur.idle - prev.idle;
+    const totalDiff = cur.total - prev.total;
+    if (totalDiff === 0) return 0;
+    return Math.round((1 - idleDiff / totalDiff) * 100);
+  });
+}
+
 async function fetchStats(): Promise<void> {
+  // systemInfo is guaranteed to exist (polling starts after ontoolresult)
+  const { systemInfo } = state;
+  if (!systemInfo) return;
+
   try {
     const result = await app.callServerTool({
-      name: "refresh-stats", // Use app-only tool for polling
+      name: "poll-system-stats", // App-only tool for polling dynamic data
       arguments: {},
     });
 
-    const text = result
-      .content!.filter(
-        (c): c is { type: "text"; text: string } => c.type === "text",
-      )
-      .map((c) => c.text)
-      .join("");
-    const stats = JSON.parse(text) as SystemStats;
-
-    // Initialize chart on first data if needed
-    if (!state.chart && stats.cpu.count > 0) {
-      state.coreCount = stats.cpu.count;
-      state.chart = initChart(state.coreCount);
-    }
+    const stats = result.structuredContent as unknown as PollStats;
+    const coreCount = systemInfo.cpu.count;
 
     // Calculate CPU usage from raw timing data (client-side)
     const coreUsages = calculateCpuUsage(
@@ -293,18 +347,22 @@ async function fetchStats(): Promise<void> {
       state.labels.shift();
     }
 
-    // Update UI
-    updateChart(state.cpuHistory, state.labels);
-    updateMemoryBar(stats.memory);
-    updateSystemInfo(stats.system);
+    // Update UI with dynamic data
+    updateChart(state.cpuHistory, state.labels, coreCount);
+    updateMemoryBar(stats.memory, systemInfo.memory.totalBytes);
+    updateDynamicUptime(stats.uptime);
 
     const time = new Date().toLocaleTimeString("en-US", { hour12: false });
     updateStatus(time, true);
   } catch (error) {
-    log.error("Failed to fetch stats:", error);
+    console.error("Failed to fetch stats:", error);
     updateStatus("Error", false, true);
   }
 }
+
+// =============================================================================
+// Polling Control
+// =============================================================================
 
 function startPolling(): void {
   if (state.isPolling) return;
@@ -343,24 +401,58 @@ function togglePolling(): void {
   }
 }
 
-// Event listeners
+// =============================================================================
+// Event Handlers & Initialization
+// =============================================================================
+
 pollToggleBtn.addEventListener("click", togglePolling);
 
 // Handle theme changes
 window
   .matchMedia("(prefers-color-scheme: dark)")
   .addEventListener("change", () => {
-    if (state.chart) {
+    if (state.chart && state.systemInfo) {
+      const coreCount = state.systemInfo.cpu.count;
       state.chart.destroy();
-      state.chart = initChart(state.coreCount);
-      updateChart(state.cpuHistory, state.labels);
+      state.chart = initChart(coreCount);
+      updateChart(state.cpuHistory, state.labels, coreCount);
     }
   });
 
-// Register handlers and connect
-app.onerror = log.error;
+app.onerror = console.error;
 
-app.connect();
+// Receive static system info when host sends the initial tool result
+app.ontoolresult = (result) => {
+  const info = result.structuredContent as unknown as SystemInfo;
 
-// Auto-start polling after a short delay
-setTimeout(startPolling, 500);
+  if (info) {
+    state.systemInfo = info;
+
+    // Initialize chart with CPU count from static info
+    state.chart = initChart(info.cpu.count);
+
+    // Update static UI elements (hostname, platform)
+    updateStaticSystemInfo(info);
+
+    // Start polling after receiving static info
+    startPolling();
+  }
+};
+
+function handleHostContextChanged(ctx: McpUiHostContext) {
+  if (ctx.safeAreaInsets) {
+    mainEl.style.paddingTop = `${ctx.safeAreaInsets.top}px`;
+    mainEl.style.paddingRight = `${ctx.safeAreaInsets.right}px`;
+    mainEl.style.paddingBottom = `${ctx.safeAreaInsets.bottom}px`;
+    mainEl.style.paddingLeft = `${ctx.safeAreaInsets.left}px`;
+  }
+}
+
+app.onhostcontextchanged = handleHostContextChanged;
+
+app.connect().then(() => {
+  const ctx = app.getHostContext();
+  if (ctx) {
+    handleHostContextChanged(ctx);
+  }
+});

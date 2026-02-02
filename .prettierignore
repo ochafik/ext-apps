@@ -1,9 +1,10 @@
 examples/basic-host/**/*.ts
 examples/basic-host/**/*.tsx
-examples/basic-server-react/**/*.ts
-examples/basic-server-react/**/*.tsx
-examples/basic-server-vanillajs/**/*.ts
-examples/basic-server-vanillajs/**/*.tsx
+examples/basic-server-*/**/*.ts
+examples/basic-server-*/**/*.tsx
+examples/quickstart/**/*.ts
+**/vendor/**
+SKILL.md
 
 # Swift package manager build artifacts
 sdk/swift/.build/

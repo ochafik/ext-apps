@@ -1,3 +1,8 @@
+import {
+  RESOURCE_MIME_TYPE,
+  registerAppResource,
+  registerAppTool,
+} from "@modelcontextprotocol/ext-apps/server";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type {
   CallToolResult,
@@ -8,55 +13,78 @@ import os from "node:os";
 import path from "node:path";
 import si from "systeminformation";
 import { z } from "zod";
-import {
-  RESOURCE_MIME_TYPE,
-  RESOURCE_URI_META_KEY,
-  registerAppResource,
-  registerAppTool,
-} from "@modelcontextprotocol/ext-apps/server";
-import { startServer } from "./src/server-utils.js";
 
-// Schemas - types are derived from these using z.infer
-const CpuCoreSchema = z.object({
-  idle: z.number(),
-  total: z.number(),
-});
+// Works both from source (server.ts) and compiled (dist/server.js)
+const DIST_DIR = import.meta.filename.endsWith(".ts")
+  ? path.join(import.meta.dirname, "dist")
+  : import.meta.dirname;
 
-const CpuStatsSchema = z.object({
-  cores: z.array(CpuCoreSchema),
-  model: z.string(),
-  count: z.number(),
-});
-
-const MemoryStatsSchema = z.object({
-  usedBytes: z.number(),
-  totalBytes: z.number(),
-  usedPercent: z.number(),
-  freeBytes: z.number(),
-  usedFormatted: z.string(),
-  totalFormatted: z.string(),
-});
+// =============================================================================
+// Types and schemas
+// =============================================================================
 
 const SystemInfoSchema = z.object({
   hostname: z.string(),
   platform: z.string(),
   arch: z.string(),
-  uptime: z.number(),
-  uptimeFormatted: z.string(),
+  cpu: z.object({
+    model: z.string(),
+    count: z.number(),
+  }),
+  memory: z.object({
+    totalBytes: z.number(),
+  }),
 });
 
-const SystemStatsSchema = z.object({
-  cpu: CpuStatsSchema,
-  memory: MemoryStatsSchema,
-  system: SystemInfoSchema,
+type SystemInfo = z.infer<typeof SystemInfoSchema>;
+
+const CpuCoreSchema = z.object({
+  idle: z.number(),
+  total: z.number(),
+});
+
+type CpuCore = z.infer<typeof CpuCoreSchema>;
+
+const PollStatsSchema = z.object({
+  cpu: z.object({
+    cores: z.array(CpuCoreSchema),
+  }),
+  memory: z.object({
+    usedBytes: z.number(),
+    usedPercent: z.number(),
+    freeBytes: z.number(),
+  }),
+  uptime: z.object({
+    seconds: z.number(),
+  }),
   timestamp: z.string(),
 });
 
-// Types derived from schemas
-type CpuCore = z.infer<typeof CpuCoreSchema>;
-type MemoryStats = z.infer<typeof MemoryStatsSchema>;
-type SystemStats = z.infer<typeof SystemStatsSchema>;
-const DIST_DIR = path.join(import.meta.dirname, "dist");
+type PollStats = z.infer<typeof PollStatsSchema>;
+
+// =============================================================================
+// Static system info (called once by Model-facing tool)
+// =============================================================================
+
+function getSystemInfo(): SystemInfo {
+  const cpuInfo = os.cpus()[0];
+  return {
+    hostname: os.hostname(),
+    platform: `${os.platform()} ${os.arch()}`,
+    arch: os.arch(),
+    cpu: {
+      model: cpuInfo?.model ?? "Unknown",
+      count: os.cpus().length,
+    },
+    memory: {
+      totalBytes: os.totalmem(),
+    },
+  };
+}
+
+// =============================================================================
+// Dynamic polling stats (called repeatedly by app-only tool)
+// =============================================================================
 
 // Returns raw CPU timing data per core (client calculates usage from deltas)
 function getCpuSnapshots(): CpuCore[] {
@@ -67,89 +95,76 @@ function getCpuSnapshots(): CpuCore[] {
     return { idle, total };
   });
 }
-
-function formatUptime(seconds: number): string {
-  const days = Math.floor(seconds / 86400);
-  const hours = Math.floor((seconds % 86400) / 3600);
-  const minutes = Math.floor((seconds % 3600) / 60);
-
-  const parts: string[] = [];
-  if (days > 0) parts.push(`${days}d`);
-  if (hours > 0) parts.push(`${hours}h`);
-  if (minutes > 0) parts.push(`${minutes}m`);
-
-  return parts.length > 0 ? parts.join(" ") : "< 1m";
-}
-
-function formatBytes(bytes: number): string {
-  const units = ["B", "KB", "MB", "GB", "TB"];
-  let value = bytes;
-  let unitIndex = 0;
-
-  while (value >= 1024 && unitIndex < units.length - 1) {
-    value /= 1024;
-    unitIndex++;
-  }
-
-  return `${value.toFixed(1)} ${units[unitIndex]}`;
-}
-
-async function getMemoryStats(): Promise<MemoryStats> {
+async function getPollStats(): Promise<PollStats> {
   const mem = await si.mem();
+  const uptimeSeconds = os.uptime();
+
   return {
-    usedBytes: mem.active,
-    totalBytes: mem.total,
-    usedPercent: Math.round((mem.active / mem.total) * 100),
-    freeBytes: mem.available,
-    usedFormatted: formatBytes(mem.active),
-    totalFormatted: formatBytes(mem.total),
+    cpu: {
+      cores: getCpuSnapshots(),
+    },
+    memory: {
+      usedBytes: mem.active,
+      usedPercent: Math.round((mem.active / mem.total) * 100),
+      freeBytes: mem.available,
+    },
+    uptime: {
+      seconds: uptimeSeconds,
+    },
+    timestamp: new Date().toISOString(),
   };
 }
 
-function createServer(): McpServer {
+// =============================================================================
+// MCP server
+// =============================================================================
+
+export function createServer(): McpServer {
   const server = new McpServer({
     name: "System Monitor Server",
     version: "1.0.0",
   });
 
-  // Register the get-system-stats tool and its associated UI resource
   const resourceUri = "ui://system-monitor/mcp-app.html";
 
+  // Model-facing tool: returns static system configuration
   registerAppTool(
     server,
-    "get-system-stats",
+    "get-system-info",
     {
-      title: "Get System Stats",
+      title: "Get System Info",
       description:
-        "Returns current system statistics including per-core CPU usage, memory, and system info.",
+        "Returns system information, including hostname, platform, CPU info, and memory.",
       inputSchema: {},
-      _meta: { [RESOURCE_URI_META_KEY]: resourceUri },
+      outputSchema: SystemInfoSchema.shape,
+      _meta: { ui: { resourceUri } },
+    },
+    (): CallToolResult => {
+      const info = getSystemInfo();
+      return {
+        content: [{ type: "text", text: JSON.stringify(info) }],
+        structuredContent: info,
+      };
+    },
+  );
+
+  // App-only tool: returns dynamic metrics for polling
+  registerAppTool(
+    server,
+    "poll-system-stats",
+    {
+      title: "Poll System Stats",
+      description:
+        "Returns dynamic system metrics for polling: per-core CPU timing, memory usage, and uptime. App-only.",
+      inputSchema: {},
+      outputSchema: PollStatsSchema.shape,
+      _meta: { ui: { visibility: ["app"] } },
     },
     async (): Promise<CallToolResult> => {
-      const cpuSnapshots = getCpuSnapshots();
-      const cpuInfo = os.cpus()[0];
-      const memory = await getMemoryStats();
-      const uptimeSeconds = os.uptime();
-
-      const stats: SystemStats = {
-        cpu: {
-          cores: cpuSnapshots,
-          model: cpuInfo?.model ?? "Unknown",
-          count: os.cpus().length,
-        },
-        memory,
-        system: {
-          hostname: os.hostname(),
-          platform: `${os.platform()} ${os.arch()}`,
-          arch: os.arch(),
-          uptime: uptimeSeconds,
-          uptimeFormatted: formatUptime(uptimeSeconds),
-        },
-        timestamp: new Date().toISOString(),
-      };
-
+      const stats = await getPollStats();
       return {
         content: [{ type: "text", text: JSON.stringify(stats) }],
+        structuredContent: stats,
       };
     },
   );
@@ -179,5 +194,3 @@ function createServer(): McpServer {
 
   return server;
 }
-
-startServer(createServer);
