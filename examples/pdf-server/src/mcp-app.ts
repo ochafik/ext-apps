@@ -69,6 +69,29 @@ const fullscreenBtn = document.getElementById(
 const progressContainerEl = document.getElementById("progress-container")!;
 const progressBarEl = document.getElementById("progress-bar")!;
 const progressTextEl = document.getElementById("progress-text")!;
+const searchBtn = document.getElementById("search-btn") as HTMLButtonElement;
+const searchBarEl = document.getElementById("search-bar")!;
+const searchInputEl = document.getElementById("search-input") as HTMLInputElement;
+const searchMatchCountEl = document.getElementById("search-match-count")!;
+const searchPrevBtn = document.getElementById("search-prev-btn") as HTMLButtonElement;
+const searchNextBtn = document.getElementById("search-next-btn") as HTMLButtonElement;
+const searchCloseBtn = document.getElementById("search-close-btn") as HTMLButtonElement;
+const highlightLayerEl = document.getElementById("highlight-layer")!;
+
+// Search state
+interface SearchMatch {
+  pageNum: number;
+  index: number;
+  length: number;
+}
+
+let searchOpen = false;
+let searchQuery = "";
+let searchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+const pageTextCache = new Map<number, string>();
+const pageTextItemsCache = new Map<number, string[]>();
+let allMatches: SearchMatch[] = [];
+let currentMatchIndex = -1;
 
 // Track current display mode
 let currentDisplayMode: "inline" | "fullscreen" = "inline";
@@ -106,14 +129,241 @@ function requestFitToContent() {
   const paddingBottom = parseFloat(containerStyle.paddingBottom);
 
   // Calculate required height:
-  // toolbar + padding-top + page-wrapper height + padding-bottom + buffer
+  // toolbar + search-bar + padding-top + page-wrapper height + padding-bottom + buffer
   const toolbarHeight = toolbarEl.offsetHeight;
+  const searchBarHeight = searchOpen ? searchBarEl.offsetHeight : 0;
   const pageWrapperHeight = pageWrapperEl.offsetHeight;
   const BUFFER = 10; // Buffer for sub-pixel rounding and browser quirks
   const totalHeight =
-    toolbarHeight + paddingTop + pageWrapperHeight + paddingBottom + BUFFER;
+    toolbarHeight + searchBarHeight + paddingTop + pageWrapperHeight + paddingBottom + BUFFER;
 
   app.sendSizeChanged({ height: totalHeight });
+}
+
+// --- Search Functions ---
+
+async function extractAllPageText() {
+  if (!pdfDocument) return;
+  for (let i = 1; i <= totalPages; i++) {
+    if (pageTextCache.has(i)) continue;
+    try {
+      const page = await pdfDocument.getPage(i);
+      const textContent = await page.getTextContent();
+      const items = (textContent.items as Array<{ str?: string }>).map(
+        (item) => item.str || "",
+      );
+      pageTextItemsCache.set(i, items);
+      pageTextCache.set(i, items.join(""));
+    } catch (err) {
+      log.error("Error extracting text for page", i, err);
+    }
+  }
+}
+
+function performSearch(query: string) {
+  allMatches = [];
+  currentMatchIndex = -1;
+  searchQuery = query;
+
+  if (!query) {
+    updateSearchUI();
+    clearHighlights();
+    return;
+  }
+
+  const lowerQuery = query.toLowerCase();
+  for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
+    const pageText = pageTextCache.get(pageNum);
+    if (!pageText) continue;
+    const lowerText = pageText.toLowerCase();
+    let startIdx = 0;
+    while (true) {
+      const idx = lowerText.indexOf(lowerQuery, startIdx);
+      if (idx === -1) break;
+      allMatches.push({ pageNum, index: idx, length: query.length });
+      startIdx = idx + 1;
+    }
+  }
+
+  // Set current match to first match on or after current page
+  if (allMatches.length > 0) {
+    const idx = allMatches.findIndex((m) => m.pageNum >= currentPage);
+    currentMatchIndex = idx >= 0 ? idx : 0;
+  }
+
+  updateSearchUI();
+  renderHighlights();
+
+  // Navigate to match page if needed
+  if (allMatches.length > 0 && currentMatchIndex >= 0) {
+    const match = allMatches[currentMatchIndex];
+    if (match.pageNum !== currentPage) {
+      goToPage(match.pageNum);
+    }
+  }
+}
+
+function convertMatchToSpanRanges(
+  pageNum: number,
+  index: number,
+  length: number,
+): { divIndex: number; startOffset: number; endOffset: number }[] {
+  const itemStrs = pageTextItemsCache.get(pageNum);
+  if (!itemStrs) return [];
+
+  const ranges: { divIndex: number; startOffset: number; endOffset: number }[] =
+    [];
+  let charPos = 0;
+  const matchEnd = index + length;
+
+  for (let i = 0; i < itemStrs.length; i++) {
+    const itemLen = itemStrs[i].length;
+    const itemStart = charPos;
+    const itemEnd = charPos + itemLen;
+
+    if (itemEnd > index && itemStart < matchEnd) {
+      const startOffset = Math.max(0, index - itemStart);
+      const endOffset = Math.min(itemLen, matchEnd - itemStart);
+      ranges.push({ divIndex: i, startOffset, endOffset });
+    }
+
+    charPos += itemLen;
+    if (charPos >= matchEnd) break;
+  }
+
+  return ranges;
+}
+
+function renderHighlights() {
+  clearHighlights();
+  if (!searchQuery || allMatches.length === 0) return;
+
+  const spans = textLayerEl.querySelectorAll("span");
+  if (spans.length === 0) return;
+
+  const pageMatches = allMatches.filter((m) => m.pageNum === currentPage);
+  const containerRect = highlightLayerEl.getBoundingClientRect();
+
+  for (const match of pageMatches) {
+    const isCurrentMatch =
+      allMatches.indexOf(match) === currentMatchIndex;
+    const spanRanges = convertMatchToSpanRanges(
+      match.pageNum,
+      match.index,
+      match.length,
+    );
+
+    for (const sr of spanRanges) {
+      const span = spans[sr.divIndex] as HTMLElement;
+      if (!span) continue;
+
+      // Use span's bounding rect (correctly accounts for CSS transforms)
+      // and proportional character offsets for positioning within the span
+      const spanRect = span.getBoundingClientRect();
+      const totalLen = span.textContent?.length || 1;
+
+      const startFrac = sr.startOffset / totalLen;
+      const endFrac = sr.endOffset / totalLen;
+
+      const hlLeft =
+        spanRect.left + spanRect.width * startFrac - containerRect.left;
+      const hlTop = spanRect.top - containerRect.top;
+      const hlWidth = spanRect.width * (endFrac - startFrac);
+      const hlHeight = spanRect.height;
+
+      const div = document.createElement("div");
+      div.className =
+        "search-highlight" + (isCurrentMatch ? " current" : "");
+      div.style.left = `${hlLeft}px`;
+      div.style.top = `${hlTop}px`;
+      div.style.width = `${hlWidth}px`;
+      div.style.height = `${hlHeight}px`;
+      highlightLayerEl.appendChild(div);
+    }
+
+    // Scroll current match into view
+    if (isCurrentMatch) {
+      const currentHighlight = highlightLayerEl.querySelector(
+        ".search-highlight.current",
+      ) as HTMLElement;
+      if (currentHighlight) {
+        currentHighlight.scrollIntoView({ block: "center", behavior: "smooth" });
+      }
+    }
+  }
+}
+
+function clearHighlights() {
+  highlightLayerEl.innerHTML = "";
+}
+
+function updateSearchUI() {
+  if (allMatches.length === 0) {
+    searchMatchCountEl.textContent = searchQuery ? "No matches" : "";
+  } else {
+    searchMatchCountEl.textContent = `${currentMatchIndex + 1} of ${allMatches.length}`;
+  }
+  searchPrevBtn.disabled = allMatches.length === 0;
+  searchNextBtn.disabled = allMatches.length === 0;
+}
+
+function openSearch() {
+  if (searchOpen) {
+    searchInputEl.focus();
+    searchInputEl.select();
+    return;
+  }
+  searchOpen = true;
+  searchBarEl.style.display = "flex";
+  searchInputEl.focus();
+  requestFitToContent();
+  extractAllPageText();
+}
+
+function closeSearch() {
+  if (!searchOpen) return;
+  searchOpen = false;
+  searchBarEl.style.display = "none";
+  searchQuery = "";
+  searchInputEl.value = "";
+  allMatches = [];
+  currentMatchIndex = -1;
+  clearHighlights();
+  updateSearchUI();
+  requestFitToContent();
+}
+
+function toggleSearch() {
+  if (searchOpen) {
+    closeSearch();
+  } else {
+    openSearch();
+  }
+}
+
+function goToNextMatch() {
+  if (allMatches.length === 0) return;
+  currentMatchIndex = (currentMatchIndex + 1) % allMatches.length;
+  const match = allMatches[currentMatchIndex];
+  updateSearchUI();
+  if (match.pageNum !== currentPage) {
+    goToPage(match.pageNum);
+  } else {
+    renderHighlights();
+  }
+}
+
+function goToPrevMatch() {
+  if (allMatches.length === 0) return;
+  currentMatchIndex =
+    (currentMatchIndex - 1 + allMatches.length) % allMatches.length;
+  const match = allMatches[currentMatchIndex];
+  updateSearchUI();
+  if (match.pageNum !== currentPage) {
+    goToPage(match.pageNum);
+  } else {
+    renderHighlights();
+  }
 }
 
 // Create app instance
@@ -430,6 +680,24 @@ async function renderPage() {
     });
     await textLayer.render();
 
+    // Cache page text items if not already cached
+    if (!pageTextItemsCache.has(pageToRender)) {
+      const items = (textContent.items as Array<{ str?: string }>).map(
+        (item) => item.str || "",
+      );
+      pageTextItemsCache.set(pageToRender, items);
+      pageTextCache.set(pageToRender, items.join(""));
+    }
+
+    // Size the highlight layer to match the canvas
+    highlightLayerEl.style.width = `${viewport.width}px`;
+    highlightLayerEl.style.height = `${viewport.height}px`;
+
+    // Re-render search highlights if search is active
+    if (searchOpen && searchQuery) {
+      renderHighlights();
+    }
+
     updateControls();
     updatePageContext();
 
@@ -549,7 +817,33 @@ prevBtn.addEventListener("click", prevPage);
 nextBtn.addEventListener("click", nextPage);
 zoomOutBtn.addEventListener("click", zoomOut);
 zoomInBtn.addEventListener("click", zoomIn);
+searchBtn.addEventListener("click", toggleSearch);
+searchCloseBtn.addEventListener("click", closeSearch);
+searchPrevBtn.addEventListener("click", goToPrevMatch);
+searchNextBtn.addEventListener("click", goToNextMatch);
 fullscreenBtn.addEventListener("click", toggleFullscreen);
+
+// Search input events
+searchInputEl.addEventListener("input", () => {
+  if (searchDebounceTimer) clearTimeout(searchDebounceTimer);
+  searchDebounceTimer = setTimeout(() => {
+    performSearch(searchInputEl.value);
+  }, 300);
+});
+
+searchInputEl.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") {
+    e.preventDefault();
+    if (e.shiftKey) {
+      goToPrevMatch();
+    } else {
+      goToNextMatch();
+    }
+  } else if (e.key === "Escape") {
+    e.preventDefault();
+    closeSearch();
+  }
+});
 
 pageInputEl.addEventListener("change", () => {
   const page = parseInt(pageInputEl.value, 10);
@@ -568,6 +862,15 @@ pageInputEl.addEventListener("keydown", (e) => {
 
 // Keyboard navigation
 document.addEventListener("keydown", (e) => {
+  // Ctrl/Cmd+F to open search
+  if ((e.ctrlKey || e.metaKey) && e.key === "f") {
+    e.preventDefault();
+    openSearch();
+    return;
+  }
+
+  // Don't handle nav shortcuts when search input is focused
+  if (document.activeElement === searchInputEl) return;
   if (document.activeElement === pageInputEl) return;
 
   // Ctrl/Cmd+0 to reset zoom
@@ -579,7 +882,10 @@ document.addEventListener("keydown", (e) => {
 
   switch (e.key) {
     case "Escape":
-      if (currentDisplayMode === "fullscreen") {
+      if (searchOpen) {
+        closeSearch();
+        e.preventDefault();
+      } else if (currentDisplayMode === "fullscreen") {
         toggleFullscreen();
         e.preventDefault();
       }

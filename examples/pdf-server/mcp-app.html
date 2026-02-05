@@ -57,16 +57,29 @@
             <button id="zoom-in-btn" class="zoom-btn" title="Zoom in (+)">
               +
             </button>
+            <button id="search-btn" class="search-btn" title="Search (Ctrl+F)">
+              🔍
+            </button>
             <button id="fullscreen-btn" class="fullscreen-btn" title="Toggle fullscreen">
               ⛶
             </button>
           </div>
         </div>
 
+        <!-- Search Bar -->
+        <div id="search-bar" class="search-bar" style="display: none">
+          <input id="search-input" class="search-input" type="text" placeholder="Search in document..." />
+          <span id="search-match-count" class="search-match-count"></span>
+          <button id="search-prev-btn" class="search-nav-btn" title="Previous match (Shift+Enter)">▲</button>
+          <button id="search-next-btn" class="search-nav-btn" title="Next match (Enter)">▼</button>
+          <button id="search-close-btn" class="search-nav-btn" title="Close (Escape)">✕</button>
+        </div>
+
         <!-- Single Page Canvas Container -->
         <div class="canvas-container">
           <div class="page-wrapper">
             <canvas id="pdf-canvas"></canvas>
+            <div id="highlight-layer" class="highlight-layer"></div>
             <div id="text-layer" class="text-layer"></div>
           </div>
         </div>
