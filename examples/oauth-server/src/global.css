@@ -1,0 +1,60 @@
+:root {
+  color-scheme: light dark;
+
+  --color-text-primary: light-dark(#1f2937, #f3f4f6);
+  --color-text-inverse: light-dark(#f3f4f6, #1f2937);
+  --color-text-info: light-dark(#1d4ed8, #60a5fa);
+  --color-text-muted: light-dark(#6b7280, #9ca3af);
+  --color-text-success: light-dark(#15803d, #4ade80);
+  --color-text-error: light-dark(#dc2626, #f87171);
+  --color-background-primary: light-dark(#ffffff, #1a1a1a);
+  --color-background-inverse: light-dark(#1a1a1a, #ffffff);
+  --color-background-info: light-dark(#eff6ff, #1e3a5f);
+  --color-background-success: light-dark(#f0fdf4, #14532d);
+  --color-background-error: light-dark(#fef2f2, #450a0a);
+  --color-background-surface: light-dark(#f9fafb, #262626);
+  --color-ring-primary: light-dark(#3b82f6, #60a5fa);
+  --color-border: light-dark(#e5e7eb, #374151);
+  --border-radius-md: 6px;
+  --border-radius-lg: 10px;
+  --border-width-regular: 1px;
+  --font-sans: ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+  --font-weight-normal: 400;
+  --font-weight-bold: 700;
+  --font-text-md-size: 1rem;
+  --font-text-md-line-height: 1.5;
+  --font-text-sm-size: 0.875rem;
+  --font-heading-xl-size: 1.5rem;
+  --font-heading-xl-line-height: 1.25;
+
+  --spacing-unit: var(--font-text-md-size);
+  --spacing-xs: calc(var(--spacing-unit) * 0.25);
+  --spacing-sm: calc(var(--spacing-unit) * 0.5);
+  --spacing-md: var(--spacing-unit);
+  --spacing-lg: calc(var(--spacing-unit) * 1.5);
+
+  --color-accent: #2563eb;
+  --color-text-on-accent: #ffffff;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  font-family: var(--font-sans);
+  font-size: var(--font-text-md-size);
+  font-weight: var(--font-weight-normal);
+  line-height: var(--font-text-md-line-height);
+  color: var(--color-text-primary);
+}
+
+code, pre, kbd {
+  font-family: var(--font-mono);
+  font-size: 1em;
+}
+
+b, strong {
+  font-weight: var(--font-weight-bold);
+}
