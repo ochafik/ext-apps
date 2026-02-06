@@ -258,7 +258,10 @@ body {
   display: block;
 }
 
-/* Text Layer for Selection */
+/* Text Layer for Selection
+ * Critical: must include font-size and transform rules that PDF.js TextLayer
+ * relies on via CSS custom properties (--font-height, --scale-x, --rotate).
+ * Without these, text layer spans won't align with the canvas rendering. */
 .text-layer {
   position: absolute;
   left: 0;
@@ -272,15 +275,32 @@ body {
   forced-color-adjust: none;
   transform-origin: 0 0;
   z-index: 2;
+  /* PDF.js TextLayer sets --min-font-size on the container */
+  --min-font-size-inv: calc(1 / var(--min-font-size, 1));
 }
 
-.text-layer span,
-.text-layer br {
+.text-layer :is(span, br) {
   color: transparent;
   position: absolute;
   white-space: pre;
   cursor: text;
   transform-origin: 0% 0%;
+}
+
+/* PDF.js sets --font-height, --scale-x, --rotate as inline styles on each span.
+ * These rules apply the proper font size and transforms to match the canvas. */
+.text-layer > :not(.markedContent),
+.text-layer .markedContent span:not(.markedContent) {
+  z-index: 1;
+  --font-height: 0;
+  font-size: calc(var(--scale-factor, 1) * var(--font-height));
+  --scale-x: 1;
+  --rotate: 0deg;
+  transform: rotate(var(--rotate)) scaleX(var(--scale-x)) scale(var(--min-font-size-inv, 1));
+}
+
+.text-layer .markedContent {
+  display: contents;
 }
 
 .text-layer ::selection {
@@ -385,10 +405,10 @@ body {
 }
 
 .search-highlight {
-  position: absolute;
   background: rgba(255, 255, 0, 0.4);
   mix-blend-mode: multiply;
-  border-radius: 1px;
+  border-radius: 2px;
+  pointer-events: none;
 }
 
 .search-highlight.current {

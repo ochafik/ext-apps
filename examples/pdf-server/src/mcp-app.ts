@@ -70,6 +70,7 @@ const progressContainerEl = document.getElementById("progress-container")!;
 const progressBarEl = document.getElementById("progress-bar")!;
 const progressTextEl = document.getElementById("progress-text")!;
 const searchBtn = document.getElementById("search-btn") as HTMLButtonElement;
+searchBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="6.5" cy="6.5" r="4.5"/><line x1="10" y1="10" x2="14" y2="14"/></svg>`;
 const searchBarEl = document.getElementById("search-bar")!;
 const searchInputEl = document.getElementById("search-input") as HTMLInputElement;
 const searchMatchCountEl = document.getElementById("search-match-count")!;
@@ -203,94 +204,85 @@ function performSearch(query: string) {
   }
 }
 
-function convertMatchToSpanRanges(
-  pageNum: number,
-  index: number,
-  length: number,
-): { divIndex: number; startOffset: number; endOffset: number }[] {
-  const itemStrs = pageTextItemsCache.get(pageNum);
-  if (!itemStrs) return [];
-
-  const ranges: { divIndex: number; startOffset: number; endOffset: number }[] =
-    [];
-  let charPos = 0;
-  const matchEnd = index + length;
-
-  for (let i = 0; i < itemStrs.length; i++) {
-    const itemLen = itemStrs[i].length;
-    const itemStart = charPos;
-    const itemEnd = charPos + itemLen;
-
-    if (itemEnd > index && itemStart < matchEnd) {
-      const startOffset = Math.max(0, index - itemStart);
-      const endOffset = Math.min(itemLen, matchEnd - itemStart);
-      ranges.push({ divIndex: i, startOffset, endOffset });
-    }
-
-    charPos += itemLen;
-    if (charPos >= matchEnd) break;
-  }
-
-  return ranges;
-}
-
 function renderHighlights() {
   clearHighlights();
   if (!searchQuery || allMatches.length === 0) return;
 
-  const spans = textLayerEl.querySelectorAll("span");
+  const spans = Array.from(
+    textLayerEl.querySelectorAll("span"),
+  ) as HTMLElement[];
   if (spans.length === 0) return;
 
   const pageMatches = allMatches.filter((m) => m.pageNum === currentPage);
-  const containerRect = highlightLayerEl.getBoundingClientRect();
+  if (pageMatches.length === 0) return;
 
-  for (const match of pageMatches) {
-    const isCurrentMatch =
-      allMatches.indexOf(match) === currentMatchIndex;
-    const spanRanges = convertMatchToSpanRanges(
-      match.pageNum,
-      match.index,
-      match.length,
-    );
+  const lowerQuery = searchQuery.toLowerCase();
+  const lowerQueryLen = lowerQuery.length;
 
-    for (const sr of spanRanges) {
-      const span = spans[sr.divIndex] as HTMLElement;
-      if (!span) continue;
+  // Position highlight divs over matching text using the Range API.
+  // This works because the text layer spans are now properly sized and
+  // positioned (via CSS --font-height, --scale-x, --scale-factor variables).
+  const wrapperEl = textLayerEl.parentElement!;
+  const wrapperRect = wrapperEl.getBoundingClientRect();
 
-      // Use span's bounding rect (correctly accounts for CSS transforms)
-      // and proportional character offsets for positioning within the span
-      const spanRect = span.getBoundingClientRect();
-      const totalLen = span.textContent?.length || 1;
+  let domMatchOrdinal = 0;
 
-      const startFrac = sr.startOffset / totalLen;
-      const endFrac = sr.endOffset / totalLen;
+  for (const span of spans) {
+    const text = span.textContent || "";
+    if (text.length === 0) continue;
+    const lowerText = text.toLowerCase();
+    if (!lowerText.includes(lowerQuery)) continue;
 
-      const hlLeft =
-        spanRect.left + spanRect.width * startFrac - containerRect.left;
-      const hlTop = spanRect.top - containerRect.top;
-      const hlWidth = spanRect.width * (endFrac - startFrac);
-      const hlHeight = spanRect.height;
-
-      const div = document.createElement("div");
-      div.className =
-        "search-highlight" + (isCurrentMatch ? " current" : "");
-      div.style.left = `${hlLeft}px`;
-      div.style.top = `${hlTop}px`;
-      div.style.width = `${hlWidth}px`;
-      div.style.height = `${hlHeight}px`;
-      highlightLayerEl.appendChild(div);
+    // Find all match positions within this span
+    const matchPositions: number[] = [];
+    let pos = 0;
+    while (true) {
+      const idx = lowerText.indexOf(lowerQuery, pos);
+      if (idx === -1) break;
+      matchPositions.push(idx);
+      pos = idx + 1;
     }
+    if (matchPositions.length === 0) continue;
 
-    // Scroll current match into view
-    if (isCurrentMatch) {
-      const currentHighlight = highlightLayerEl.querySelector(
-        ".search-highlight.current",
-      ) as HTMLElement;
-      if (currentHighlight) {
-        currentHighlight.scrollIntoView({ block: "center", behavior: "smooth" });
+    // For each match, create a highlight div positioned over the match area
+    const textNode = span.firstChild;
+    if (!textNode || textNode.nodeType !== Node.TEXT_NODE) continue;
+
+    for (const idx of matchPositions) {
+      const isCurrentMatch =
+        domMatchOrdinal < pageMatches.length &&
+        allMatches.indexOf(pageMatches[domMatchOrdinal]) === currentMatchIndex;
+
+      try {
+        const range = document.createRange();
+        range.setStart(textNode, idx);
+        range.setEnd(textNode, Math.min(idx + lowerQueryLen, text.length));
+        const rects = range.getClientRects();
+
+        for (let ri = 0; ri < rects.length; ri++) {
+          const r = rects[ri];
+          const div = document.createElement("div");
+          div.className = "search-highlight" + (isCurrentMatch ? " current" : "");
+          div.style.position = "absolute";
+          div.style.left = `${r.left - wrapperRect.left}px`;
+          div.style.top = `${r.top - wrapperRect.top}px`;
+          div.style.width = `${r.width}px`;
+          div.style.height = `${r.height}px`;
+          highlightLayerEl.appendChild(div);
+        }
+      } catch {
+        // Range errors can happen with stale text nodes
       }
+
+      domMatchOrdinal++;
     }
   }
+
+  // Scroll current highlight into view
+  const currentHL = highlightLayerEl.querySelector(
+    ".search-highlight.current",
+  ) as HTMLElement;
+  if (currentHL) currentHL.scrollIntoView({ block: "center", behavior: "smooth" });
 }
 
 function clearHighlights() {
@@ -641,6 +633,10 @@ async function renderPage() {
     textLayerEl.innerHTML = "";
     textLayerEl.style.width = `${viewport.width}px`;
     textLayerEl.style.height = `${viewport.height}px`;
+    // Set --scale-factor so CSS font-size/transform rules work correctly.
+    // PDF.js TextLayer uses percentage-based left/top positioning and sets
+    // --font-height in PDF coordinate space; --scale-factor converts to CSS pixels.
+    textLayerEl.style.setProperty("--scale-factor", `${scale}`);
 
     // Render canvas - track the task so we can cancel it
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
