@@ -126,6 +126,7 @@ function updateControls() {
 
 /**
  * Request the host to resize the app to fit the current page.
+ * Scales the page height by the zoom factor so the app shrinks/grows with zoom.
  */
 function requestFitToContent() {
   if (currentDisplayMode === "fullscreen") return;
@@ -134,11 +135,11 @@ function requestFitToContent() {
   if (!toolbarEl) return;
 
   const toolbarHeight = toolbarEl.offsetHeight;
-  const searchBarHeight = searchOpen ? searchBarEl.offsetHeight : 0;
   const containerPadding = 2 * 16; // 1rem top + 1rem bottom
   const BUFFER = 10;
+  const scaledPageHeight = PAGE_HEIGHT * scale;
   const totalHeight =
-    toolbarHeight + searchBarHeight + PAGE_HEIGHT + containerPadding + BUFFER;
+    toolbarHeight + scaledPageHeight + containerPadding + BUFFER;
 
   app.sendSizeChanged({ height: totalHeight });
 }
@@ -155,6 +156,7 @@ function requestFitToContent() {
 function setupPagination() {
   // Reset transform so measurements are clean
   docContentEl.style.transform = "";
+  docPageEl.style.transform = "";
 
   // The viewport width is the visible area for one page
   const viewportWidth = docViewportEl.clientWidth;
@@ -175,6 +177,10 @@ function setupPagination() {
   // Clamp current page
   if (currentPage > totalPages) currentPage = totalPages;
 
+  // Apply zoom scale to the page container (like PDF re-renders at different scale)
+  docPageEl.style.transform = scale === 1.0 ? "" : `scale(${scale})`;
+  docPageEl.style.transformOrigin = "top center";
+
   showPage(currentPage);
   updateControls();
   requestFitToContent();
@@ -184,9 +190,9 @@ function showPage(page: number) {
   const viewportWidth = docViewportEl.clientWidth;
   if (viewportWidth <= 0) return;
 
+  // Only translateX for pagination - zoom is on docPageEl
   const offset = -(page - 1) * viewportWidth;
-  docContentEl.style.transform =
-    scale === 1.0 ? `translateX(${offset}px)` : `translateX(${offset}px) scale(${scale})`;
+  docContentEl.style.transform = `translateX(${offset}px)`;
 }
 
 // =============================================================================
@@ -361,7 +367,6 @@ function openSearch() {
   searchOpen = true;
   searchBarEl.style.display = "flex";
   searchInputEl.focus();
-  requestFitToContent();
 }
 
 function closeSearch() {
@@ -372,7 +377,6 @@ function closeSearch() {
   searchInputEl.value = "";
   clearHighlights();
   updateSearchUI();
-  requestFitToContent();
 }
 
 function goToNextMatch() {

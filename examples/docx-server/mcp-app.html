@@ -41,15 +41,14 @@
             <button id="search-btn" class="toolbar-btn" title="Search (Ctrl+F)">&#x1F50D;</button>
             <button id="fullscreen-btn" class="toolbar-btn" title="Toggle fullscreen">&#x26F6;</button>
           </div>
-        </div>
-
-        <!-- Search Bar -->
-        <div id="search-bar" class="search-bar" style="display: none">
-          <input id="search-input" class="search-input" type="text" placeholder="Search in document..." />
-          <span id="search-match-count" class="search-match-count"></span>
-          <button id="search-prev-btn" class="search-nav-btn" title="Previous match (Shift+Enter)">&#x25B2;</button>
-          <button id="search-next-btn" class="search-nav-btn" title="Next match (Enter)">&#x25BC;</button>
-          <button id="search-close-btn" class="search-nav-btn" title="Close (Escape)">&#x2715;</button>
+          <!-- Compact search popover anchored to toolbar-right -->
+          <div id="search-bar" class="search-bar" style="display: none">
+            <input id="search-input" class="search-input" type="text" placeholder="Search..." />
+            <span id="search-match-count" class="search-match-count"></span>
+            <button id="search-prev-btn" class="search-nav-btn" title="Previous (Shift+Enter)">&#x25B2;</button>
+            <button id="search-next-btn" class="search-nav-btn" title="Next (Enter)">&#x25BC;</button>
+            <button id="search-close-btn" class="search-nav-btn" title="Close (Esc)">&#x2715;</button>
+          </div>
         </div>
 
         <!-- Document Content - uses CSS columns for pagination -->
