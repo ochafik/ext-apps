@@ -26,16 +26,39 @@
           <div class="toolbar-left">
             <span id="doc-title" class="doc-title">Document</span>
           </div>
+          <div class="toolbar-center">
+            <button id="prev-btn" class="toolbar-btn" title="Previous page">&#x25C0;</button>
+            <div class="page-nav">
+              <input id="page-input" type="number" class="page-input" min="1" value="1" title="Go to page" />
+              <span id="total-pages" class="total-pages">of 1</span>
+            </div>
+            <button id="next-btn" class="toolbar-btn" title="Next page">&#x25B6;</button>
+          </div>
           <div class="toolbar-right">
-            <button id="fullscreen-btn" class="fullscreen-btn" title="Toggle fullscreen">
-              &#x26F6;
-            </button>
+            <button id="zoom-out-btn" class="toolbar-btn" title="Zoom out (-)">&#x2212;</button>
+            <span id="zoom-level" class="zoom-level">100%</span>
+            <button id="zoom-in-btn" class="toolbar-btn" title="Zoom in (+)">+</button>
+            <button id="search-btn" class="toolbar-btn" title="Search (Ctrl+F)">&#x1F50D;</button>
+            <button id="fullscreen-btn" class="toolbar-btn" title="Toggle fullscreen">&#x26F6;</button>
           </div>
         </div>
 
-        <!-- Document Content -->
-        <div class="doc-container">
-          <div id="doc-content" class="doc-content"></div>
+        <!-- Search Bar -->
+        <div id="search-bar" class="search-bar" style="display: none">
+          <input id="search-input" class="search-input" type="text" placeholder="Search in document..." />
+          <span id="search-match-count" class="search-match-count"></span>
+          <button id="search-prev-btn" class="search-nav-btn" title="Previous match (Shift+Enter)">&#x25B2;</button>
+          <button id="search-next-btn" class="search-nav-btn" title="Next match (Enter)">&#x25BC;</button>
+          <button id="search-close-btn" class="search-nav-btn" title="Close (Escape)">&#x2715;</button>
+        </div>
+
+        <!-- Document Content - uses CSS columns for pagination -->
+        <div id="doc-container" class="doc-container">
+          <div id="doc-page" class="doc-page">
+            <div id="doc-viewport" class="doc-viewport">
+              <div id="doc-content" class="doc-content"></div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
