@@ -448,8 +448,7 @@ async function toggleFullscreen() {
     return;
   }
 
-  const newMode =
-    currentDisplayMode === "fullscreen" ? "inline" : "fullscreen";
+  const newMode = currentDisplayMode === "fullscreen" ? "inline" : "fullscreen";
 
   try {
     const result = await app.requestDisplayMode({ mode: newMode });
@@ -656,8 +655,7 @@ app.ontoolresult = async (result: CallToolResult) => {
       throw new Error(errorText || "Failed to read document");
     }
 
-    const content =
-      contentResult.structuredContent as unknown as DocxContent;
+    const content = contentResult.structuredContent as unknown as DocxContent;
     if (!content) {
       throw new Error("No content returned from server");
     }

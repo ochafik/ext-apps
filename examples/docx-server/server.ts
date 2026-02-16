@@ -251,7 +251,10 @@ export function validateUrl(url: string): { valid: boolean; error?: string } {
     return { valid: true };
   }
 
-  return { valid: false, error: `Only local file:// URLs are supported. Pass DOCX file paths as CLI arguments.` };
+  return {
+    valid: false,
+    error: `Only local file:// URLs are supported. Pass DOCX file paths as CLI arguments.`,
+  };
 }
 
 // =============================================================================
@@ -323,7 +326,8 @@ export function createServer(): McpServer {
     "read_docx_content",
     {
       title: "Read DOCX Content",
-      description: "Read a DOCX file and return its content as HTML and plain text",
+      description:
+        "Read a DOCX file and return its content as HTML and plain text",
       inputSchema: {
         url: z.string().describe("DOCX file URL"),
       },

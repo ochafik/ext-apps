@@ -84,10 +84,12 @@ The viewer keeps the model informed about the current page and any selected text
 
 ```typescript
 app.updateModelContext({
-  content: [{
-    type: "text",
-    text: `DOCX viewer | ${fileName} | Page: ${page}/${total}\n\n${content}`,
-  }],
+  content: [
+    {
+      type: "text",
+      text: `DOCX viewer | ${fileName} | Page: ${page}/${total}\n\n${content}`,
+    },
+  ],
 });
 ```
 
@@ -121,11 +123,11 @@ bun examples/docx-server/main.ts --stdio ./documents/report.docx
 
 ## Tools
 
-| Tool                | Visibility | Purpose                                  |
-| ------------------- | ---------- | ---------------------------------------- |
-| `list_documents`    | Model      | List available DOCX files                |
-| `display_docx`      | Model + UI | Display interactive viewer               |
-| `read_docx_content` | App only   | Convert DOCX to HTML + text              |
+| Tool                | Visibility | Purpose                     |
+| ------------------- | ---------- | --------------------------- |
+| `list_documents`    | Model      | List available DOCX files   |
+| `display_docx`      | Model + UI | Display interactive viewer  |
+| `read_docx_content` | App only   | Convert DOCX to HTML + text |
 
 ## Architecture
 
