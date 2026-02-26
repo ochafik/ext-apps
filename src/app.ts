@@ -33,6 +33,8 @@ import {
   McpUiMessageResultSchema,
   McpUiOpenLinkRequest,
   McpUiOpenLinkResultSchema,
+  McpUiDownloadFileRequest,
+  McpUiDownloadFileResultSchema,
   McpUiResourceTeardownRequest,
   McpUiResourceTeardownRequestSchema,
   McpUiResourceTeardownResult,
@@ -931,6 +933,83 @@ export class App extends Protocol<AppRequest, AppNotification, AppResult> {
   sendOpenLink: App["openLink"] = this.openLink;
 
   /**
+   * Request the host to download a file.
+   *
+   * Since MCP Apps run in sandboxed iframes where direct downloads are blocked,
+   * this provides a host-mediated mechanism for file exports. The host will
+   * typically show a confirmation dialog before initiating the download.
+   *
+   * Uses standard MCP resource types: `EmbeddedResource` for inline content
+   * and `ResourceLink` for content the host can fetch directly.
+   *
+   * @param params - Resource contents to download
+   * @param options - Request options (timeout, etc.)
+   * @returns Result with `isError: true` if the host denied the request (e.g., user cancelled)
+   *
+   * @throws {Error} If the request times out or the connection is lost
+   *
+   * @example Download a JSON file (embedded text resource)
+   * ```ts
+   * const data = JSON.stringify({ items: selectedItems }, null, 2);
+   * const { isError } = await app.downloadFile({
+   *   contents: [{
+   *     type: "resource",
+   *     resource: {
+   *       uri: "file:///export.json",
+   *       mimeType: "application/json",
+   *       text: data,
+   *     },
+   *   }],
+   * });
+   * if (isError) {
+   *   console.warn("Download denied or cancelled");
+   * }
+   * ```
+   *
+   * @example Download binary content (embedded blob resource)
+   * ```ts
+   * const { isError } = await app.downloadFile({
+   *   contents: [{
+   *     type: "resource",
+   *     resource: {
+   *       uri: "file:///image.png",
+   *       mimeType: "image/png",
+   *       blob: base64EncodedPng,
+   *     },
+   *   }],
+   * });
+   * ```
+   *
+   * @example Download via resource link (host fetches)
+   * ```ts
+   * const { isError } = await app.downloadFile({
+   *   contents: [{
+   *     type: "resource_link",
+   *     uri: "https://api.example.com/reports/q4.pdf",
+   *     name: "Q4 Report",
+   *     mimeType: "application/pdf",
+   *   }],
+   * });
+   * ```
+   *
+   * @see {@link McpUiDownloadFileRequest `McpUiDownloadFileRequest`} for request structure
+   * @see {@link McpUiDownloadFileResult `McpUiDownloadFileResult`} for result structure
+   */
+  downloadFile(
+    params: McpUiDownloadFileRequest["params"],
+    options?: RequestOptions,
+  ) {
+    return this.request(
+      <McpUiDownloadFileRequest>{
+        method: "ui/download-file",
+        params,
+      },
+      McpUiDownloadFileResultSchema,
+      options,
+    );
+  }
+
+  /**
    * Request a change to the display mode.
    *
    * Requests the host to change the UI container to the specified display mode
@@ -1118,6 +1197,11 @@ export class App extends Protocol<AppRequest, AppNotification, AppResult> {
     ),
     options?: RequestOptions,
   ): Promise<void> {
+    if (this.transport) {
+      throw new Error(
+        "App is already connected. Call close() before connecting again.",
+      );
+    }
     await super.connect(transport);
 
     try {

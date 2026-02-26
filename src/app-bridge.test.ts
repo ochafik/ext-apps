@@ -615,6 +615,40 @@ describe("App <-> AppBridge integration", () => {
     });
   });
 
+  describe("double-connect guard", () => {
+    it("AppBridge.connect() throws if already connected", async () => {
+      await bridge.connect(bridgeTransport);
+      await app.connect(appTransport);
+
+      // Attempting to connect again with a different transport should throw
+      const [, secondBridgeTransport] = InMemoryTransport.createLinkedPair();
+      await expect(bridge.connect(secondBridgeTransport)).rejects.toThrow(
+        "AppBridge is already connected",
+      );
+    });
+
+    it("App.connect() throws if already connected", async () => {
+      await bridge.connect(bridgeTransport);
+      await app.connect(appTransport);
+
+      // Attempting to connect again should throw
+      const [secondAppTransport] = InMemoryTransport.createLinkedPair();
+      await expect(app.connect(secondAppTransport)).rejects.toThrow(
+        "App is already connected",
+      );
+    });
+
+    it("AppBridge.connect() throws even when called with the same transport", async () => {
+      await bridge.connect(bridgeTransport);
+      await app.connect(appTransport);
+
+      // Should throw regardless of whether it's the same or a different transport
+      await expect(bridge.connect(bridgeTransport)).rejects.toThrow(
+        "AppBridge is already connected",
+      );
+    });
+  });
+
   describe("ping", () => {
     it("App responds to ping from bridge", async () => {
       await bridge.connect(bridgeTransport);
@@ -676,6 +710,36 @@ describe("App <-> AppBridge integration", () => {
       expect(receivedCalls).toHaveLength(1);
       expect(receivedCalls[0]).toMatchObject(toolCall);
       expect(result.content).toEqual(resultContent);
+    });
+
+    it("ondownloadfile setter registers handler for ui/download-file requests", async () => {
+      const downloadParams = {
+        contents: [
+          {
+            type: "resource" as const,
+            resource: {
+              uri: "file:///export.json",
+              mimeType: "application/json",
+              text: '{"key":"value"}',
+            },
+          },
+        ],
+      };
+      const receivedRequests: unknown[] = [];
+
+      bridge.ondownloadfile = async (params) => {
+        receivedRequests.push(params);
+        return {};
+      };
+
+      await bridge.connect(bridgeTransport);
+      await app.connect(appTransport);
+
+      const result = await app.downloadFile(downloadParams);
+
+      expect(receivedRequests).toHaveLength(1);
+      expect(receivedRequests[0]).toMatchObject(downloadParams);
+      expect(result).toEqual({});
     });
 
     it("callServerTool throws a helpful error when called with a string instead of params object", async () => {

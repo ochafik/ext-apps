@@ -5,8 +5,10 @@ import { z } from "zod";
 import {
   ContentBlockSchema,
   CallToolResultSchema,
+  EmbeddedResourceSchema,
   ImplementationSchema,
   RequestIdSchema,
+  ResourceLinkSchema,
   ToolSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 
@@ -157,6 +159,22 @@ export const McpUiOpenLinkResultSchema = z
       .optional()
       .describe(
         "True if the host failed to open the URL (e.g., due to security policy).",
+      ),
+  })
+  .passthrough();
+
+/**
+ * @description Result from a file download request.
+ * @see {@link McpUiDownloadFileRequest `McpUiDownloadFileRequest`}
+ */
+export const McpUiDownloadFileResultSchema = z
+  .object({
+    /** @description True if the download failed (e.g., user cancelled or host denied). */
+    isError: z
+      .boolean()
+      .optional()
+      .describe(
+        "True if the download failed (e.g., user cancelled or host denied).",
       ),
   })
   .passthrough();
@@ -476,6 +494,11 @@ export const McpUiHostCapabilitiesSchema = z.object({
     .object({})
     .optional()
     .describe("Host supports opening external URLs."),
+  /** @description Host supports file downloads via ui/download-file. */
+  downloadFile: z
+    .object({})
+    .optional()
+    .describe("Host supports file downloads via ui/download-file."),
   /** @description Host can proxy tool calls to the MCP server. */
   serverTools: z
     .object({
@@ -697,6 +720,28 @@ export const McpUiClientCapabilitiesSchema = z.object({
     .describe(
       'Array of supported MIME types for UI resources.\nMust include `"text/html;profile=mcp-app"` for MCP Apps support.',
     ),
+});
+
+/**
+ * @description Request to download a file through the host.
+ *
+ * Sent from the View to the Host when the app wants to trigger a file download.
+ * Since MCP Apps run in sandboxed iframes where direct downloads are blocked,
+ * this provides a host-mediated mechanism for file exports.
+ * The host SHOULD show a confirmation dialog before initiating the download.
+ *
+ * @see {@link app!App.downloadFile `App.downloadFile`} for the method that sends this request
+ */
+export const McpUiDownloadFileRequestSchema = z.object({
+  method: z.literal("ui/download-file"),
+  params: z.object({
+    /** @description Resource contents to download — embedded (inline data) or linked (host fetches). Uses standard MCP resource types. */
+    contents: z
+      .array(z.union([EmbeddedResourceSchema, ResourceLinkSchema]))
+      .describe(
+        "Resource contents to download \u2014 embedded (inline data) or linked (host fetches). Uses standard MCP resource types.",
+      ),
+  }),
 });
 
 /**

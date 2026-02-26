@@ -5,6 +5,7 @@
  */
 
 import fs from "node:fs";
+import path from "node:path";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { createMcpExpressApp } from "@modelcontextprotocol/sdk/server/express.js";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -19,8 +20,8 @@ import {
   pathToFileUrl,
   fileUrlToPath,
   allowedLocalFiles,
-  allowedRemoteOrigins,
   DEFAULT_PDF,
+  allowedLocalDirs,
 } from "./server.js";
 
 /**
@@ -121,10 +122,16 @@ async function main() {
   // Register local files in whitelist
   for (const url of urls) {
     if (isFileUrl(url)) {
-      const filePath = fileUrlToPath(url);
+      const filePath = path.resolve(fileUrlToPath(url));
       if (fs.existsSync(filePath)) {
-        allowedLocalFiles.add(filePath);
-        console.error(`[pdf-server] Registered local file: ${filePath}`);
+        const s = fs.statSync(filePath);
+        if (s.isFile()) {
+          allowedLocalFiles.add(filePath);
+          console.error(`[pdf-server] Registered local file: ${filePath}`);
+        } else if (s.isDirectory()) {
+          allowedLocalDirs.add(filePath);
+          console.error(`[pdf-server] Registered local directory: ${filePath}`);
+        }
       } else {
         console.error(`[pdf-server] Warning: File not found: ${filePath}`);
       }
@@ -132,9 +139,6 @@ async function main() {
   }
 
   console.error(`[pdf-server] Ready (${urls.length} URL(s) configured)`);
-  console.error(
-    `[pdf-server] Allowed origins: ${[...allowedRemoteOrigins].join(", ")}`,
-  );
 
   if (stdio) {
     await startStdioServer(createServer);
