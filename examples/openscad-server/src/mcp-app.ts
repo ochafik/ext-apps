@@ -2,7 +2,7 @@
  * OpenSCAD Viewer MCP App
  *
  * Renders OpenSCAD code as interactive 3D models:
- * 1. Fetches OpenSCAD WASM ZIP from files.openscad.org
+ * 1. Fetches OpenSCAD WASM from the MCP server (avoids CORS issues)
  * 2. Runs OpenSCAD in an inline Web Worker
  * 3. Displays GLB output via <model-viewer> web component
  */
@@ -16,8 +16,6 @@ import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import "./global.css";
 import "./mcp-app.css";
 
-const WASM_ZIP_URL =
-  "https://files.openscad.org/playground/OpenSCAD-2025.03.25.wasm24456-WebAssembly-web.zip";
 const MODEL_VIEWER_URL =
   "https://ajax.googleapis.com/ajax/libs/model-viewer/4.0.0/model-viewer.min.js";
 
@@ -81,155 +79,46 @@ function showViewer() {
 }
 
 // =============================================================================
-// ZIP Extraction (using browser DecompressionStream)
+// WASM Loading (via MCP server to avoid CORS)
 // =============================================================================
 
-interface ZipEntry {
-  filename: string;
-  compressedData: Uint8Array;
-  compressionMethod: number;
-  uncompressedSize: number;
+/** Decode a base64 string to a Blob URL using the browser's built-in decoder. */
+async function base64ToBlobUrl(
+  base64: string,
+  mimeType: string,
+): Promise<string> {
+  const response = await fetch(`data:${mimeType};base64,${base64}`);
+  return URL.createObjectURL(await response.blob());
 }
-
-function parseZipEntries(buffer: ArrayBuffer): ZipEntry[] {
-  const view = new DataView(buffer);
-  const bytes = new Uint8Array(buffer);
-  const entries: ZipEntry[] = [];
-
-  // Find End of Central Directory record (scan from end)
-  let eocdOffset = -1;
-  for (let i = bytes.length - 22; i >= 0; i--) {
-    if (view.getUint32(i, true) === 0x06054b50) {
-      eocdOffset = i;
-      break;
-    }
-  }
-  if (eocdOffset === -1) throw new Error("Not a valid ZIP file");
-
-  const cdOffset = view.getUint32(eocdOffset + 16, true);
-  const cdEntries = view.getUint16(eocdOffset + 10, true);
-
-  let offset = cdOffset;
-  for (let i = 0; i < cdEntries; i++) {
-    if (view.getUint32(offset, true) !== 0x02014b50) break;
-
-    const compressionMethod = view.getUint16(offset + 10, true);
-    const compressedSize = view.getUint32(offset + 20, true);
-    const uncompressedSize = view.getUint32(offset + 24, true);
-    const filenameLen = view.getUint16(offset + 28, true);
-    const extraLen = view.getUint16(offset + 30, true);
-    const commentLen = view.getUint16(offset + 32, true);
-    const localHeaderOffset = view.getUint32(offset + 42, true);
-
-    const filename = new TextDecoder().decode(
-      bytes.subarray(offset + 46, offset + 46 + filenameLen),
-    );
-
-    // Read from local file header to get actual data offset
-    const localFilenameLen = view.getUint16(localHeaderOffset + 26, true);
-    const localExtraLen = view.getUint16(localHeaderOffset + 28, true);
-    const dataOffset =
-      localHeaderOffset + 30 + localFilenameLen + localExtraLen;
-
-    const compressedData = bytes.slice(dataOffset, dataOffset + compressedSize);
-
-    entries.push({
-      filename,
-      compressedData,
-      compressionMethod,
-      uncompressedSize,
-    });
-
-    offset += 46 + filenameLen + extraLen + commentLen;
-  }
-
-  return entries;
-}
-
-async function decompressEntry(entry: ZipEntry): Promise<Uint8Array> {
-  if (entry.compressionMethod === 0) {
-    // Stored (no compression)
-    return entry.compressedData;
-  }
-  if (entry.compressionMethod === 8) {
-    // Deflate
-    const ds = new DecompressionStream("deflate-raw");
-    const writer = ds.writable.getWriter();
-    const reader = ds.readable.getReader();
-
-    const chunks: Uint8Array[] = [];
-    let totalSize = 0;
-
-    writer.write(entry.compressedData as unknown as BufferSource);
-    writer.close();
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      chunks.push(value);
-      totalSize += value.length;
-    }
-
-    const result = new Uint8Array(totalSize);
-    let offset = 0;
-    for (const chunk of chunks) {
-      result.set(chunk, offset);
-      offset += chunk.length;
-    }
-    return result;
-  }
-  throw new Error(`Unsupported compression method: ${entry.compressionMethod}`);
-}
-
-// =============================================================================
-// WASM Loading
-// =============================================================================
 
 async function loadWasm(): Promise<void> {
   if (wasmReady) return;
 
-  showLoading("Downloading OpenSCAD WASM (9 MB)...");
-  log.info("Fetching WASM ZIP from", WASM_ZIP_URL);
+  showLoading("Downloading OpenSCAD WASM via server...");
+  log.info("Fetching WASM files via callServerTool...");
 
-  const response = await fetch(WASM_ZIP_URL);
-  if (!response.ok)
-    throw new Error(`Failed to fetch WASM ZIP: ${response.status}`);
+  const result = await app.callServerTool({
+    name: "_openscad_get_wasm",
+    arguments: {},
+  });
 
-  const buffer = await response.arrayBuffer();
-  log.info(
-    `ZIP downloaded: ${(buffer.byteLength / 1024 / 1024).toFixed(1)} MB`,
-  );
+  const text = result.content.find(
+    (c): c is { type: "text"; text: string } => c.type === "text",
+  )?.text;
+  if (!text) throw new Error("No WASM data returned from server");
 
-  showLoading("Extracting WASM files...");
+  const data: { openscadJs: string; openscadWasm: string } = JSON.parse(text);
 
-  const entries = parseZipEntries(buffer);
-  log.info(
-    "ZIP entries:",
-    entries.map((e) => e.filename),
-  );
+  showLoading("Decoding WASM files...");
+  log.info("Decoding base64 WASM data...");
 
-  // Find openscad.js and openscad.wasm (they may be in a subdirectory)
-  const jsEntry = entries.find((e) => e.filename.endsWith("openscad.js"));
-  const wasmEntry = entries.find((e) => e.filename.endsWith("openscad.wasm"));
-
-  if (!jsEntry) throw new Error("openscad.js not found in ZIP");
-  if (!wasmEntry) throw new Error("openscad.wasm not found in ZIP");
-
-  const jsData = await decompressEntry(jsEntry);
-  const wasmData = await decompressEntry(wasmEntry);
-
-  log.info(
-    `Extracted: openscad.js (${(jsData.length / 1024).toFixed(0)} KB), openscad.wasm (${(wasmData.length / 1024 / 1024).toFixed(1)} MB)`,
-  );
-
-  openscadJsBlobUrl = URL.createObjectURL(
-    new Blob([jsData as BlobPart], { type: "application/javascript" }),
-  );
-  openscadWasmBlobUrl = URL.createObjectURL(
-    new Blob([wasmData as BlobPart], { type: "application/wasm" }),
-  );
+  [openscadJsBlobUrl, openscadWasmBlobUrl] = await Promise.all([
+    base64ToBlobUrl(data.openscadJs, "application/javascript"),
+    base64ToBlobUrl(data.openscadWasm, "application/wasm"),
+  ]);
 
   wasmReady = true;
+  log.info("WASM files ready");
 }
 
 // =============================================================================
@@ -478,22 +367,6 @@ interface OpenSCADToolResult {
   features: string[];
 }
 
-app.ontoolresult = async (result: CallToolResult) => {
-  log.info("Received tool result:", result);
-
-  const parsed =
-    result.structuredContent as unknown as OpenSCADToolResult | null;
-  if (!parsed?.code) {
-    showError("No OpenSCAD code provided");
-    return;
-  }
-
-  // Reset model container visibility
-  modelContainerEl.style.display = "";
-
-  await renderOpenSCAD(parsed.code, parsed.features || ["manifold"]);
-};
-
 app.onerror = (err) => {
   log.error("App error:", err);
   showError(err instanceof Error ? err.message : String(err));
@@ -534,6 +407,22 @@ function handleHostContextChanged(ctx: McpUiHostContext) {
 }
 
 app.onhostcontextchanged = handleHostContextChanged;
+
+app.ontoolresult = async (result: CallToolResult) => {
+  log.info("Received tool result:", result);
+
+  const parsed =
+    result.structuredContent as unknown as OpenSCADToolResult | null;
+  if (!parsed?.code) {
+    showError("No OpenSCAD code provided");
+    return;
+  }
+
+  // Reset model container visibility
+  modelContainerEl.style.display = "";
+
+  await renderOpenSCAD(parsed.code, parsed.features || ["manifold"]);
+};
 
 // Connect to host
 app.connect().then(() => {

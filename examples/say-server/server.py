@@ -30,6 +30,10 @@ Usage:
 
   # Or with stdio transport (for Claude Desktop)
   python server.py --stdio
+
+TODOs:
+- optional awaitReply (Defaults to true)
+- 
 """
 from __future__ import annotations
 import asyncio
