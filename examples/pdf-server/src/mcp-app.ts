@@ -43,6 +43,10 @@ import {
   convertToModelCoords,
 } from "./pdf-annotations.js";
 import {
+  PdfAnnotationDefSchema,
+  PdfAnnotationPatchSchema,
+} from "./annotation-schemas.js";
+import {
   type TrackedAnnotation,
   type EditEntry,
   annotationMap,
@@ -5362,22 +5366,20 @@ app.registerTool(
   {
     title: "Add Annotations",
     description:
-      "Add one or more annotations (highlight, note, rectangle, circle, line, stamp, image, freetext). Each needs id, type, page, and type-specific geometry.",
+      'Add one or more annotations to the document: highlight, underline, strikethrough, note, rectangle, circle, line, freetext, stamp (e.g. label "APPROVED") or image. ' +
+      "Each annotation needs a unique id, a type, a 1-indexed page and the type-specific fields in the schema. " +
+      "Coordinates are PDF points (1pt = 1/72in; US Letter is 612×792) with the origin at the page's top-left corner, y increasing downward. " +
+      "To highlight text by content, prefer highlight_text.",
     inputSchema: z.object({
       annotations: z
-        .array(z.record(z.string(), z.any()))
+        .array(PdfAnnotationDefSchema)
         .min(1)
-        .describe(
-          "Annotation objects. Each needs: id, type, page, plus type-specific fields (x, y, width, height, rects, color, content, etc.)",
-        ),
+        .describe("Annotations to add"),
     }),
   },
   async ({ annotations }) =>
     runCommand(
-      {
-        type: "add_annotations",
-        annotations: annotations as PdfAnnotationDef[],
-      },
+      { type: "add_annotations", annotations },
       `Added ${annotations.length} annotation(s)`,
     ),
 );
@@ -5390,20 +5392,16 @@ app.registerTool(
       "Patch existing annotations by id. Only id and type are required; other fields are merged.",
     inputSchema: z.object({
       annotations: z
-        .array(z.record(z.string(), z.any()))
+        .array(PdfAnnotationPatchSchema)
         .min(1)
-        .describe("Partial annotation objects. Each needs: id, type."),
+        .describe(
+          "Partial annotation objects. Each needs id and type; other fields are merged into the existing annotation.",
+        ),
     }),
   },
   async ({ annotations }) =>
     runCommand(
-      {
-        type: "update_annotations",
-        annotations: annotations as Extract<
-          PdfCommand,
-          { type: "update_annotations" }
-        >["annotations"],
-      },
+      { type: "update_annotations", annotations },
       `Updated ${annotations.length} annotation(s)`,
     ),
 );
